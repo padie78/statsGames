@@ -1,0 +1,80 @@
+type Query {
+  health: String!
+  getPlayerProfile(userId: ID!): PlayerProfile!
+  listPlayerMatches(userId: ID!, platform: String, limit: Int): [MatchUpdate!]!
+  listPlayerStatsRollups(
+    userId: ID!
+    granularity: String!
+    periodId: String!
+    platform: String
+    limit: Int
+  ): [PlayerStatsRollup!]!
+}
+
+type PlayerProfile {
+  userId: ID!
+  gamerTag: String!
+  primaryPlatform: String!
+  fortniteId: String
+  robloxId: String
+  avatarUrl: String
+  createdAtIso: AWSDateTime!
+  updatedAtIso: AWSDateTime!
+  versionId: Int!
+}
+
+input UpsertPlayerProfileInput {
+  userId: ID!
+  gamerTag: String!
+  primaryPlatform: String!
+  fortniteId: String
+  robloxId: String
+  avatarUrl: String
+}
+
+input LinkPlatformAccountInput {
+  userId: ID!
+  platform: String!
+  externalId: String!
+}
+
+input MatchUpdateInput {
+  userId: ID!
+  matchId: ID!
+  platform: String!
+  summary: String!
+  updatedAt: AWSDateTime!
+}
+
+type Mutation {
+  ping(message: String!): String!
+  upsertPlayerProfile(input: UpsertPlayerProfileInput!): PlayerProfile!
+  linkPlatformAccount(input: LinkPlatformAccountInput!): PlayerProfile!
+  publishMatchUpdate(input: MatchUpdateInput!): MatchUpdate
+}
+
+type Subscription {
+  onMatchUpdate(userId: ID!): MatchUpdate
+    @aws_subscribe(mutations: ["publishMatchUpdate"])
+}
+
+type MatchUpdate {
+  userId: ID!
+  matchId: ID!
+  platform: String!
+  summary: String!
+  updatedAt: AWSDateTime!
+}
+
+type PlayerStatsRollup {
+  userId: ID!
+  platform: String!
+  granularity: String!
+  periodId: String!
+  matchCount: Int!
+  totalKills: Int!
+  totalDeaths: Int!
+  avgPlacement: Float!
+  versionId: Int!
+  lastUpdatedIso: AWSDateTime!
+}

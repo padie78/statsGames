@@ -1,0 +1,72 @@
+{
+  "name": "stats-games-web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/stats-games-web/src",
+  "prefix": "app",
+  "targets": {
+    "build": {
+      "executor": "@angular-devkit/build-angular:browser",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/stats-games-web",
+        "index": "apps/stats-games-web/src/index.html",
+        "main": "apps/stats-games-web/src/main.ts",
+        "polyfills": ["zone.js"],
+        "tsConfig": "apps/stats-games-web/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/stats-games-web/src/assets",
+            "output": "assets"
+          }
+        ],
+        "styles": [
+          "apps/stats-games-web/src/theme/variables.scss",
+          "apps/stats-games-web/src/styles.scss"
+        ],
+        "scripts": []
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "2mb",
+              "maximumError": "3mb"
+            }
+          ],
+          "outputHashing": "all",
+          "fileReplacements": [
+            {
+              "replace": "apps/stats-games-web/src/environments/environment.ts",
+              "with": "apps/stats-games-web/src/environments/environment.prod.ts"
+            }
+          ]
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true,
+          "namedChunks": true,
+          "vendorChunk": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@angular-devkit/build-angular:dev-server",
+      "configurations": {
+        "production": {
+          "buildTarget": "stats-games-web:build:production"
+        },
+        "development": {
+          "buildTarget": "stats-games-web:build:development"
+        }
+      },
+      "defaultConfiguration": "development"
+    }
+  },
+  "tags": ["scope:web", "type:app"]
+}

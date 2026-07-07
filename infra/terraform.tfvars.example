@@ -1,0 +1,10 @@
+project_name             = "stats-games"
+environment              = "dev"
+appsync_graphql_api_name = "api"
+aws_region               = "eu-central-1"
+# webhook_secret = "..."  # opcional; validar header X-Webhook-Secret
+
+tags = {
+  CostCenter = "gaming-analytics"
+  Owner      = "platform-team"
+}
