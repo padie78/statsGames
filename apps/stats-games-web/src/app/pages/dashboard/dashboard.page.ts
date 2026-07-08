@@ -1,37 +1,37 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  IonBadge,
   IonButton,
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardTitle,
   IonContent,
   IonHeader,
   IonInput,
   IonItem,
-  IonLabel,
   IonList,
   IonRefresher,
   IonRefresherContent,
   IonSelect,
   IonSelectOption,
-  IonText,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
-import { MatchLiveStore } from '../../stores/match-live.store';
+import {
+  LiveMatchFeedComponent,
+  type LiveMatchFeedItem,
+  NeonBadgeComponent,
+  PremiumUpsellBannerComponent,
+  StatValueComponent,
+} from '../../ui';
 
 @Component({
   standalone: true,
   selector: 'app-dashboard-page',
+  encapsulation: ViewEncapsulation.None,
   imports: [
     ReactiveFormsModule,
     IonHeader,
@@ -40,26 +40,22 @@ import { MatchLiveStore } from '../../stores/match-live.store';
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardSubtitle,
-    IonCardContent,
     IonList,
     IonItem,
-    IonLabel,
     IonInput,
     IonSelect,
     IonSelectOption,
-    IonBadge,
     IonButton,
-    IonText,
+    NeonBadgeComponent,
+    StatValueComponent,
+    LiveMatchFeedComponent,
+    PremiumUpsellBannerComponent,
   ],
   template: `
     <ion-header>
-      <ion-toolbar color="primary">
-        <ion-title>Dashboard</ion-title>
-        <ion-button slot="end" fill="clear" color="light" (click)="logout()">Salir</ion-button>
+      <ion-toolbar>
+        <ion-title>StatsGames</ion-title>
+        <ion-button slot="end" fill="clear" (click)="logout()">Salir</ion-button>
       </ion-toolbar>
     </ion-header>
 
@@ -68,35 +64,60 @@ import { MatchLiveStore } from '../../stores/match-live.store';
         <ion-refresher-content />
       </ion-refresher>
 
-      @if (error()) {
-        <ion-text color="danger"><p>{{ error() }}</p></ion-text>
-      }
+      <div class="page-shell u-flex u-flex-col u-gap-4">
+        @if (error()) {
+          <p class="u-error">{{ error() }}</p>
+        }
 
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>{{ profile()?.gamerTag ?? 'Gamer' }}</ion-card-title>
-          <ion-card-subtitle>{{ profile()?.primaryPlatform ?? '—' }}</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
-          <p>Email: {{ auth.email() ?? '—' }}</p>
-          @if (profile()?.fortniteId) {
-            <p>Fortnite: {{ profile()?.fortniteId }}</p>
-          }
-          @if (profile()?.robloxId) {
-            <p>Roblox: {{ profile()?.robloxId }}</p>
-          }
-        </ion-card-content>
-      </ion-card>
+        <section class="sg-player-hero">
+          <div class="u-flex u-justify-between u-items-start u-gap-3">
+            <div class="u-min-w-0">
+              <p class="u-text-xs u-font-display u-tracking-wide u-text-muted u-uppercase u-mb-2">
+                Player profile
+              </p>
+              <h1 class="sg-player-hero__name">{{ profile()?.gamerTag ?? 'Gamer' }}</h1>
+              <div class="sg-player-hero__meta u-mt-3">
+                <sg-neon-badge [tone]="platformTone()">
+                  {{ profile()?.primaryPlatform ?? '—' }}
+                </sg-neon-badge>
+                @if (realtime.isLive()) {
+                  <sg-neon-badge tone="lime" [pulse]="true">STREAM ON</sg-neon-badge>
+                }
+                @if (profile()?.fortniteId) {
+                  <sg-neon-badge tone="cyan">FN {{ profile()?.fortniteId }}</sg-neon-badge>
+                }
+                @if (profile()?.robloxId) {
+                  <sg-neon-badge tone="purple">RBX {{ profile()?.robloxId }}</sg-neon-badge>
+                }
+              </div>
+            </div>
+          </div>
 
-      @if (showLinkPlatformForm()) {
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Vincular cuenta de juego</ion-card-title>
-            <ion-card-subtitle>Para webhooks con platformUserId</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
+          <div class="u-grid-stats u-mt-2">
+            <sg-stat-value label="Matches" [value]="recentMatches().length" accent="lime" />
+            <sg-stat-value label="Live feed" [value]="realtime.liveCount()" accent="purple" />
+            <sg-stat-value label="Platform" [value]="profile()?.primaryPlatform ?? '—'" />
+            <sg-stat-value label="Session" [value]="auth.email() ? 'ON' : '—'" accent="pink" />
+          </div>
+        </section>
+
+        @if (showPremiumBanner() && realtime.premiumInsight().visible) {
+          <sg-premium-upsell-banner
+            [headline]="realtime.premiumInsight().headline"
+            [body]="realtime.premiumInsight().body"
+            (ctaClick)="onPremiumCta()"
+            (dismiss)="dismissPremium()"
+          />
+        }
+
+        @if (showLinkPlatformForm()) {
+          <section class="u-surface-card u-p-4">
+            <h2 class="u-font-display u-text-md u-fw-bold u-uppercase u-tracking-wide u-mb-2">
+              Vincular cuenta
+            </h2>
+            <p class="u-hint">Para webhooks con platformUserId desde Roblox / Fortnite.</p>
             <form [formGroup]="linkForm" (ngSubmit)="submitLinkPlatform()">
-              <ion-list lines="full">
+              <ion-list lines="none">
                 <ion-item>
                   <ion-select label="Plataforma" labelPlacement="stacked" formControlName="platform">
                     @if (!profile()?.fortniteId) {
@@ -108,95 +129,75 @@ import { MatchLiveStore } from '../../stores/match-live.store';
                   </ion-select>
                 </ion-item>
                 <ion-item>
-                  <ion-input
-                    label="ID externo"
-                    labelPlacement="stacked"
-                    formControlName="externalId"
-                  />
+                  <ion-input label="ID externo" labelPlacement="stacked" formControlName="externalId" />
                 </ion-item>
               </ion-list>
-
               @if (linkError()) {
-                <ion-text color="danger"><p>{{ linkError() }}</p></ion-text>
+                <p class="u-error">{{ linkError() }}</p>
               }
-
-              <ion-button expand="block" type="submit" [disabled]="linkForm.invalid || linking()">
+              <button
+                type="submit"
+                class="u-btn u-btn--lime u-btn--block u-mt-3"
+                [disabled]="linkForm.invalid || linking()"
+              >
                 {{ linking() ? 'Vinculando...' : 'Vincular' }}
-              </ion-button>
+              </button>
             </form>
-          </ion-card-content>
-        </ion-card>
-      }
+          </section>
+        }
 
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>Partidas recientes</ion-card-title>
-          <ion-card-subtitle>{{ matches().length }} cargadas</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list>
-            @for (match of matches(); track match.matchId) {
-              <ion-item>
-                <ion-label>
-                  <h2>{{ match.platform }} · {{ match.matchId }}</h2>
-                  <p>{{ match.summary }}</p>
-                  <p>{{ match.updatedAt }}</p>
-                </ion-label>
-              </ion-item>
-            } @empty {
-              <ion-item>
-                <ion-label>Sin partidas todavía.</ion-label>
-              </ion-item>
-            }
-          </ion-list>
-        </ion-card-content>
-      </ion-card>
+        <sg-live-match-feed
+          title="Partidas recientes"
+          [items]="historyFeedItems()"
+          [showLiveIndicator]="false"
+          emptyMessage="Sin partidas todavía."
+        />
 
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>Live feed</ion-card-title>
-          <ion-card-subtitle>Subscription onMatchUpdate</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list>
-            @for (update of liveStore.liveUpdates(); track update.matchId + update.updatedAt) {
-              <ion-item>
-                <ion-badge slot="start" color="success">LIVE</ion-badge>
-                <ion-label>
-                  <h2>{{ update.platform }} · {{ update.matchId }}</h2>
-                  <p>{{ update.summary }}</p>
-                </ion-label>
-              </ion-item>
-            } @empty {
-              <ion-item>
-                <ion-label>Esperando eventos en tiempo real...</ion-label>
-              </ion-item>
-            }
-          </ion-list>
-        </ion-card-content>
-      </ion-card>
+        <sg-live-match-feed
+          title="Live feed"
+          [items]="liveFeedItems()"
+          [showLiveIndicator]="realtime.isLive()"
+          emptyMessage="Esperando eventos en tiempo real vía AppSync…"
+        />
+      </div>
     </ion-content>
   `,
 })
 export class DashboardPageComponent implements OnInit {
   readonly auth = inject(AuthService);
+  readonly realtime = inject(AppSyncRealtimeService);
   private readonly matchService = inject(MatchService);
   private readonly playerService = inject(PlayerService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
-  readonly liveStore = inject(MatchLiveStore);
 
   readonly profile = signal<PlayerProfileView | null>(null);
-  readonly matches = signal<MatchUpdateView[]>([]);
+  readonly recentMatches = signal<MatchUpdateView[]>([]);
   readonly error = signal<string | null>(null);
   readonly linking = signal(false);
   readonly linkError = signal<string | null>(null);
+  readonly showPremiumBanner = signal(true);
 
   readonly showLinkPlatformForm = computed(() => {
     const p = this.profile();
     if (!p) return false;
     return !p.fortniteId || !p.robloxId;
   });
+
+  readonly platformTone = computed(() => {
+    const p = this.profile()?.primaryPlatform?.toLowerCase();
+    if (p === 'fortnite') return 'cyan' as const;
+    if (p === 'roblox') return 'purple' as const;
+    return 'muted' as const;
+  });
+
+  readonly historyFeedItems = computed<LiveMatchFeedItem[]>(() =>
+    this.recentMatches().map((m) => this.toFeedItem(m, false)),
+  );
+
+  readonly liveFeedItems = computed<LiveMatchFeedItem[]>(() =>
+    this.realtime.liveMatches().map((m) => this.toFeedItem(m, true)),
+  );
 
   readonly linkForm = this.fb.nonNullable.group({
     platform: ['roblox' as 'fortnite' | 'roblox', Validators.required],
@@ -205,7 +206,7 @@ export class DashboardPageComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadData();
-    this.liveStore.ensureStarted();
+    this.realtime.ensureConnected();
   }
 
   async refresh(event: CustomEvent): Promise<void> {
@@ -214,14 +215,22 @@ export class DashboardPageComponent implements OnInit {
   }
 
   async logout(): Promise<void> {
-    this.liveStore.reset();
+    this.realtime.reset();
     await this.auth.logout();
     await this.router.navigateByUrl('/login');
   }
 
+  dismissPremium(): void {
+    this.showPremiumBanner.set(false);
+  }
+
+  onPremiumCta(): void {
+    // Placeholder de monetización — enrutar a checkout cuando exista.
+    console.info('[Dashboard] Premium CTA clicked');
+  }
+
   async submitLinkPlatform(): Promise<void> {
     if (this.linkForm.invalid) return;
-
     const userId = this.auth.userId();
     if (!userId) return;
 
@@ -249,6 +258,21 @@ export class DashboardPageComponent implements OnInit {
     }
   }
 
+  private toFeedItem(m: MatchUpdateView, live: boolean): LiveMatchFeedItem {
+    return {
+      matchId: m.matchId,
+      platform: m.platform,
+      summary: m.summary,
+      updatedAt: m.updatedAt,
+      live,
+      stats: this.parseStatsFromSummary(m.summary),
+    };
+  }
+
+  private parseStatsFromSummary(_summary: string): LiveMatchFeedItem['stats'] {
+    return {};
+  }
+
   private async loadData(): Promise<void> {
     const userId = this.auth.userId();
     if (!userId) return;
@@ -266,7 +290,10 @@ export class DashboardPageComponent implements OnInit {
       });
 
       this.matchService.listPlayerMatches(userId).subscribe({
-        next: (rows) => this.matches.set(rows),
+        next: (rows) => {
+          this.recentMatches.set(rows);
+          this.realtime.seedFromHistory(rows);
+        },
         error: (err) =>
           this.error.set(err instanceof Error ? err.message : 'Error cargando partidas'),
       });

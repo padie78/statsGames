@@ -2,10 +2,12 @@ import { Injectable, computed, signal } from '@angular/core';
 import {
   confirmSignUp,
   fetchAuthSession,
+  resendSignUpCode,
   signIn,
   signOut,
   signUp,
 } from 'aws-amplify/auth';
+import { AuthPendingConfirmationError } from './auth.errors';
 import { decodeJwtPayload } from './appsync-auth.util';
 
 @Injectable({ providedIn: 'root' })
@@ -30,13 +32,18 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<void> {
-    await signIn({ username: email, password });
-    const session = await fetchAuthSession();
-    const idToken = session.tokens?.idToken?.toString();
-    if (!idToken) {
-      throw new Error('No se pudo obtener el token de sesión.');
+    const result = await signIn({
+      username: email,
+      password,
+      options: { authFlowType: 'USER_PASSWORD_AUTH' },
+    });
+
+    if (!result.isSignedIn) {
+      await this.handleIncompleteSignIn(email, password, result.nextStep.signInStep);
+      return;
     }
-    this.applyToken(idToken);
+
+    await this.persistSessionFromTokens();
   }
 
   async register(email: string, password: string): Promise<void> {
@@ -56,10 +63,46 @@ export class AuthService {
     });
   }
 
+  async resendConfirmationCode(email: string): Promise<void> {
+    await resendSignUpCode({ username: email });
+  }
+
   async logout(): Promise<void> {
     await signOut();
     this._userId.set(null);
     this._email.set(null);
+  }
+
+  private async handleIncompleteSignIn(
+    email: string,
+    password: string,
+    signInStep: string,
+  ): Promise<never> {
+    switch (signInStep) {
+      case 'CONFIRM_SIGN_UP': {
+        await this.resendConfirmationCode(email);
+        throw new AuthPendingConfirmationError(email, password);
+      }
+      case 'RESET_PASSWORD':
+        throw new Error('Tenés que restablecer tu contraseña. Usá "Olvidé mi contraseña" (próximamente).');
+      case 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED':
+        throw new Error('Tenés que cambiar tu contraseña temporal antes de ingresar.');
+      case 'CONFIRM_SIGN_IN_WITH_SMS_CODE':
+      case 'CONFIRM_SIGN_IN_WITH_TOTP_CODE':
+      case 'CONFIRM_SIGN_IN_WITH_EMAIL_CODE':
+        throw new Error('Completá la verificación MFA para continuar.');
+      default:
+        throw new Error(`No se pudo completar el ingreso (paso: ${signInStep}).`);
+    }
+  }
+
+  private async persistSessionFromTokens(): Promise<void> {
+    const session = await fetchAuthSession({ forceRefresh: true });
+    const idToken = session.tokens?.idToken?.toString();
+    if (!idToken) {
+      throw new Error('No se pudo obtener el token de sesión.');
+    }
+    this.applyToken(idToken);
   }
 
   private applyToken(idToken: string): void {

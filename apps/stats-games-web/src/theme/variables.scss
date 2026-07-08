@@ -1,8 +1,5 @@
-:root {
-  --ion-color-primary: #6366f1;
-  --ion-color-primary-rgb: 99, 102, 241;
-  --ion-color-primary-contrast: #ffffff;
-  --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #575ad4;
-  --ion-color-primary-tint: #7377f2;
-}
+/**
+ * Bridge legacy path — tokens viven en tokens/_variables.scss.
+ * project.json puede dejar de referenciar este archivo; se mantiene por compat.
+ */
+@import './tokens/variables';

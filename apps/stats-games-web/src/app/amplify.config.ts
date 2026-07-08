@@ -19,6 +19,8 @@ export function configureAmplify(env: AppEnvironment): void {
       Cognito: {
         userPoolId: env.cognito.userPoolId,
         userPoolClientId: env.cognito.userPoolClientId,
+        loginWith: { email: true },
+        signUpVerificationMethod: 'code',
       },
     },
     API: {

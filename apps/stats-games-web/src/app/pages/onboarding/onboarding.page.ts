@@ -87,7 +87,7 @@ import { PlayerService } from '../../services/player.service';
         </ion-list>
 
         <ion-text color="medium">
-          <p class="hint">
+          <p class="u-hint">
             El ID de plataforma permite recibir webhooks con platformUserId sin conocer tu Cognito sub.
           </p>
         </ion-text>
@@ -102,14 +102,6 @@ import { PlayerService } from '../../services/player.service';
       </form>
     </ion-content>
   `,
-  styles: [
-    `
-      .hint {
-        font-size: 0.85rem;
-        margin: 0.75rem 0 1rem;
-      }
-    `,
-  ],
 })
 export class OnboardingPageComponent {
   private readonly auth = inject(AuthService);

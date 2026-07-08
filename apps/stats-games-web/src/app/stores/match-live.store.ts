@@ -1,37 +1,32 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Injectable, computed, inject } from '@angular/core';
 import { AuthService } from '../core/auth/auth.service';
-import { MatchService, type MatchUpdateView } from '../services/match.service';
+import { AppSyncRealtimeService } from '../services/appsync-realtime.service';
+import { MatchService } from '../services/match.service';
 
+/**
+ * Facade del live feed — mantiene compatibilidad con MatchLiveStore previo
+ * y delega en AppSyncRealtimeService (Signals).
+ */
 @Injectable({ providedIn: 'root' })
 export class MatchLiveStore {
+  private readonly realtime = inject(AppSyncRealtimeService);
   private readonly auth = inject(AuthService);
   private readonly matches = inject(MatchService);
 
-  private readonly _liveUpdates = signal<MatchUpdateView[]>([]);
-  private subscription?: Subscription;
-
-  readonly liveUpdates = computed(() => this._liveUpdates());
+  readonly liveUpdates = computed(() => this.realtime.liveMatches());
 
   ensureStarted(): void {
-    if (this.subscription) return;
-    const userId = this.auth.userId();
-    if (!userId) return;
-
-    this.subscription = this.matches.onMatchUpdate(userId).subscribe({
-      next: (update) => {
-        this._liveUpdates.update((current) => [update, ...current].slice(0, 20));
-      },
-      error: (err) => {
-        console.error('[MatchLiveStore] subscription error', err);
-        this.reset();
-      },
-    });
+    this.realtime.ensureConnected(this.auth.userId());
   }
 
   reset(): void {
-    this.subscription?.unsubscribe();
-    this.subscription = undefined;
-    this._liveUpdates.set([]);
+    this.realtime.reset();
+  }
+
+  /** @deprecated Preferir AppSyncRealtimeService.seedFromHistory */
+  prefetchHistory(userId: string): void {
+    this.matches.listPlayerMatches(userId).subscribe({
+      next: (rows) => this.realtime.seedFromHistory(rows),
+    });
   }
 }

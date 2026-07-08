@@ -22,10 +22,7 @@
             "output": "assets"
           }
         ],
-        "styles": [
-          "apps/stats-games-web/src/theme/variables.scss",
-          "apps/stats-games-web/src/styles.scss"
-        ],
+        "styles": ["apps/stats-games-web/src/styles.scss"],
         "scripts": []
       },
       "configurations": {

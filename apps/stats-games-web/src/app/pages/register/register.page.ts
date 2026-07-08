@@ -1,6 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonContent,
@@ -78,7 +78,7 @@ function passwordMatchValidator(control: AbstractControl) {
           </ion-list>
 
           <ion-text color="medium">
-            <p class="hint">Mínimo 12 caracteres, mayúsculas, números y símbolos.</p>
+            <p class="u-hint">Mínimo 12 caracteres, mayúsculas, números y símbolos.</p>
           </ion-text>
 
           @if (signupForm.hasError('passwordMismatch') && signupForm.touched) {
@@ -89,6 +89,10 @@ function passwordMatchValidator(control: AbstractControl) {
             <ion-text color="danger"><p>{{ error() }}</p></ion-text>
           }
 
+          @if (notice()) {
+            <ion-text color="success"><p>{{ notice() }}</p></ion-text>
+          }
+
           <ion-button expand="block" type="submit" [disabled]="signupForm.invalid || loading()">
             {{ loading() ? 'Creando...' : 'Registrarme' }}
           </ion-button>
@@ -97,6 +101,7 @@ function passwordMatchValidator(control: AbstractControl) {
         <form [formGroup]="confirmForm" (ngSubmit)="submitConfirm()">
           <ion-text color="medium">
             <p>Enviamos un código a <strong>{{ registeredEmail() }}</strong></p>
+            <p class="u-hint">Revisá spam si no lo ves. El código vence en unos minutos.</p>
           </ion-text>
 
           <ion-list lines="full">
@@ -114,8 +119,22 @@ function passwordMatchValidator(control: AbstractControl) {
             <ion-text color="danger"><p>{{ error() }}</p></ion-text>
           }
 
+          @if (notice()) {
+            <ion-text color="success"><p>{{ notice() }}</p></ion-text>
+          }
+
           <ion-button expand="block" type="submit" [disabled]="confirmForm.invalid || loading()">
             {{ loading() ? 'Verificando...' : 'Confirmar y continuar' }}
+          </ion-button>
+
+          <ion-button
+            expand="block"
+            fill="clear"
+            type="button"
+            [disabled]="loading()"
+            (click)="resendCode()"
+          >
+            Reenviar código
           </ion-button>
         </form>
       }
@@ -125,18 +144,11 @@ function passwordMatchValidator(control: AbstractControl) {
       </ion-button>
     </ion-content>
   `,
-  styles: [
-    `
-      .hint {
-        font-size: 0.85rem;
-        margin: 0.5rem 0 1rem;
-      }
-    `,
-  ],
 })
-export class RegisterPageComponent {
+export class RegisterPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
 
   readonly step = signal<'signup' | 'confirm'>('signup');
@@ -145,6 +157,7 @@ export class RegisterPageComponent {
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly notice = signal<string | null>(null);
 
   readonly signupForm = this.fb.nonNullable.group(
     {
@@ -165,6 +178,38 @@ export class RegisterPageComponent {
   readonly confirmForm = this.fb.nonNullable.group({
     code: ['', [Validators.required, Validators.minLength(6)]],
   });
+
+  ngOnInit(): void {
+    const step = this.route.snapshot.queryParamMap.get('step');
+    const email = this.route.snapshot.queryParamMap.get('email');
+    const state = history.state as { password?: string };
+
+    if (step === 'confirm' && email) {
+      this.registeredEmail.set(email);
+      if (state.password) {
+        this.pendingPassword = state.password;
+      }
+      this.step.set('confirm');
+    }
+  }
+
+  async resendCode(): Promise<void> {
+    const email = this.registeredEmail();
+    if (!email) return;
+
+    this.loading.set(true);
+    this.error.set(null);
+    this.notice.set(null);
+
+    try {
+      await this.auth.resendConfirmationCode(email);
+      this.notice.set('Código reenviado. Revisá tu email (y spam).');
+    } catch (err) {
+      this.error.set(err instanceof Error ? err.message : 'No se pudo reenviar el código');
+    } finally {
+      this.loading.set(false);
+    }
+  }
 
   async submitSignup(): Promise<void> {
     if (this.signupForm.invalid) return;
@@ -193,7 +238,15 @@ export class RegisterPageComponent {
       const email = this.registeredEmail();
       const { code } = this.confirmForm.getRawValue();
       await this.auth.confirmRegistration(email, code);
-      await this.auth.login(email, this.pendingPassword);
+
+      if (this.pendingPassword) {
+        await this.auth.login(email, this.pendingPassword);
+      } else {
+        this.error.set('Confirmado. Volvé a login e ingresá con tu contraseña.');
+        await this.router.navigate(['/login'], { queryParams: { email } });
+        return;
+      }
+
       await this.router.navigateByUrl('/onboarding');
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Código inválido');

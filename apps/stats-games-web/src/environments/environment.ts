@@ -1,12 +1,12 @@
 export const environment = {
   production: false,
   appsync: {
-    endpoint: 'https://REPLACE.appsync-api.eu-central-1.amazonaws.com/graphql',
+    endpoint: 'https://fjfiyg5qmrdwdiga4ru2g2ut7m.appsync-api.eu-central-1.amazonaws.com/graphql',
     region: 'eu-central-1',
-    apiKey: 'REPLACE_API_KEY',
+    apiKey: 'da2-el3nlzvq2nawxcgx7nqcdw6kaa',
   },
   cognito: {
-    userPoolId: 'eu-central-1_REPLACE',
-    userPoolClientId: 'REPLACE_CLIENT_ID',
+    userPoolId: 'eu-central-1_80z3lWnpT',
+    userPoolClientId: '32htrhmdetl2a2rmqi3hba5gb0',
   },
 };

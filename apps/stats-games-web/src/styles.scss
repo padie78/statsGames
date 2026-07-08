@@ -1,3 +1,7 @@
+@import './theme/tokens/variables';
+@import './theme/utilities/utilities';
+@import './theme/components/atomic';
+
 @import '@ionic/angular/css/core.css';
 @import '@ionic/angular/css/normalize.css';
 @import '@ionic/angular/css/structure.css';
@@ -9,6 +13,86 @@
 @import '@ionic/angular/css/text-transformation.css';
 @import '@ionic/angular/css/flex-utils.css';
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
-  background: #0f172a;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sg-font-body);
+  color: var(--sg-text-primary);
+  background-color: var(--sg-bg-deep);
+  background-image: var(--sg-gradient-hero), var(--sg-bg-noise);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+ion-app,
+ion-content {
+  --background: transparent;
+}
+
+ion-toolbar {
+  --background: rgba(17, 24, 39, 0.92);
+  --border-color: var(--sg-border-subtle);
+  --color: var(--sg-text-primary);
+  backdrop-filter: blur(12px);
+}
+
+ion-title {
+  font-family: var(--sg-font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: var(--sg-fs-md);
+}
+
+ion-item {
+  --background: rgba(26, 34, 52, 0.55);
+  --border-color: var(--sg-border-subtle);
+  --color: var(--sg-text-primary);
+  --highlight-color-focused: var(--sg-neon-lime);
+  margin-bottom: var(--sg-space-2);
+  border-radius: var(--sg-radius-md);
+  overflow: hidden;
+}
+
+ion-input,
+ion-select {
+  --color: var(--sg-text-primary);
+  --placeholder-color: var(--sg-text-muted);
+}
+
+ion-tab-bar {
+  --background: rgba(10, 14, 23, 0.96);
+  --border: 1px solid var(--sg-border-subtle);
+  --color: var(--sg-text-muted);
+  --color-selected: var(--sg-neon-lime);
+}
+
+.page-shell {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.pulse-live {
+  animation: sg-pulse 1.4s var(--sg-ease-out) infinite;
+}
+
+@keyframes sg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(184, 255, 60, 0.55);
+  }
+  50% {
+    opacity: 0.75;
+    box-shadow: 0 0 0 8px rgba(184, 255, 60, 0);
+  }
 }

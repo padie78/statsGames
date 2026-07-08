@@ -1,0 +1,115 @@
+// =============================================================================
+// StatsGames — TRN Cyberpunk Design Tokens
+// Fuente única de verdad visual. Ningún componente define CSS local.
+// =============================================================================
+
+:root {
+  // —— Surfaces (dark depth) ——
+  --sg-bg-void: #05070d;
+  --sg-bg-deep: #0a0e17;
+  --sg-bg-panel: #111827;
+  --sg-bg-elevated: #1a2234;
+  --sg-bg-overlay: rgba(5, 7, 13, 0.85);
+  --sg-bg-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+
+  // —— Neon accents ——
+  --sg-neon-lime: #b8ff3c;
+  --sg-neon-lime-rgb: 184, 255, 60;
+  --sg-neon-purple: #a855f7;
+  --sg-neon-purple-rgb: 168, 85, 247;
+  --sg-neon-pink: #ff2d95;
+  --sg-neon-pink-rgb: 255, 45, 149;
+  --sg-neon-cyan: #22d3ee;
+  --sg-neon-cyan-rgb: 34, 211, 238;
+
+  // —— Text ——
+  --sg-text-primary: #f1f5f9;
+  --sg-text-secondary: #94a3b8;
+  --sg-text-muted: #64748b;
+  --sg-text-inverse: #05070d;
+
+  // —— Borders ——
+  --sg-border-subtle: rgba(148, 163, 184, 0.12);
+  --sg-border-strong: rgba(148, 163, 184, 0.28);
+  --sg-border-lime: rgba(184, 255, 60, 0.55);
+  --sg-border-purple: rgba(168, 85, 247, 0.55);
+  --sg-border-pink: rgba(255, 45, 149, 0.55);
+
+  // —— Glow shadows ——
+  --sg-glow-lime: 0 0 12px rgba(184, 255, 60, 0.45), 0 0 28px rgba(184, 255, 60, 0.18);
+  --sg-glow-purple: 0 0 12px rgba(168, 85, 247, 0.5), 0 0 28px rgba(168, 85, 247, 0.2);
+  --sg-glow-pink: 0 0 12px rgba(255, 45, 149, 0.5), 0 0 28px rgba(255, 45, 149, 0.2);
+  --sg-glow-card: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  // —— Gradients ——
+  --sg-gradient-hero: linear-gradient(145deg, #0a0e17 0%, #15102a 45%, #0a1628 100%);
+  --sg-gradient-panel: linear-gradient(180deg, rgba(26, 34, 52, 0.95) 0%, rgba(10, 14, 23, 0.98) 100%);
+  --sg-gradient-cta: linear-gradient(90deg, #b8ff3c 0%, #7ddf00 100%);
+  --sg-gradient-ai: linear-gradient(90deg, #a855f7 0%, #6366f1 50%, #22d3ee 100%);
+  --sg-gradient-streak: linear-gradient(90deg, #ff2d95 0%, #fb923c 100%);
+
+  // —— Typography ——
+  --sg-font-display: 'Orbitron', 'Rajdhani', system-ui, sans-serif;
+  --sg-font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --sg-font-mono: 'JetBrains Mono', 'Roboto Mono', ui-monospace, monospace;
+
+  --sg-fs-xs: 0.6875rem;
+  --sg-fs-sm: 0.8125rem;
+  --sg-fs-md: 0.9375rem;
+  --sg-fs-lg: 1.125rem;
+  --sg-fs-xl: 1.375rem;
+  --sg-fs-2xl: 1.75rem;
+  --sg-fs-3xl: 2.25rem;
+
+  --sg-fw-regular: 400;
+  --sg-fw-medium: 500;
+  --sg-fw-semibold: 600;
+  --sg-fw-bold: 700;
+  --sg-fw-black: 800;
+
+  --sg-lh-tight: 1.15;
+  --sg-lh-snug: 1.35;
+  --sg-lh-normal: 1.5;
+
+  // —— Spacing scale (4px base) ——
+  --sg-space-1: 0.25rem;
+  --sg-space-2: 0.5rem;
+  --sg-space-3: 0.75rem;
+  --sg-space-4: 1rem;
+  --sg-space-5: 1.25rem;
+  --sg-space-6: 1.5rem;
+  --sg-space-8: 2rem;
+  --sg-space-10: 2.5rem;
+  --sg-space-12: 3rem;
+
+  // —— Radius ——
+  --sg-radius-sm: 4px;
+  --sg-radius-md: 8px;
+  --sg-radius-lg: 12px;
+  --sg-radius-xl: 16px;
+  --sg-radius-pill: 999px;
+
+  // —— Motion ——
+  --sg-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sg-duration-fast: 120ms;
+  --sg-duration-base: 220ms;
+  --sg-duration-slow: 480ms;
+
+  // —— Ionic bridge (cyberpunk override) ——
+  --ion-background-color: var(--sg-bg-deep);
+  --ion-text-color: var(--sg-text-primary);
+  --ion-toolbar-background: var(--sg-bg-panel);
+  --ion-toolbar-color: var(--sg-text-primary);
+  --ion-item-background: transparent;
+  --ion-card-background: var(--sg-bg-elevated);
+  --ion-color-primary: var(--sg-neon-lime);
+  --ion-color-primary-contrast: var(--sg-text-inverse);
+  --ion-color-primary-rgb: var(--sg-neon-lime-rgb);
+  --ion-color-secondary: var(--sg-neon-purple);
+  --ion-color-secondary-rgb: var(--sg-neon-purple-rgb);
+  --ion-color-danger: var(--sg-neon-pink);
+  --ion-color-danger-rgb: var(--sg-neon-pink-rgb);
+  --ion-color-success: var(--sg-neon-lime);
+  --ion-color-warning: #fb923c;
+  --ion-font-family: var(--sg-font-body);
+}
