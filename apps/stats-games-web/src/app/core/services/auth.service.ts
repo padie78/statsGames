@@ -12,7 +12,7 @@ import {
 } from 'aws-amplify/auth';
 import { isOAuthConfigured } from '../../amplify.config';
 import { environment } from '../../../environments/environment';
-import { AuthPendingConfirmationError } from '../auth/auth.errors';
+import { AuthPendingConfirmationError, isAlreadyAuthenticatedError, mapAuthErrorMessage } from '../auth/auth.errors';
 import { decodeJwtPayload } from '../auth/appsync-auth.util';
 
 export type SelectedGame = 'roblox' | 'fortnite';
@@ -49,19 +49,27 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<void> {
-    const result = await signIn({
-      username: email,
-      password,
-      options: { authFlowType: 'USER_PASSWORD_AUTH' },
-    });
+    try {
+      const result = await signIn({
+        username: email,
+        password,
+        options: { authFlowType: 'USER_PASSWORD_AUTH' },
+      });
 
-    if (!result.isSignedIn) {
-      await this.handleIncompleteSignIn(email, password, result.nextStep.signInStep);
-      return;
+      if (!result.isSignedIn) {
+        await this.handleIncompleteSignIn(email, password, result.nextStep.signInStep);
+        return;
+      }
+
+      await this.persistSessionFromTokens();
+      await this.refreshUserAttributes();
+    } catch (err) {
+      if (isAlreadyAuthenticatedError(err)) {
+        await this.resumeExistingSession();
+        return;
+      }
+      throw err;
     }
-
-    await this.persistSessionFromTokens();
-    await this.refreshUserAttributes();
   }
 
   async loginWithSocialProvider(provider: SocialProvider): Promise<void> {
@@ -71,12 +79,29 @@ export class AuthService {
       );
     }
 
-    if (provider === 'Discord') {
-      await signInWithRedirect({ provider: { custom: 'Discord' } });
+    if (await this.resumeExistingSession()) {
       return;
     }
 
-    await signInWithRedirect({ provider });
+    try {
+      if (provider === 'Discord') {
+        await signInWithRedirect({ provider: { custom: 'Discord' } });
+        return;
+      }
+
+      await signInWithRedirect({ provider });
+    } catch (err) {
+      if (isAlreadyAuthenticatedError(err)) {
+        await this.resumeExistingSession();
+        return;
+      }
+      throw err;
+    }
+  }
+
+  /** Restaura tokens en memoria si Amplify ya tiene sesión persistida. */
+  async resumeExistingSession(): Promise<boolean> {
+    return this.restoreSession();
   }
 
   async register(email: string, password: string): Promise<void> {

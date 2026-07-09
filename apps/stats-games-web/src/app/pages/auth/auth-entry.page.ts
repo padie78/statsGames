@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal, ViewEncapsulation } from '@angular/c
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonInput } from '@ionic/angular/standalone';
-import { AuthPendingConfirmationError, mapAuthErrorMessage } from '../../core/auth/auth.errors';
+import { AuthPendingConfirmationError, isAlreadyAuthenticatedError, mapAuthErrorMessage } from '../../core/auth/auth.errors';
 import { AuthService, type SocialProvider } from '../../core/services/auth.service';
 
 type AuthMode = 'signin' | 'signup' | 'confirm';
@@ -260,6 +260,14 @@ export class AuthEntryPageComponent implements OnInit {
       this.signinForm.patchValue({ email: prefillEmail });
       this.signupForm.patchValue({ email: prefillEmail });
     }
+
+    void this.redirectIfAlreadyAuthenticated();
+  }
+
+  private async redirectIfAlreadyAuthenticated(): Promise<void> {
+    const restored = await this.auth.restoreSession();
+    if (!restored && !this.auth.isAuthenticated()) return;
+    await this.navigateAfterAuth();
   }
 
   setMode(next: AuthMode): void {
@@ -274,8 +282,16 @@ export class AuthEntryPageComponent implements OnInit {
     this.error.set(null);
     try {
       await this.auth.loginWithSocialProvider(provider);
+      if (this.auth.isAuthenticated()) {
+        await this.navigateAfterAuth();
+      }
     } catch (err) {
+      if (isAlreadyAuthenticatedError(err)) {
+        await this.navigateAfterAuth();
+        return;
+      }
       this.error.set(mapAuthErrorMessage(err));
+    } finally {
       this.loading.set(false);
     }
   }
@@ -294,6 +310,10 @@ export class AuthEntryPageComponent implements OnInit {
         this.registeredEmail.set(err.email);
         this.pendingPassword = err.password;
         this.mode.set('confirm');
+        return;
+      }
+      if (isAlreadyAuthenticatedError(err)) {
+        await this.navigateAfterAuth();
         return;
       }
       this.error.set(mapAuthErrorMessage(err));
@@ -359,6 +379,10 @@ export class AuthEntryPageComponent implements OnInit {
       await this.auth.refreshUserAttributes();
       await this.navigateAfterAuth();
     } catch (err) {
+      if (isAlreadyAuthenticatedError(err)) {
+        await this.navigateAfterAuth();
+        return;
+      }
       this.error.set(err instanceof Error ? err.message : 'Código inválido');
     } finally {
       this.loading.set(false);

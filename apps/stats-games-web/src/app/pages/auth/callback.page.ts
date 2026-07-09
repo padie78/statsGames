@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent, IonSpinner } from '@ionic/angular/standalone';
-import { mapAuthErrorMessage } from '../../core/auth/auth.errors';
+import { isAlreadyAuthenticatedError, mapAuthErrorMessage } from '../../core/auth/auth.errors';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -39,6 +39,15 @@ export class AuthCallbackPageComponent implements OnInit {
 
       await this.router.navigateByUrl('/tabs/dashboard');
     } catch (err) {
+      if (isAlreadyAuthenticatedError(err)) {
+        await this.auth.resumeExistingSession();
+        if (this.auth.needsOnboarding()) {
+          await this.router.navigateByUrl('/onboarding');
+          return;
+        }
+        await this.router.navigateByUrl('/tabs/dashboard');
+        return;
+      }
       this.error.set(mapAuthErrorMessage(err));
       setTimeout(() => void this.router.navigateByUrl('/login'), 2500);
     }

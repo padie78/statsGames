@@ -8,6 +8,15 @@ export class AuthPendingConfirmationError extends Error {
   }
 }
 
+export function isAlreadyAuthenticatedError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return (
+    err.name === 'UserAlreadyAuthenticatedException' ||
+    err.message.includes('already a signed in user') ||
+    err.message.includes('already authenticated')
+  );
+}
+
 export function mapAuthErrorMessage(err: unknown): string {
   if (err instanceof AuthPendingConfirmationError) {
     return err.message;
