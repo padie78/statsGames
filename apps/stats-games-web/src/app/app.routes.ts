@@ -7,16 +7,17 @@ export const APP_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'tabs/dashboard' },
   {
     path: 'login',
-    loadComponent: () => import('./pages/auth/login.page').then((m) => m.LoginPageComponent),
-  },
-  {
-    path: 'auth/callback',
-    loadComponent: () => import('./pages/auth/callback.page').then((m) => m.AuthCallbackPageComponent),
+    loadComponent: () =>
+      import('./pages/auth/auth-entry.page').then((m) => m.AuthEntryPageComponent),
   },
   {
     path: 'register',
     loadComponent: () =>
-      import('./pages/register/register.page').then((m) => m.RegisterPageComponent),
+      import('./pages/auth/auth-entry.page').then((m) => m.AuthEntryPageComponent),
+  },
+  {
+    path: 'auth/callback',
+    loadComponent: () => import('./pages/auth/callback.page').then((m) => m.AuthCallbackPageComponent),
   },
   {
     path: 'onboarding',

@@ -8,7 +8,7 @@ export const environment = {
   cognito: {
     userPoolId: 'eu-central-1_80z3lWnpT',
     userPoolClientId: '32htrhmdetl2a2rmqi3hba5gb0',
-    domain: '',
+    domain: 'stats-games-dev',
     oauthRedirectSignIn: 'http://localhost:4200/auth/callback',
     oauthRedirectSignOut: 'http://localhost:4200/login',
   },

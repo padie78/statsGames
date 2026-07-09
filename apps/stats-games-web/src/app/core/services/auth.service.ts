@@ -10,6 +10,8 @@ import {
   signUp,
   updateUserAttributes,
 } from 'aws-amplify/auth';
+import { isOAuthConfigured } from '../../amplify.config';
+import { environment } from '../../../environments/environment';
 import { AuthPendingConfirmationError } from '../auth/auth.errors';
 import { decodeJwtPayload } from '../auth/appsync-auth.util';
 
@@ -63,6 +65,12 @@ export class AuthService {
   }
 
   async loginWithSocialProvider(provider: SocialProvider): Promise<void> {
+    if (!isOAuthConfigured(environment)) {
+      throw new Error(
+        'Login social no configurado. Ejecutá npm run sync:env tras terraform apply.',
+      );
+    }
+
     if (provider === 'Discord') {
       await signInWithRedirect({ provider: { custom: 'Discord' } });
       return;

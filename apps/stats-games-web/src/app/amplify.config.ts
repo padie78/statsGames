@@ -17,9 +17,9 @@ export interface AppEnvironment {
 }
 
 export function configureAmplify(env: AppEnvironment): void {
-  const oauthDomain = env.cognito.domain;
   const redirectSignIn = env.cognito.oauthRedirectSignIn ?? `${window.location.origin}/auth/callback`;
   const redirectSignOut = env.cognito.oauthRedirectSignOut ?? `${window.location.origin}/login`;
+  const oauthDomain = resolveCognitoOAuthDomain(env.cognito.domain, env.appsync.region);
 
   Amplify.configure({
     Auth: {
@@ -28,15 +28,17 @@ export function configureAmplify(env: AppEnvironment): void {
         userPoolClientId: env.cognito.userPoolClientId,
         loginWith: {
           email: true,
-          oauth: oauthDomain
+          ...(oauthDomain
             ? {
-                domain: oauthDomain,
-                scopes: ['openid', 'email', 'profile'],
-                redirectSignIn: [redirectSignIn],
-                redirectSignOut: [redirectSignOut],
-                responseType: 'code',
+                oauth: {
+                  domain: oauthDomain,
+                  scopes: ['openid', 'email', 'profile'],
+                  redirectSignIn: [redirectSignIn],
+                  redirectSignOut: [redirectSignOut],
+                  responseType: 'code' as const,
+                },
               }
-            : undefined,
+            : {}),
         },
         signUpVerificationMethod: 'code',
       },
@@ -50,4 +52,19 @@ export function configureAmplify(env: AppEnvironment): void {
       },
     },
   });
+}
+
+/** Acepta prefijo (`stats-games-dev`) o FQDN completo de Hosted UI. */
+export function resolveCognitoOAuthDomain(
+  domain: string | undefined,
+  region: string,
+): string | undefined {
+  const trimmed = domain?.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.includes('.amazoncognito.com')) return trimmed;
+  return `${trimmed}.auth.${region}.amazoncognito.com`;
+}
+
+export function isOAuthConfigured(env: AppEnvironment): boolean {
+  return !!resolveCognitoOAuthDomain(env.cognito.domain, env.appsync.region);
 }
