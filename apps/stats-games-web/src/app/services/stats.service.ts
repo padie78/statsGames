@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { generateClient } from 'aws-amplify/api';
 import { Observable, from, map } from 'rxjs';
-import { authenticatedAppsyncOptions } from '../core/auth/appsync-auth.util';
+import { assertGraphqlData } from '../utils/graphql-error.util';
 
 export interface PlayerStatsRollupView {
   userId: string;
@@ -76,11 +76,16 @@ export class StatsService {
     platform?: 'fortnite' | 'roblox',
   ): Observable<PlayerStatsRollupView[]> {
     return from(
-      this.authenticatedGraphql<{ data: ListPlayerStatsRollupsResp }>({
+      this.client.graphql({
         query: LIST_PLAYER_STATS_ROLLUPS,
         variables: { userId, granularity, periodId, platform },
       }),
-    ).pipe(map((resp) => resp.data.listPlayerStatsRollups));
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<ListPlayerStatsRollupsResp>(resp as { data?: ListPlayerStatsRollupsResp })
+          .listPlayerStatsRollups,
+      ),
+    );
   }
 
   listPlayerDailyTrend(
@@ -89,24 +94,16 @@ export class StatsService {
     days = 7,
   ): Observable<PlayerStatsRollupView[]> {
     return from(
-      this.authenticatedGraphql<{ data: ListPlayerDailyTrendResp }>({
+      this.client.graphql({
         query: LIST_PLAYER_DAILY_TREND,
         variables: { userId, platform, days },
       }),
-    ).pipe(map((resp) => resp.data.listPlayerDailyTrend));
-  }
-
-  private async authenticatedGraphql<T>(params: {
-    query: string;
-    variables?: Record<string, unknown>;
-  }): Promise<T> {
-    const authOptions = await authenticatedAppsyncOptions();
-    const result = await this.client.graphql({
-      query: params.query,
-      variables: params.variables,
-      ...authOptions,
-    });
-    return result as T;
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<ListPlayerDailyTrendResp>(resp as { data?: ListPlayerDailyTrendResp })
+          .listPlayerDailyTrend,
+      ),
+    );
   }
 }
 
@@ -116,7 +113,7 @@ function currentWeeklyPeriodId(): string {
   const day = tmp.getUTCDay() || 7;
   tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
+  const week = Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
   return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 

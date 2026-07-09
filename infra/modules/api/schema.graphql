@@ -1,9 +1,13 @@
 type Query {
-  health: String!
+  health: String! @aws_api_key
   getPlayerProfile(userId: ID!): PlayerProfile!
-  getProfileByGamerTag(gamerTag: String!): PublicPlayerProfile!
-  searchPlayers(query: String!, limit: Int): [PlayerSearchHit!]!
+    @aws_api_key
+    @aws_cognito_user_pools
+  getProfileByGamerTag(gamerTag: String!): PublicPlayerProfile! @aws_api_key
+  searchPlayers(query: String!, limit: Int): [PlayerSearchHit!]! @aws_api_key
   listPlayerMatches(userId: ID!, platform: String, limit: Int): [MatchUpdate!]!
+    @aws_api_key
+    @aws_cognito_user_pools
   listPlayerStatsRollups(
     userId: ID!
     granularity: String!
@@ -11,10 +15,14 @@ type Query {
     platform: String
     limit: Int
   ): [PlayerStatsRollup!]!
+    @aws_api_key
+    @aws_cognito_user_pools
   listPlayerDailyTrend(userId: ID!, platform: String, days: Int): [PlayerStatsRollup!]!
+    @aws_api_key
+    @aws_cognito_user_pools
 }
 
-type PlayerProfile {
+type PlayerProfile @aws_api_key @aws_cognito_user_pools {
   userId: ID!
   gamerTag: String!
   primaryPlatform: String!
@@ -26,7 +34,7 @@ type PlayerProfile {
   versionId: Int!
 }
 
-type PublicPlayerProfile {
+type PublicPlayerProfile @aws_api_key {
   userId: ID!
   gamerTag: String!
   primaryPlatform: String!
@@ -34,7 +42,7 @@ type PublicPlayerProfile {
   createdAtIso: AWSDateTime!
 }
 
-type PlayerSearchHit {
+type PlayerSearchHit @aws_api_key {
   userId: ID!
   gamerTag: String!
   primaryPlatform: String!
@@ -73,25 +81,30 @@ input MatchUpdateInput {
 }
 
 type Mutation {
-  ping(message: String!): String!
+  ping(message: String!): String! @aws_api_key @aws_cognito_user_pools
   upsertPlayerProfile(input: UpsertPlayerProfileInput!): PlayerProfile!
+    @aws_api_key
+    @aws_cognito_user_pools
   linkPlatformAccount(input: LinkPlatformAccountInput!): PlayerProfile!
-  publishMatchUpdate(input: MatchUpdateInput!): MatchUpdate
+    @aws_api_key
+    @aws_cognito_user_pools
+  publishMatchUpdate(input: MatchUpdateInput!): MatchUpdate @aws_api_key
 }
 
 type Subscription {
   onMatchUpdate(userId: ID!): MatchUpdate
     @aws_subscribe(mutations: ["publishMatchUpdate"])
+    @aws_cognito_user_pools
 }
 
-type MatchStats {
+type MatchStats @aws_api_key @aws_cognito_user_pools {
   kills: Int
   deaths: Int
   placement: Int
   assists: Int
 }
 
-type MatchUpdate {
+type MatchUpdate @aws_api_key @aws_cognito_user_pools {
   userId: ID!
   matchId: ID!
   platform: String!
@@ -100,7 +113,7 @@ type MatchUpdate {
   stats: MatchStats
 }
 
-type PlayerStatsRollup {
+type PlayerStatsRollup @aws_api_key @aws_cognito_user_pools {
   userId: ID!
   platform: String!
   granularity: String!

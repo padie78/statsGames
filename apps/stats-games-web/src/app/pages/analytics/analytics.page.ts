@@ -2,6 +2,7 @@ import { Component, OnInit, ViewEncapsulation, computed, inject, signal } from '
 import { IonContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { PlayerService } from '../../services/player.service';
 import {
   StatsService,
   currentWeeklyPeriodIdForStats,
@@ -9,6 +10,7 @@ import {
 } from '../../services/stats.service';
 import { StatValueComponent, TrendChartComponent, type TrendChartPoint } from '../../ui';
 import { computeKdRatio } from '../../utils/match-stats.util';
+import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
 @Component({
   standalone: true,
@@ -25,6 +27,15 @@ import { computeKdRatio } from '../../utils/match-stats.util';
 
         @if (error()) {
           <p class="u-error">{{ error() }}</p>
+        }
+
+        @if (showEmptyHint()) {
+          <section class="u-surface-card u-p-4">
+            <p class="u-hint u-m-0">
+              Sin estadísticas todavía. Cargá mock data con tu User ID (Config):
+              <code class="sg-code-block u-mt-2">npm run seed:mock -- --user-id TU_USER_ID</code>
+            </p>
+          </section>
         }
 
         @if (weekly()) {
@@ -60,6 +71,7 @@ import { computeKdRatio } from '../../utils/match-stats.util';
 })
 export class AnalyticsPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly playerService = inject(PlayerService);
   private readonly statsService = inject(StatsService);
 
   readonly weekly = signal<PlayerStatsRollupView | null>(null);
@@ -86,6 +98,14 @@ export class AnalyticsPageComponent implements OnInit {
     })),
   );
 
+  readonly showEmptyHint = computed(
+    () =>
+      !this.error() &&
+      !this.weekly() &&
+      this.dailyTrend().length > 0 &&
+      this.dailyTrend().every((d) => d.matchCount === 0),
+  );
+
   ngOnInit(): void {
     void this.loadStats();
   }
@@ -94,10 +114,15 @@ export class AnalyticsPageComponent implements OnInit {
     const userId = this.auth.userId();
     if (!userId) return;
 
-    const platform = this.auth.selectedGame() ?? undefined;
     this.error.set(null);
 
     try {
+      const profile = await this.playerService.getPlayerProfileOrNull(userId);
+      const platform =
+        (profile?.primaryPlatform as 'fortnite' | 'roblox' | undefined) ??
+        this.auth.selectedGame() ??
+        undefined;
+
       const [weeklyRows, daily] = await Promise.all([
         firstValueFrom(
           this.statsService.listPlayerStatsRollups(
@@ -113,7 +138,7 @@ export class AnalyticsPageComponent implements OnInit {
       this.weekly.set(weeklyRows[0] ?? null);
       this.dailyTrend.set(daily);
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Error cargando estadísticas');
+      this.error.set(extractGraphqlErrorMessage(err, 'Error cargando estadísticas'));
     }
   }
 }

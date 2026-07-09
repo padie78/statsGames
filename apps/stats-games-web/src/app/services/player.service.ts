@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { generateClient } from 'aws-amplify/api';
 import { Observable, firstValueFrom, from, map } from 'rxjs';
-import { authenticatedAppsyncOptions } from '../core/auth/appsync-auth.util';
+import { assertGraphqlData } from '../utils/graphql-error.util';
 
 export interface PlayerProfileView {
   userId: string;
@@ -128,10 +128,17 @@ export class PlayerService {
   private readonly client = generateClient();
 
   getPlayerProfile(userId: string): Observable<PlayerProfileView> {
-    return from(this.authenticatedGraphql<{ data: GetPlayerProfileResp }>({
-      query: GET_PLAYER_PROFILE,
-      variables: { userId },
-    })).pipe(map((resp) => resp.data.getPlayerProfile));
+    return from(
+      this.client.graphql({
+        query: GET_PLAYER_PROFILE,
+        variables: { userId },
+      }),
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<GetPlayerProfileResp>(resp as { data?: GetPlayerProfileResp })
+          .getPlayerProfile,
+      ),
+    );
   }
 
   async getPlayerProfileOrNull(userId: string): Promise<PlayerProfileView | null> {
@@ -145,20 +152,30 @@ export class PlayerService {
 
   upsertPlayerProfile(input: UpsertPlayerProfileInput): Observable<PlayerProfileView> {
     return from(
-      this.authenticatedGraphql<{ data: UpsertPlayerProfileResp }>({
+      this.client.graphql({
         query: UPSERT_PLAYER_PROFILE,
         variables: { input },
       }),
-    ).pipe(map((resp) => resp.data.upsertPlayerProfile));
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<UpsertPlayerProfileResp>(resp as { data?: UpsertPlayerProfileResp })
+          .upsertPlayerProfile,
+      ),
+    );
   }
 
   linkPlatformAccount(input: LinkPlatformAccountInput): Observable<PlayerProfileView> {
     return from(
-      this.authenticatedGraphql<{ data: LinkPlatformAccountResp }>({
+      this.client.graphql({
         query: LINK_PLATFORM_ACCOUNT,
         variables: { input },
       }),
-    ).pipe(map((resp) => resp.data.linkPlatformAccount));
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<LinkPlatformAccountResp>(resp as { data?: LinkPlatformAccountResp })
+          .linkPlatformAccount,
+      ),
+    );
   }
 
   getProfileByGamerTag(gamerTag: string): Observable<PublicPlayerProfileView> {
@@ -167,7 +184,12 @@ export class PlayerService {
         query: GET_PROFILE_BY_GAMER_TAG,
         variables: { gamerTag },
       }),
-    ).pipe(map((resp) => (resp as { data: GetProfileByGamerTagResp }).data.getProfileByGamerTag));
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<GetProfileByGamerTagResp>(resp as { data?: GetProfileByGamerTagResp })
+          .getProfileByGamerTag,
+      ),
+    );
   }
 
   async getProfileByGamerTagOrNull(gamerTag: string): Promise<PublicPlayerProfileView | null> {
@@ -185,20 +207,11 @@ export class PlayerService {
         query: SEARCH_PLAYERS,
         variables: { query, limit },
       }),
-    ).pipe(map((resp) => (resp as { data: SearchPlayersResp }).data.searchPlayers));
-  }
-
-  private async authenticatedGraphql<T>(params: {
-    query: string;
-    variables?: Record<string, unknown>;
-  }): Promise<T> {
-    const authOptions = await authenticatedAppsyncOptions();
-    const result = await this.client.graphql({
-      query: params.query,
-      variables: params.variables,
-      ...authOptions,
-    });
-    return result as T;
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<SearchPlayersResp>(resp as { data?: SearchPlayersResp }).searchPlayers,
+      ),
+    );
   }
 }
 
@@ -210,19 +223,14 @@ function isPlayerNotFoundError(error: unknown): boolean {
     errors?: Array<{ message?: string; errorType?: string }>;
   };
 
-  const messages = [
-    err.message,
-    ...(err.errors?.map((e) => e.message) ?? []),
-  ].filter(Boolean);
+  const messages = [err.message, ...(err.errors?.map((e) => e.message) ?? [])].filter(Boolean);
 
   const types = err.errors?.map((e) => e.errorType).filter(Boolean) ?? [];
 
   return (
     types.some((t) => t === 'PlayerNotFound') ||
     messages.some(
-      (m) =>
-        m?.includes('Perfil de jugador no encontrado') ||
-        m?.includes('PlayerNotFound'),
+      (m) => m?.includes('Perfil de jugador no encontrado') || m?.includes('PlayerNotFound'),
     )
   );
 }
