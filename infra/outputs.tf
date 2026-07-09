@@ -46,6 +46,18 @@ output "cognito_web_client_id" {
   value = module.auth.web_client_id
 }
 
+output "cognito_domain" {
+  value = module.auth.cognito_domain
+}
+
+output "cognito_hosted_ui_base_url" {
+  value = module.auth.cognito_hosted_ui_base_url
+}
+
+output "post_confirmation_name" {
+  value = module.auth.post_confirmation_name
+}
+
 output "glue_database_name" {
   value = module.analytics.glue_database_name
 }

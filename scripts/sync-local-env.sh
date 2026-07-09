@@ -34,6 +34,7 @@ APPSYNC_ENDPOINT="$(echo "${OUTPUTS}" | jq -r '.appsync_endpoint.value // empty'
 APPSYNC_API_KEY="$(echo "${OUTPUTS}" | jq -r '.appsync_api_key.value // empty')"
 COGNITO_POOL="$(echo "${OUTPUTS}" | jq -r '.cognito_user_pool_id.value // empty')"
 COGNITO_CLIENT="$(echo "${OUTPUTS}" | jq -r '.cognito_web_client_id.value // empty')"
+COGNITO_DOMAIN="$(echo "${OUTPUTS}" | jq -r '.cognito_domain.value // empty')"
 
 if [ -z "${APPSYNC_ENDPOINT}" ] || [ -z "${APPSYNC_API_KEY}" ] || [ -z "${COGNITO_POOL}" ] || [ -z "${COGNITO_CLIENT}" ]; then
   echo "Error: faltan outputs requeridos (appsync_endpoint, appsync_api_key, cognito_user_pool_id, cognito_web_client_id)." >&2
@@ -51,6 +52,9 @@ export const environment = {
   cognito: {
     userPoolId: '${COGNITO_POOL}',
     userPoolClientId: '${COGNITO_CLIENT}',
+    domain: '${COGNITO_DOMAIN}',
+    oauthRedirectSignIn: 'http://localhost:4200/auth/callback',
+    oauthRedirectSignOut: 'http://localhost:4200/login',
   },
 };
 EOF

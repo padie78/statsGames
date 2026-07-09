@@ -8,4 +8,8 @@ export {
   LiveMatchFeedComponent,
   type LiveMatchFeedItem,
 } from './organisms/live-match-feed/live-match-feed.component';
+export {
+  GameSelectionCardComponent,
+  type GameSelection,
+} from './molecules/game-selection-card/game-selection-card.component';
 export { PremiumUpsellBannerComponent } from './organisms/premium-upsell-banner/premium-upsell-banner.component';

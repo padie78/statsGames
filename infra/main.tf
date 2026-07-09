@@ -22,11 +22,6 @@ module "analytics" {
   data_lake_bucket_arn  = module.storage.data_lake_bucket_arn
 }
 
-module "auth" {
-  source      = "./modules/auth"
-  name_prefix = local.name_prefix
-}
-
 module "queues" {
   source      = "./modules/queues"
   name_prefix = local.name_prefix
@@ -56,4 +51,29 @@ module "api" {
 module "frontend_hosting" {
   source      = "./modules/frontend_hosting"
   name_prefix = local.name_prefix
+}
+
+module "auth" {
+  source      = "./modules/auth"
+  name_prefix = local.name_prefix
+  aws_region  = var.aws_region
+
+  table_name = module.database.table_name
+  table_arn  = module.database.table_arn
+
+  domain_prefix       = local.cognito_domain_prefix
+  oauth_callback_urls = local.cognito_oauth_callback_urls
+  oauth_logout_urls   = local.cognito_oauth_logout_urls
+
+  enable_google_idp     = var.enable_google_idp
+  google_client_id      = var.google_client_id
+  google_client_secret  = var.google_client_secret
+  enable_apple_idp      = var.enable_apple_idp
+  apple_client_id       = var.apple_client_id
+  apple_team_id         = var.apple_team_id
+  apple_key_id          = var.apple_key_id
+  apple_private_key     = var.apple_private_key
+  enable_discord_idp    = var.enable_discord_idp
+  discord_client_id     = var.discord_client_id
+  discord_client_secret = var.discord_client_secret
 }

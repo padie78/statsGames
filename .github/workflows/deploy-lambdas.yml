@@ -48,6 +48,9 @@ jobs:
           - path: ingestion/game_processor
             artifact: game_processor
             tf_output: game_processor_name
+          - path: auth/post_confirmation
+            artifact: post_confirmation
+            tf_output: post_confirmation_name
 
     steps:
       - name: Checkout
@@ -97,6 +100,9 @@ jobs:
           - path: ingestion/game_processor
             artifact: game_processor
             tf_output: game_processor_name
+          - path: auth/post_confirmation
+            artifact: post_confirmation
+            tf_output: post_confirmation_name
 
     steps:
       - name: Checkout

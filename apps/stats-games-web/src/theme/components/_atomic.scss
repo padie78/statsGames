@@ -296,3 +296,108 @@
   gap: var(--sg-space-2);
   align-items: center;
 }
+
+// —— Molecule: Game Selection Tile ——
+.sg-game-picker {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sg-space-3);
+}
+
+@media (min-width: 560px) {
+  .sg-game-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.sg-game-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sg-space-2);
+  width: 100%;
+  min-height: 11rem;
+  padding: var(--sg-space-4);
+  border: 1px solid var(--sg-border-subtle);
+  border-radius: var(--sg-radius-lg);
+  background: var(--sg-gradient-panel);
+  color: var(--sg-text-primary);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform var(--sg-duration-fast) var(--sg-ease-out),
+    border-color var(--sg-duration-base) var(--sg-ease-out),
+    box-shadow var(--sg-duration-base) var(--sg-ease-out);
+}
+
+.sg-game-tile__glow {
+  position: absolute;
+  inset: auto -20% -55% -20%;
+  height: 70%;
+  opacity: 0.35;
+  filter: blur(28px);
+  pointer-events: none;
+  transition: opacity var(--sg-duration-base) var(--sg-ease-out);
+}
+
+.sg-game-tile--roblox .sg-game-tile__glow {
+  background: radial-gradient(circle, rgba(184, 255, 60, 0.55), transparent 70%);
+}
+
+.sg-game-tile--fortnite .sg-game-tile__glow {
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.55), transparent 70%);
+}
+
+.sg-game-tile:hover,
+.sg-game-tile--selected {
+  transform: translateY(-2px);
+}
+
+.sg-game-tile--roblox:hover,
+.sg-game-tile--roblox.sg-game-tile--selected {
+  border-color: var(--sg-border-lime);
+  box-shadow: var(--sg-glow-card), var(--sg-glow-lime);
+}
+
+.sg-game-tile--fortnite:hover,
+.sg-game-tile--fortnite.sg-game-tile--selected {
+  border-color: var(--sg-border-purple);
+  box-shadow: var(--sg-glow-card), var(--sg-glow-purple);
+}
+
+.sg-game-tile:hover .sg-game-tile__glow,
+.sg-game-tile--selected .sg-game-tile__glow {
+  opacity: 0.85;
+}
+
+.sg-game-tile__badge {
+  font-family: var(--sg-font-mono);
+  font-size: var(--sg-fs-xs);
+  font-weight: var(--sg-fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sg-text-muted);
+}
+
+.sg-game-tile__title {
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-xl);
+  font-weight: var(--sg-fw-black);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sg-game-tile__subtitle {
+  font-size: var(--sg-fs-sm);
+  color: var(--sg-text-secondary);
+  line-height: var(--sg-lh-snug);
+}
+
+.sg-game-tile__stats {
+  margin-top: auto;
+  font-family: var(--sg-font-mono);
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-neon-cyan);
+}
