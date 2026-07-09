@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import {
   IonContent,
@@ -7,11 +7,12 @@ import {
   IonSelect,
   IonSelectOption,
 } from '@ionic/angular/standalone';
-import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { GameContextService } from '../../core/game/game-context.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import {
   LiveMatchFeedComponent,
+  PlatformPageBannerComponent,
   type LiveMatchFeedItem,
 } from '../../ui';
 import { toMatchCardStats } from '../../utils/match-stats.util';
@@ -31,18 +32,20 @@ type DateFilter = 'all' | '7d' | '30d';
     IonSelect,
     IonSelectOption,
     LiveMatchFeedComponent,
+    PlatformPageBannerComponent,
   ],
   template: `
-    <ion-content class="ion-padding">
+    <ion-content class="sg-page-content">
       <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
         <ion-refresher-content />
       </ion-refresher>
 
-      <div class="page-shell u-flex u-flex-col u-gap-4">
-        <header>
-          <h1 class="u-font-display u-text-lg u-fw-bold u-uppercase">Partidas</h1>
-          <p class="u-hint">Historial completo con filtros por plataforma y fecha.</p>
-        </header>
+      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
+        <sg-platform-page-banner
+          [platform]="bannerPlatform()"
+          title="Partidas"
+          subtitle="Historial completo con filtros por plataforma y fecha."
+        />
 
         <section class="u-surface-card u-p-4 u-flex u-gap-3 u-flex-wrap">
           <ion-select
@@ -84,6 +87,7 @@ type DateFilter = 'all' | '7d' | '30d';
 })
 export class MatchesPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
   private readonly fb = inject(FormBuilder);
 
@@ -97,6 +101,14 @@ export class MatchesPageComponent implements OnInit {
     dateRange: ['all' as DateFilter],
   });
 
+  readonly bannerPlatform = computed(
+    (): 'fortnite' | 'roblox' => {
+      const filter = this.filterForm.controls.platform.value;
+      if (filter === 'fortnite' || filter === 'roblox') return filter;
+      return this.gameContext.activeGame() ?? 'fortnite';
+    },
+  );
+
   readonly feedItems = computed<LiveMatchFeedItem[]>(() =>
     this.filteredMatches().map((m) => ({
       matchId: m.matchId,
@@ -107,7 +119,26 @@ export class MatchesPageComponent implements OnInit {
     })),
   );
 
+  constructor() {
+    effect(() => {
+      const tick = this.gameContext.refreshTick();
+      if (tick === 0) return;
+
+      const active = this.gameContext.activeGame();
+      if (active) {
+        this.filterForm.controls.platform.setValue(active, { emitEvent: false });
+        this.applyFilters();
+      } else {
+        void this.loadMatches();
+      }
+    });
+  }
+
   ngOnInit(): void {
+    const active = this.gameContext.activeGame();
+    if (active) {
+      this.filterForm.controls.platform.setValue(active, { emitEvent: false });
+    }
     void this.loadMatches();
   }
 

@@ -123,6 +123,31 @@
   box-shadow: var(--sg-glow-card), var(--sg-glow-lime);
 }
 
+.sg-match-card--fortnite:hover {
+  border-color: rgba(168, 85, 247, 0.55);
+}
+
+.sg-match-card--roblox:hover {
+  border-color: var(--sg-border-lime);
+}
+
+.sg-match-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sg-space-2);
+  min-width: 0;
+}
+
+.sg-match-card__thumb {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: var(--sg-radius-sm);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--sg-border-subtle);
+}
+
 .sg-match-card__header {
   display: flex;
   align-items: center;
@@ -314,11 +339,9 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--sg-space-2);
   width: 100%;
-  min-height: 11rem;
-  padding: var(--sg-space-4);
+  min-height: 16rem;
+  padding: 0;
   border: 1px solid var(--sg-border-subtle);
   border-radius: var(--sg-radius-lg);
   background: var(--sg-gradient-panel);
@@ -330,6 +353,42 @@
     transform var(--sg-duration-fast) var(--sg-ease-out),
     border-color var(--sg-duration-base) var(--sg-ease-out),
     box-shadow var(--sg-duration-base) var(--sg-ease-out);
+}
+
+.sg-game-tile__art {
+  position: relative;
+  height: 7.5rem;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid var(--sg-border-subtle);
+}
+
+.sg-game-tile__art-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 30%, rgba(5, 7, 13, 0.92) 100%);
+}
+
+.sg-game-tile__icon {
+  position: absolute;
+  right: var(--sg-space-3);
+  bottom: var(--sg-space-2);
+  font-size: 1.75rem;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.sg-game-tile--roblox .sg-game-tile__icon { color: var(--sg-neon-lime); }
+.sg-game-tile--fortnite .sg-game-tile__icon { color: var(--sg-neon-purple); }
+
+.sg-game-tile__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sg-space-2);
+  flex: 1;
+  padding: var(--sg-space-4);
 }
 
 .sg-game-tile__glow {
@@ -414,6 +473,9 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  width: 100%;
+  background: radial-gradient(ellipse 80% 40% at 50% 0%, var(--sg-shell-glow, transparent), transparent 70%);
+  transition: background 0.55s ease;
 }
 
 // —— Organism: Global Topbar ——
@@ -855,4 +917,733 @@
 
 .sg-share-link {
   font-size: var(--sg-fs-xs);
+}
+
+// =============================================================================
+// Dashboard — layout denso estilo Tracker.gg
+// =============================================================================
+
+.sg-dashboard-content {
+  --background: var(--sg-bg-void);
+}
+
+.sg-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-4);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: var(--sg-space-4) clamp(var(--sg-space-4), 2.5vw, var(--sg-space-6));
+}
+
+.sg-dashboard__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sg-space-4);
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .sg-dashboard__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 22vw);
+  }
+}
+
+@media (min-width: 1600px) {
+  .sg-dashboard__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 18rem);
+  }
+}
+
+.sg-dashboard__main,
+.sg-dashboard__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-4);
+  min-width: 0;
+}
+
+.sg-dashboard__charts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sg-space-3);
+}
+
+@media (min-width: 768px) {
+  .sg-dashboard__charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+// —— Live ticker ——
+.sg-live-ticker {
+  display: flex;
+  align-items: center;
+  gap: var(--sg-space-3);
+  padding: var(--sg-space-2) var(--sg-space-4);
+  background: rgba(5, 7, 13, 0.85);
+  border: 1px solid var(--sg-border-subtle);
+  border-radius: var(--sg-radius-md);
+  overflow: hidden;
+}
+
+.sg-live-ticker__track {
+  display: flex;
+  gap: var(--sg-space-6);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.sg-live-ticker__track::-webkit-scrollbar {
+  display: none;
+}
+
+.sg-live-ticker__item {
+  font-family: var(--sg-font-mono);
+  font-size: var(--sg-fs-xs);
+  letter-spacing: 0.04em;
+}
+
+.sg-live-ticker__item--lime { color: var(--sg-neon-lime); }
+.sg-live-ticker__item--purple { color: var(--sg-neon-purple); }
+.sg-live-ticker__item--cyan { color: var(--sg-neon-cyan); }
+
+// —— Dashboard hero ——
+.sg-dashboard-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-4);
+  padding: var(--sg-space-5);
+  border: 1px solid var(--sg-border-subtle);
+  border-radius: var(--sg-radius-xl);
+  background: var(--sg-gradient-panel);
+  box-shadow: var(--sg-glow-card);
+  overflow: hidden;
+}
+
+.sg-dashboard-hero__glow {
+  position: absolute;
+  inset: auto -10% -60% -10%;
+  height: 80%;
+  opacity: 0.45;
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.sg-dashboard-hero__glow--fortnite {
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.5), transparent 70%);
+}
+
+.sg-dashboard-hero__glow--roblox {
+  background: radial-gradient(circle, rgba(184, 255, 60, 0.45), transparent 70%);
+}
+
+.sg-dashboard-hero__main {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sg-space-4);
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .sg-dashboard-hero__main {
+    grid-template-columns: auto 1fr auto;
+  }
+}
+
+.sg-dashboard-hero__avatar {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--sg-radius-lg);
+  border: 2px solid var(--sg-border-lime);
+  background: rgba(184, 255, 60, 0.08);
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-xl);
+  font-weight: var(--sg-fw-black);
+  color: var(--sg-neon-lime);
+  box-shadow: var(--sg-glow-lime);
+  overflow: hidden;
+}
+
+.sg-dashboard-hero--fortnite .sg-dashboard-hero__avatar {
+  border-color: rgba(168, 85, 247, 0.65);
+  background: rgba(168, 85, 247, 0.1);
+  color: var(--sg-neon-purple);
+  box-shadow: var(--sg-glow-purple);
+}
+
+.sg-dashboard-hero__avatar-icon {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.35;
+}
+
+.sg-dashboard-hero__avatar-text {
+  position: relative;
+  z-index: 1;
+}
+
+.sg-dashboard-hero--animating .sg-dashboard-hero__art {
+  animation: sg-platform-art-in 0.48s ease;
+}
+
+.sg-dashboard-hero--animating .sg-dashboard-hero__glow {
+  animation: sg-platform-glow-in 0.48s ease;
+}
+
+@keyframes sg-platform-art-in {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 0.45; transform: scale(1); }
+}
+
+@keyframes sg-platform-glow-in {
+  from { opacity: 0; }
+  to { opacity: 0.45; }
+}
+
+.sg-dashboard-hero__eyebrow {
+  margin: 0 0 var(--sg-space-1);
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sg-text-muted);
+}
+
+.sg-dashboard-hero__name {
+  margin: 0;
+  font-family: var(--sg-font-display);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: var(--sg-fw-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sg-text-primary);
+}
+
+.sg-dashboard-hero__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sg-space-2);
+  margin-top: var(--sg-space-3);
+}
+
+.sg-dashboard-hero__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sg-space-2);
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .sg-dashboard-hero__actions {
+    grid-column: auto;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 9rem;
+  }
+}
+
+.sg-dashboard-hero__footer {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sg-space-2);
+}
+
+@media (min-width: 640px) {
+  .sg-dashboard-hero__footer {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.sg-dashboard-hero__stat-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: var(--sg-space-3);
+  border: 1px solid var(--sg-border-subtle);
+  border-radius: var(--sg-radius-md);
+  background: rgba(5, 7, 13, 0.55);
+}
+
+.sg-dashboard-hero__stat-label {
+  font-size: var(--sg-fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sg-text-muted);
+}
+
+.sg-dashboard-hero__stat-value {
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-lg);
+  font-weight: var(--sg-fw-bold);
+  color: var(--sg-text-primary);
+}
+
+// —— KPI strip ——
+.sg-kpi-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-3);
+}
+
+.sg-kpi-strip__title {
+  margin: 0;
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-sm);
+  font-weight: var(--sg-fw-bold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sg-text-muted);
+}
+
+.sg-kpi-strip__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sg-space-2);
+}
+
+@media (min-width: 640px) {
+  .sg-kpi-strip__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .sg-kpi-strip__grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.sg-kpi-strip__cell {
+  min-width: 0;
+}
+
+// —— Panel header (shared) ——
+.sg-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sg-space-2);
+  margin-bottom: var(--sg-space-3);
+}
+
+.sg-panel-header__title {
+  margin: 0;
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-sm);
+  font-weight: var(--sg-fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sg-text-primary);
+}
+
+.sg-panel-header__link {
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-neon-cyan);
+  text-decoration: none;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sg-panel-header__link:hover {
+  color: var(--sg-neon-lime);
+}
+
+// —— Leaderboard mini ——
+.sg-leaderboard-mini__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-1);
+}
+
+.sg-leaderboard-mini__row {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto auto auto auto;
+  gap: var(--sg-space-2);
+  align-items: center;
+  padding: var(--sg-space-2) var(--sg-space-2);
+  border-radius: var(--sg-radius-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--sg-duration-fast) var(--sg-ease-out);
+}
+
+.sg-leaderboard-mini__row:hover {
+  background: rgba(184, 255, 60, 0.06);
+}
+
+.sg-leaderboard-mini__rank {
+  font-family: var(--sg-font-mono);
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-text-muted);
+}
+
+.sg-leaderboard-mini__rank--top {
+  color: var(--sg-neon-lime);
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-leaderboard-mini__name {
+  font-size: var(--sg-fs-sm);
+  font-weight: var(--sg-fw-semibold);
+  min-width: 0;
+}
+
+.sg-leaderboard-mini__platform {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--sg-border-subtle);
+}
+
+.sg-leaderboard-mini__score {
+  font-family: var(--sg-font-mono);
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-text-secondary);
+}
+
+.sg-leaderboard-mini__delta {
+  font-family: var(--sg-font-mono);
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-text-muted);
+}
+
+.sg-leaderboard-mini__delta--up { color: var(--sg-neon-lime); }
+.sg-leaderboard-mini__delta--down { color: var(--sg-neon-pink); }
+
+// —— Achievement strip ——
+.sg-achievement-strip__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sg-space-2);
+}
+
+.sg-achievement-strip__card {
+  display: flex;
+  align-items: center;
+  gap: var(--sg-space-3);
+  padding: var(--sg-space-3);
+  border-radius: var(--sg-radius-md);
+  border: 1px solid var(--sg-border-subtle);
+  background: rgba(5, 7, 13, 0.45);
+}
+
+.sg-achievement-strip__card--lime { border-color: var(--sg-border-lime); }
+.sg-achievement-strip__card--purple { border-color: var(--sg-border-purple); }
+.sg-achievement-strip__card--pink { border-color: var(--sg-border-pink); }
+.sg-achievement-strip__card--cyan { border-color: rgba(var(--sg-neon-cyan-rgb), 0.45); }
+
+.sg-achievement-strip__icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.sg-achievement-strip__title {
+  margin: 0;
+  font-size: var(--sg-fs-sm);
+  font-weight: var(--sg-fw-bold);
+  color: var(--sg-text-primary);
+}
+
+.sg-achievement-strip__subtitle {
+  margin: 0.15rem 0 0;
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-text-muted);
+}
+
+// —— Trending rail ——
+.sg-trending-rail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-3);
+}
+
+.sg-trending-rail__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sg-space-3);
+}
+
+.sg-trending-rail__dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 0.35rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sg-trending-rail__dot--lime { background: var(--sg-neon-lime); box-shadow: var(--sg-glow-lime); }
+.sg-trending-rail__dot--purple { background: var(--sg-neon-purple); }
+.sg-trending-rail__dot--cyan { background: var(--sg-neon-cyan); }
+.sg-trending-rail__dot--pink { background: var(--sg-neon-pink); }
+
+.sg-trending-rail__label {
+  margin: 0;
+  font-size: var(--sg-fs-sm);
+  font-weight: var(--sg-fw-semibold);
+  color: var(--sg-text-primary);
+}
+
+.sg-trending-rail__meta {
+  margin: 0.15rem 0 0;
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-text-muted);
+}
+
+// —— Integration status ——
+.sg-integration-status__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-2);
+}
+
+.sg-integration-status__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sg-space-2);
+  padding: var(--sg-space-2) 0;
+  border-bottom: 1px solid var(--sg-border-subtle);
+  font-size: var(--sg-fs-sm);
+}
+
+.sg-integration-status__row:last-child {
+  border-bottom: none;
+}
+
+// —— AI insight ——
+.sg-ai-insight__headline {
+  margin: 0;
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-md);
+  font-weight: var(--sg-fw-bold);
+  color: var(--sg-text-primary);
+  line-height: var(--sg-lh-snug);
+}
+
+.sg-ai-insight__body {
+  margin: var(--sg-space-2) 0 0;
+  font-size: var(--sg-fs-sm);
+  color: var(--sg-text-secondary);
+  line-height: var(--sg-lh-snug);
+}
+
+.page-shell {
+  width: 100%;
+}
+
+// —— Platform switcher (topbar — estilo TRN) ——
+.sg-platform-switch {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--sg-border-subtle);
+  border-radius: var(--sg-radius-md);
+  background: rgba(5, 7, 13, 0.75);
+}
+
+.sg-platform-switch--loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.sg-platform-switch__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sg-space-2);
+  padding: 0.35rem 0.65rem 0.35rem 0.35rem;
+  border: none;
+  border-radius: calc(var(--sg-radius-md) - 3px);
+  background: transparent;
+  color: var(--sg-text-muted);
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-xs);
+  font-weight: var(--sg-fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background var(--sg-duration-fast) var(--sg-ease-out),
+    color var(--sg-duration-fast) var(--sg-ease-out),
+    box-shadow var(--sg-duration-fast) var(--sg-ease-out);
+}
+
+.sg-platform-switch__thumb {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--sg-radius-sm);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--sg-border-subtle);
+  flex-shrink: 0;
+}
+
+.sg-platform-switch__btn--active.sg-platform-switch__btn--roblox {
+  color: var(--sg-neon-lime);
+  background: rgba(184, 255, 60, 0.12);
+  box-shadow: var(--sg-glow-lime);
+}
+
+.sg-platform-switch__btn--active.sg-platform-switch__btn--fortnite {
+  color: var(--sg-neon-purple);
+  background: rgba(168, 85, 247, 0.14);
+  box-shadow: var(--sg-glow-purple);
+}
+
+.sg-platform-switch__btn:hover:not(:disabled):not(.sg-platform-switch__btn--active) {
+  color: var(--sg-text-primary);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.sg-platform-switch__label {
+  padding-right: 0.25rem;
+}
+
+@media (max-width: 720px) {
+  .sg-platform-switch__label {
+    display: none;
+  }
+
+  .sg-platform-switch__btn {
+    padding: 0.35rem;
+  }
+}
+
+// —— Dashboard hero art panel ——
+.sg-dashboard-hero__art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(42%, 320px);
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.45;
+  mask-image: linear-gradient(90deg, transparent, #000 35%);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .sg-dashboard-hero__art {
+    width: 55%;
+    opacity: 0.28;
+  }
+}
+
+// —— Platform page banner (analytics / matches) ——
+.sg-platform-banner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-2);
+  padding: var(--sg-space-5);
+  border: 1px solid var(--sg-border-subtle);
+  border-radius: var(--sg-radius-xl);
+  background: var(--sg-gradient-panel);
+  box-shadow: var(--sg-glow-card);
+  overflow: hidden;
+}
+
+.sg-platform-banner__art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(38%, 280px);
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.42;
+  mask-image: linear-gradient(90deg, transparent, #000 40%);
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+.sg-platform-banner__glow {
+  position: absolute;
+  inset: auto -20% -70% -20%;
+  height: 70%;
+  opacity: 0.4;
+  filter: blur(40px);
+  pointer-events: none;
+  transition: background 0.55s ease;
+}
+
+.sg-platform-banner--roblox .sg-platform-banner__glow {
+  background: radial-gradient(circle, rgba(184, 255, 60, 0.5), transparent 70%);
+}
+
+.sg-platform-banner--fortnite .sg-platform-banner__glow {
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.5), transparent 70%);
+}
+
+.sg-platform-banner__content {
+  position: relative;
+  z-index: 1;
+  max-width: 36rem;
+}
+
+.sg-platform-banner__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sg-space-2);
+  margin-bottom: var(--sg-space-2);
+}
+
+.sg-platform-banner__icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--sg-radius-sm);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--sg-border-subtle);
+}
+
+.sg-platform-banner__title {
+  margin: 0;
+  font-family: var(--sg-font-display);
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-weight: var(--sg-fw-black);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sg-text-primary);
+}
+
+.sg-platform-banner__subtitle {
+  margin: var(--sg-space-2) 0 0;
+  font-size: var(--sg-fs-sm);
+  color: var(--sg-text-secondary);
+  line-height: var(--sg-lh-snug);
+}
+
+.sg-platform-banner__hint {
+  display: inline-block;
+  margin-top: var(--sg-space-3);
+  font-family: var(--sg-font-mono);
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-neon-cyan);
+  letter-spacing: 0.04em;
 }

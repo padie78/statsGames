@@ -79,6 +79,13 @@ ion-tab-bar {
   margin: 0 auto;
 }
 
+.page-shell--fluid {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: var(--sg-space-4) clamp(var(--sg-space-4), 2.5vw, var(--sg-space-6));
+}
+
 // Auth gate — Mobalytics-inspired unified sign-in / sign-up
 ion-content.auth-gate {
   --background: transparent;

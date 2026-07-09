@@ -1,14 +1,20 @@
-import { Component, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
 import { IonContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { PlayerService } from '../../services/player.service';
+import { GameContextService } from '../../core/game/game-context.service';
+import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import {
   StatsService,
   currentWeeklyPeriodIdForStats,
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
-import { StatValueComponent, TrendChartComponent, type TrendChartPoint } from '../../ui';
+import {
+  PlatformPageBannerComponent,
+  StatValueComponent,
+  TrendChartComponent,
+  type TrendChartPoint,
+} from '../../ui';
 import { computeKdRatio } from '../../utils/match-stats.util';
 import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
@@ -16,14 +22,15 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
   standalone: true,
   selector: 'app-analytics-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [IonContent, StatValueComponent, TrendChartComponent],
+  imports: [IonContent, PlatformPageBannerComponent, StatValueComponent, TrendChartComponent],
   template: `
-    <ion-content class="ion-padding">
-      <div class="page-shell u-flex u-flex-col u-gap-4">
-        <header>
-          <h1 class="u-font-display u-text-lg u-fw-bold u-uppercase">Estadísticas</h1>
-          <p class="u-hint">Rollups semanales y tendencia diaria de kills.</p>
-        </header>
+    <ion-content class="sg-page-content">
+      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
+        <sg-platform-page-banner
+          [platform]="activePlatform()"
+          title="Estadísticas"
+          subtitle="Rollups semanales y tendencia diaria filtrados por plataforma activa."
+        />
 
         @if (error()) {
           <p class="u-error">{{ error() }}</p>
@@ -40,7 +47,9 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
         @if (weekly()) {
           <section class="u-surface-card u-p-4">
-            <h2 class="u-font-display u-text-md u-fw-bold u-mb-3">Esta semana</h2>
+            <h2 class="u-font-display u-text-md u-fw-bold u-mb-3">
+              Esta semana · {{ platformMeta().shortLabel }}
+            </h2>
             <div class="u-grid-stats">
               <sg-stat-value label="Partidas" [value]="weekly()!.matchCount" accent="lime" />
               <sg-stat-value label="Kills" [value]="weekly()!.totalKills" accent="lime" />
@@ -71,12 +80,18 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 })
 export class AnalyticsPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
-  private readonly playerService = inject(PlayerService);
+  private readonly gameContext = inject(GameContextService);
   private readonly statsService = inject(StatsService);
 
   readonly weekly = signal<PlayerStatsRollupView | null>(null);
   readonly dailyTrend = signal<PlayerStatsRollupView[]>([]);
   readonly error = signal<string | null>(null);
+
+  readonly activePlatform = computed(
+    (): 'fortnite' | 'roblox' => this.gameContext.activeGame() ?? 'fortnite',
+  );
+
+  readonly platformMeta = computed(() => gamePlatformMeta(this.activePlatform()));
 
   readonly weeklyKd = computed(() => {
     const w = this.weekly();
@@ -106,6 +121,13 @@ export class AnalyticsPageComponent implements OnInit {
       this.dailyTrend().every((d) => d.matchCount === 0),
   );
 
+  constructor() {
+    effect(() => {
+      if (this.gameContext.refreshTick() === 0) return;
+      void this.loadStats();
+    });
+  }
+
   ngOnInit(): void {
     void this.loadStats();
   }
@@ -117,11 +139,7 @@ export class AnalyticsPageComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const profile = await this.playerService.getPlayerProfileOrNull(userId);
-      const platform =
-        (profile?.primaryPlatform as 'fortnite' | 'roblox' | undefined) ??
-        this.auth.selectedGame() ??
-        undefined;
+      const platform = this.activePlatform();
 
       const [weeklyRows, daily] = await Promise.all([
         firstValueFrom(

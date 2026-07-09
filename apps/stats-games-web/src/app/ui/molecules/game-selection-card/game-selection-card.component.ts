@@ -1,6 +1,9 @@
 import { Component, EventEmitter, Input, Output, ViewEncapsulation } from '@angular/core';
-
-export type GameSelection = 'roblox' | 'fortnite';
+import {
+  GAME_PLATFORMS,
+  type GamePlatformMeta,
+} from '../../../core/game/game-platform.config';
+import type { SelectedGame } from '../../../core/services/auth.service';
 
 @Component({
   standalone: true,
@@ -16,21 +19,28 @@ export type GameSelection = 'roblox' | 'fortnite';
       [attr.aria-pressed]="selected"
       (click)="select.emit(game)"
     >
-      <span class="sg-game-tile__glow" aria-hidden="true"></span>
-      <span class="sg-game-tile__badge">{{ badge }}</span>
-      <span class="sg-game-tile__title">{{ title }}</span>
-      <span class="sg-game-tile__subtitle">{{ subtitle }}</span>
-      <span class="sg-game-tile__stats">{{ stats }}</span>
+      <div class="sg-game-tile__art" [style.background-image]="'url(' + meta.artUrl + ')'">
+        <span class="sg-game-tile__art-overlay"></span>
+        <span class="sg-game-tile__icon">{{ game === 'roblox' ? '◆' : '◎' }}</span>
+      </div>
+
+      <div class="sg-game-tile__body">
+        <span class="sg-game-tile__glow" aria-hidden="true"></span>
+        <span class="sg-game-tile__badge">{{ meta.badge }}</span>
+        <span class="sg-game-tile__title">{{ meta.label }}</span>
+        <span class="sg-game-tile__subtitle">{{ meta.tagline }}</span>
+        <span class="sg-game-tile__stats">{{ meta.statsHint }}</span>
+      </div>
     </button>
   `,
 })
 export class GameSelectionCardComponent {
-  @Input({ required: true }) game!: GameSelection;
-  @Input({ required: true }) title!: string;
-  @Input({ required: true }) subtitle!: string;
-  @Input({ required: true }) stats!: string;
-  @Input({ required: true }) badge!: string;
+  @Input({ required: true }) game!: SelectedGame;
   @Input() selected = false;
 
-  @Output() readonly select = new EventEmitter<GameSelection>();
+  @Output() readonly select = new EventEmitter<SelectedGame>();
+
+  get meta(): GamePlatformMeta {
+    return GAME_PLATFORMS[this.game];
+  }
 }

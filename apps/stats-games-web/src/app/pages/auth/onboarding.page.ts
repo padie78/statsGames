@@ -37,19 +37,11 @@ import { GameSelectionCardComponent, NeonBadgeComponent } from '../../ui';
           <div class="sg-game-picker u-mb-4">
             <sg-game-selection-card
               game="roblox"
-              badge="Sandbox MMO"
-              title="Roblox"
-              subtitle="Creatividad infinita, sesiones largas y economía de experiencias."
-              stats="K/D · Sessions · XP/h"
               [selected]="selectedGame() === 'roblox'"
               (select)="pickGame($event)"
             />
             <sg-game-selection-card
               game="fortnite"
-              badge="Battle Royale"
-              title="Fortnite"
-              subtitle="Alta competencia, placement agresivo y clutch moments."
-              stats="Placement · Eliminations · Win Rate"
               [selected]="selectedGame() === 'fortnite'"
               (select)="pickGame($event)"
             />

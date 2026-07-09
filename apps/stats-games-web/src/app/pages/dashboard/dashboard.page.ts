@@ -1,12 +1,17 @@
-import { Component, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import {
-  IonContent,
-  IonRefresher,
-  IonRefresherContent,
-} from '@ionic/angular/standalone';
+import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
+import {
+  MOCK_ACHIEVEMENTS,
+  MOCK_LEADERBOARD,
+  MOCK_TICKER,
+  MOCK_TRENDING,
+  type AchievementItem,
+} from '../../data/dashboard-mock.data';
 import { AuthService } from '../../core/auth/auth.service';
+import { GameContextService } from '../../core/game/game-context.service';
+import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
@@ -16,16 +21,22 @@ import {
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
 import {
+  AchievementStripComponent,
+  AiInsightCardComponent,
+  DashboardHeroComponent,
+  IntegrationStatusCardComponent,
+  KpiStripComponent,
+  LeaderboardMiniComponent,
   LiveMatchFeedComponent,
+  LiveTickerComponent,
+  type KpiStripItem,
   type LiveMatchFeedItem,
-  NeonBadgeComponent,
-  PremiumUpsellBannerComponent,
-  ShareLinkButtonComponent,
-  StatValueComponent,
   TrendChartComponent,
+  TrendingRailComponent,
   type TrendChartPoint,
 } from '../../ui';
 import { computeKdRatio, toMatchCardStats } from '../../utils/match-stats.util';
+import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
 @Component({
   standalone: true,
@@ -35,87 +46,89 @@ import { computeKdRatio, toMatchCardStats } from '../../utils/match-stats.util';
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    NeonBadgeComponent,
-    StatValueComponent,
-    LiveMatchFeedComponent,
-    PremiumUpsellBannerComponent,
-    ShareLinkButtonComponent,
+    LiveTickerComponent,
+    DashboardHeroComponent,
+    KpiStripComponent,
     TrendChartComponent,
+    LiveMatchFeedComponent,
+    LeaderboardMiniComponent,
+    AchievementStripComponent,
+    TrendingRailComponent,
+    IntegrationStatusCardComponent,
+    AiInsightCardComponent,
   ],
   template: `
-    <ion-content class="ion-padding">
+    <ion-content class="sg-dashboard-content">
       <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
         <ion-refresher-content />
       </ion-refresher>
 
-      <div class="page-shell u-flex u-flex-col u-gap-4">
+      <div class="sg-dashboard">
         @if (error()) {
           <p class="u-error">{{ error() }}</p>
         }
 
-        <section class="sg-player-hero">
-          <div class="u-flex u-justify-between u-items-start u-gap-3">
-            <div class="u-min-w-0">
-              <p class="u-text-xs u-font-display u-tracking-wide u-text-muted u-uppercase u-mb-2">
-                Overview
-              </p>
-              <h1 class="sg-player-hero__name">{{ profile()?.gamerTag ?? 'Gamer' }}</h1>
-              <div class="sg-player-hero__meta u-mt-3">
-                <sg-neon-badge [tone]="platformTone()">
-                  {{ profile()?.primaryPlatform ?? '—' }}
-                </sg-neon-badge>
-                @if (realtime.isLive()) {
-                  <sg-neon-badge tone="lime" [pulse]="true">STREAM ON</sg-neon-badge>
-                }
-                @if (profile()?.fortniteId) {
-                  <sg-neon-badge tone="cyan">FN {{ profile()?.fortniteId }}</sg-neon-badge>
-                }
-                @if (profile()?.robloxId) {
-                  <sg-neon-badge tone="purple">RBX {{ profile()?.robloxId }}</sg-neon-badge>
-                }
-              </div>
-            </div>
-            @if (profile()?.gamerTag) {
-              <sg-share-link-button [gamerTag]="profile()!.gamerTag" />
-            }
-          </div>
+        <sg-live-ticker [items]="tickerItems" [live]="realtime.isLive()" />
 
-          <div class="u-grid-stats u-mt-2">
-            <sg-stat-value label="Partidas (sem)" [value]="weekly()?.matchCount ?? 0" accent="lime" />
-            <sg-stat-value label="K/D (sem)" [value]="weeklyKd()" accent="purple" />
-            <sg-stat-value label="Kills (sem)" [value]="weekly()?.totalKills ?? 0" accent="purple" />
-            <sg-stat-value
-              label="Placement avg"
-              [value]="weekly()?.avgPlacement?.toFixed(1) ?? '—'"
-              accent="pink"
-            />
-          </div>
-        </section>
-
-        <sg-trend-chart title="Kills — últimos 7 días" unit="kills" [points]="killsTrend()" />
-
-        @if (showPremiumBanner() && realtime.premiumInsight().visible) {
-          <sg-premium-upsell-banner
-            [headline]="realtime.premiumInsight().headline"
-            [body]="realtime.premiumInsight().body"
-            (ctaClick)="onPremiumCta()"
-            (dismiss)="dismissPremium()"
+        @if (profile()) {
+          <sg-dashboard-hero
+            [gamerTag]="profile()!.gamerTag"
+            [platform]="heroPlatform()"
+            [artUrl]="heroArtUrl()"
+            [fortniteId]="profile()!.fortniteId"
+            [robloxId]="profile()!.robloxId"
+            [live]="realtime.isLive()"
+            [matches7d]="matches7d()"
+            [bestPlacement]="bestPlacement()"
+            [percentile]="percentileLabel()"
+            [playerLevel]="playerLevel()"
           />
         }
 
-        <sg-live-match-feed
-          title="Partidas recientes"
-          [items]="historyFeedItems()"
-          [showLiveIndicator]="false"
-          emptyMessage="Sin partidas todavía. Vinculá tu cuenta en Integraciones."
-        />
+        <sg-kpi-strip title="Performance snapshot" [items]="kpiItems()" />
 
-        <sg-live-match-feed
-          title="Live feed"
-          [items]="liveFeedItems()"
-          [showLiveIndicator]="realtime.isLive()"
-          emptyMessage="Esperando eventos en tiempo real vía AppSync…"
-        />
+        <div class="sg-dashboard__grid">
+          <div class="sg-dashboard__main">
+            <div class="sg-dashboard__charts">
+              <sg-trend-chart title="Kills / día" unit="kills" [points]="killsTrend()" />
+              <sg-trend-chart title="Partidas / día" unit="matches" [points]="matchesTrend()" />
+            </div>
+
+            <sg-live-match-feed
+              title="Partidas recientes"
+              [items]="historyFeedItems()"
+              [showLiveIndicator]="false"
+              emptyMessage="Sin partidas. Conectá tu cuenta o cargá mock data."
+            />
+
+            <sg-live-match-feed
+              title="Live event stream"
+              [items]="liveFeedItems()"
+              [showLiveIndicator]="realtime.isLive()"
+              emptyMessage="Esperando eventos en tiempo real vía AppSync…"
+            />
+          </div>
+
+          <aside class="sg-dashboard__rail">
+            <sg-integration-status-card
+              [fortniteConnected]="!!profile()?.fortniteId"
+              [robloxConnected]="!!profile()?.robloxId"
+              [liveActive]="realtime.isLive()"
+            />
+
+            <sg-leaderboard-mini title="Global leaderboard" [entries]="leaderboard" />
+
+            <sg-achievement-strip title="Session highlights" [items]="achievements()" />
+
+            <sg-ai-insight-card
+              [headline]="aiHeadline()"
+              [body]="aiBody()"
+              (ctaClick)="onAiCta()"
+            />
+
+            <sg-trending-rail title="Meta & trending" [items]="trending" />
+          </aside>
+        </div>
       </div>
     </ion-content>
   `,
@@ -123,6 +136,7 @@ import { computeKdRatio, toMatchCardStats } from '../../utils/match-stats.util';
 export class DashboardPageComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly realtime = inject(AppSyncRealtimeService);
+  private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
   private readonly playerService = inject(PlayerService);
   private readonly statsService = inject(StatsService);
@@ -133,19 +147,63 @@ export class DashboardPageComponent implements OnInit {
   readonly weekly = signal<PlayerStatsRollupView | null>(null);
   readonly dailyTrend = signal<PlayerStatsRollupView[]>([]);
   readonly error = signal<string | null>(null);
-  readonly showPremiumBanner = signal(true);
 
-  readonly platformTone = computed(() => {
-    const p = this.profile()?.primaryPlatform?.toLowerCase();
-    if (p === 'fortnite') return 'cyan' as const;
-    if (p === 'roblox') return 'purple' as const;
-    return 'muted' as const;
+  readonly leaderboard = MOCK_LEADERBOARD;
+  readonly trending = MOCK_TRENDING;
+  readonly tickerItems = MOCK_TICKER;
+
+  readonly heroPlatform = computed((): 'fortnite' | 'roblox' => {
+    const g = this.gameContext.activeGame() ?? this.profile()?.primaryPlatform?.toLowerCase();
+    return g === 'roblox' ? 'roblox' : 'fortnite';
   });
+
+  readonly heroArtUrl = computed(() => gamePlatformMeta(this.heroPlatform()).artUrl);
 
   readonly weeklyKd = computed(() => {
     const w = this.weekly();
     if (!w) return '—';
     return computeKdRatio(w.totalKills, w.totalDeaths);
+  });
+
+  readonly matches7d = computed(() =>
+    this.dailyTrend().reduce((sum, d) => sum + d.matchCount, 0),
+  );
+
+  readonly bestPlacement = computed(() => {
+    const placements = this.recentMatches()
+      .map((m) => m.stats?.placement)
+      .filter((p): p is number => p != null && p > 0);
+    if (!placements.length) return 99;
+    return Math.min(...placements);
+  });
+
+  readonly percentileLabel = computed(() => {
+    const matches = this.weekly()?.matchCount ?? 0;
+    if (matches >= 15) return 'Top 10%';
+    if (matches >= 8) return 'Top 18%';
+    if (matches >= 3) return 'Top 35%';
+    return 'Unranked';
+  });
+
+  readonly playerLevel = computed(() => {
+    const kills = this.weekly()?.totalKills ?? 0;
+    return Math.max(1, Math.min(99, Math.floor(kills / 3) + 12));
+  });
+
+  readonly kpiItems = computed<KpiStripItem[]>(() => {
+    const w = this.weekly();
+    return [
+      { label: 'Matches', value: w?.matchCount ?? 0, accent: 'lime', delta: '+2', deltaTrend: 'up' },
+      { label: 'K/D', value: this.weeklyKd(), accent: 'purple', delta: '+0.4', deltaTrend: 'up' },
+      { label: 'Kills', value: w?.totalKills ?? 0, accent: 'lime' },
+      { label: 'Deaths', value: w?.totalDeaths ?? 0, accent: 'pink', delta: '-3', deltaTrend: 'down' },
+      {
+        label: 'Placement',
+        value: w?.avgPlacement ? w.avgPlacement.toFixed(1) : '—',
+        accent: 'purple',
+      },
+      { label: 'Live events', value: this.realtime.liveCount(), accent: 'pink' },
+    ];
   });
 
   readonly killsTrend = computed<TrendChartPoint[]>(() =>
@@ -155,17 +213,71 @@ export class DashboardPageComponent implements OnInit {
     })),
   );
 
+  readonly matchesTrend = computed<TrendChartPoint[]>(() =>
+    this.dailyTrend().map((d) => ({
+      label: d.periodId.slice(5),
+      value: d.matchCount,
+    })),
+  );
+
   readonly historyFeedItems = computed<LiveMatchFeedItem[]>(() =>
-    this.recentMatches().map((m) => this.toFeedItem(m, false)),
+    this.recentMatches().slice(0, 6).map((m) => this.toFeedItem(m, false)),
   );
 
   readonly liveFeedItems = computed<LiveMatchFeedItem[]>(() =>
-    this.realtime.liveMatches().map((m) => this.toFeedItem(m, true)),
+    this.realtime.liveMatches().slice(0, 6).map((m) => this.toFeedItem(m, true)),
   );
+
+  readonly achievements = computed<AchievementItem[]>(() => {
+    const w = this.weekly();
+    const bestKills = Math.max(
+      0,
+      ...this.recentMatches().map((m) => m.stats?.kills ?? 0),
+    );
+
+    return MOCK_ACHIEVEMENTS.map((item) => {
+      if (item.id === 'grind' && w) {
+        return { ...item, subtitle: `${w.matchCount} matches this week` };
+      }
+      if (item.id === 'clutch' && bestKills > 0) {
+        return { ...item, subtitle: `Best: ${bestKills} eliminations` };
+      }
+      if (item.id === 'top') {
+        return { ...item, subtitle: this.percentileLabel() };
+      }
+      return item;
+    });
+  });
+
+  readonly aiHeadline = computed(() => {
+    const w = this.weekly();
+    if (!w || w.matchCount === 0) {
+      return 'Empezá a trackear para desbloquear insights';
+    }
+    if (w.avgPlacement > 25) {
+      return 'Tu mid-game está costando placement';
+    }
+    return 'Racha positiva — empujá el siguiente rank';
+  });
+
+  readonly aiBody = computed(() => {
+    const w = this.weekly();
+    if (!w || w.matchCount === 0) {
+      return 'Vinculá Fortnite o Roblox en Integraciones, o cargá mock data para ver coaching personalizado.';
+    }
+    return `Con ${w.matchCount} partidas esta semana y K/D ${this.weeklyKd()}, el coach recomienda enfocarte en supervivencia temprana y fights más selectivos.`;
+  });
 
   ngOnInit(): void {
     void this.loadData();
     this.realtime.ensureConnected();
+  }
+
+  constructor() {
+    effect(() => {
+      if (this.gameContext.refreshTick() === 0) return;
+      void this.loadData();
+    });
   }
 
   async refresh(event: CustomEvent): Promise<void> {
@@ -173,12 +285,8 @@ export class DashboardPageComponent implements OnInit {
     (event.target as HTMLIonRefresherElement).complete();
   }
 
-  dismissPremium(): void {
-    this.showPremiumBanner.set(false);
-  }
-
-  onPremiumCta(): void {
-    console.info('[Dashboard] Premium CTA clicked');
+  onAiCta(): void {
+    void this.router.navigateByUrl('/tabs/ai-coach');
   }
 
   private toFeedItem(m: MatchUpdateView, live: boolean): LiveMatchFeedItem {
@@ -205,7 +313,10 @@ export class DashboardPageComponent implements OnInit {
       }
       this.profile.set(profile);
 
-      const platform = (profile.primaryPlatform as 'fortnite' | 'roblox') ?? undefined;
+      const platform =
+        (this.gameContext.activeGame() as 'fortnite' | 'roblox' | null) ??
+        (profile.primaryPlatform as 'fortnite' | 'roblox') ??
+        undefined;
 
       const [matches, weeklyRows, daily] = await Promise.all([
         this.matchService.listPlayerMatchesOnce(userId, { limit: 20 }),
@@ -224,7 +335,7 @@ export class DashboardPageComponent implements OnInit {
       this.weekly.set(weeklyRows[0] ?? null);
       this.dailyTrend.set(daily);
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Error inesperado');
+      this.error.set(extractGraphqlErrorMessage(err, 'Error cargando dashboard'));
     }
   }
 }

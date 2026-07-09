@@ -5,12 +5,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/services/auth.service';
 import { PlayerService, type PlayerSearchHitView } from '../../../services/player.service';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
+import { GamePlatformSwitcherComponent } from '../../molecules/game-platform-switcher/game-platform-switcher.component';
 
 @Component({
   standalone: true,
   selector: 'sg-app-topbar',
   encapsulation: ViewEncapsulation.None,
-  imports: [RouterLink, NeonBadgeComponent],
+  imports: [RouterLink, NeonBadgeComponent, GamePlatformSwitcherComponent],
   template: `
     <header class="sg-topbar sg-topbar--global">
       <div class="sg-topbar__left">
@@ -19,13 +20,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
           <span class="sg-topbar__brand-name">StatsGames</span>
         </a>
 
-        <span
-          class="sg-topbar__game-pill"
-          [class.sg-topbar__game-pill--fortnite]="auth.selectedGame() === 'fortnite'"
-          [class.sg-topbar__game-pill--roblox]="auth.selectedGame() === 'roblox'"
-        >
-          {{ gameLabel() }}
-        </span>
+        <sg-game-platform-switcher />
       </div>
 
       <div class="sg-topbar__center sg-topbar__search-wrap">
@@ -127,13 +122,6 @@ export class AppTopbarComponent {
     const email = this.auth.email();
     if (!email) return 'SG';
     return email.slice(0, 2).toUpperCase();
-  }
-
-  gameLabel(): string {
-    const game = this.auth.selectedGame();
-    if (game === 'fortnite') return 'Fortnite';
-    if (game === 'roblox') return 'Roblox';
-    return 'Sin juego';
   }
 
   onSearchInput(event: Event): void {
