@@ -12,6 +12,21 @@ export interface PlayerProfileView {
   avatarUrl?: string | null;
 }
 
+export interface PublicPlayerProfileView {
+  userId: string;
+  gamerTag: string;
+  primaryPlatform: string;
+  avatarUrl?: string | null;
+  createdAtIso: string;
+}
+
+export interface PlayerSearchHitView {
+  userId: string;
+  gamerTag: string;
+  primaryPlatform: string;
+  avatarUrl?: string | null;
+}
+
 export interface UpsertPlayerProfileInput {
   userId: string;
   gamerTag: string;
@@ -36,6 +51,14 @@ interface UpsertPlayerProfileResp {
 
 interface LinkPlatformAccountResp {
   linkPlatformAccount: PlayerProfileView;
+}
+
+interface GetProfileByGamerTagResp {
+  getProfileByGamerTag: PublicPlayerProfileView;
+}
+
+interface SearchPlayersResp {
+  searchPlayers: PlayerSearchHitView[];
 }
 
 const GET_PLAYER_PROFILE = /* GraphQL */ `
@@ -77,6 +100,29 @@ const LINK_PLATFORM_ACCOUNT = /* GraphQL */ `
   }
 `;
 
+const GET_PROFILE_BY_GAMER_TAG = /* GraphQL */ `
+  query GetProfileByGamerTag($gamerTag: String!) {
+    getProfileByGamerTag(gamerTag: $gamerTag) {
+      userId
+      gamerTag
+      primaryPlatform
+      avatarUrl
+      createdAtIso
+    }
+  }
+`;
+
+const SEARCH_PLAYERS = /* GraphQL */ `
+  query SearchPlayers($query: String!, $limit: Int) {
+    searchPlayers(query: $query, limit: $limit) {
+      userId
+      gamerTag
+      primaryPlatform
+      avatarUrl
+    }
+  }
+`;
+
 @Injectable({ providedIn: 'root' })
 export class PlayerService {
   private readonly client = generateClient();
@@ -113,6 +159,33 @@ export class PlayerService {
         variables: { input },
       }),
     ).pipe(map((resp) => resp.data.linkPlatformAccount));
+  }
+
+  getProfileByGamerTag(gamerTag: string): Observable<PublicPlayerProfileView> {
+    return from(
+      this.client.graphql({
+        query: GET_PROFILE_BY_GAMER_TAG,
+        variables: { gamerTag },
+      }),
+    ).pipe(map((resp) => (resp as { data: GetProfileByGamerTagResp }).data.getProfileByGamerTag));
+  }
+
+  async getProfileByGamerTagOrNull(gamerTag: string): Promise<PublicPlayerProfileView | null> {
+    try {
+      return await firstValueFrom(this.getProfileByGamerTag(gamerTag));
+    } catch (error) {
+      if (isPlayerNotFoundError(error)) return null;
+      throw error;
+    }
+  }
+
+  searchPlayers(query: string, limit = 8): Observable<PlayerSearchHitView[]> {
+    return from(
+      this.client.graphql({
+        query: SEARCH_PLAYERS,
+        variables: { query, limit },
+      }),
+    ).pipe(map((resp) => (resp as { data: SearchPlayersResp }).data.searchPlayers));
   }
 
   private async authenticatedGraphql<T>(params: {

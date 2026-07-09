@@ -162,6 +162,26 @@ resource "aws_appsync_resolver" "get_player_profile" {
   response_template = local.direct_lambda_response_template
 }
 
+resource "aws_appsync_resolver" "get_profile_by_gamer_tag" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Query"
+  field             = "getProfileByGamerTag"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
+resource "aws_appsync_resolver" "search_players" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Query"
+  field             = "searchPlayers"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
 resource "aws_appsync_resolver" "list_player_matches" {
   api_id            = aws_appsync_graphql_api.this.id
   type              = "Query"
@@ -176,6 +196,16 @@ resource "aws_appsync_resolver" "list_player_stats_rollups" {
   api_id            = aws_appsync_graphql_api.this.id
   type              = "Query"
   field             = "listPlayerStatsRollups"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
+resource "aws_appsync_resolver" "list_player_daily_trend" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Query"
+  field             = "listPlayerDailyTrend"
   data_source       = aws_appsync_datasource.api.name
   depends_on        = [terraform_data.appsync_datasources_ready]
   request_template  = local.direct_lambda_request_template

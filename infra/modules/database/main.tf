@@ -25,10 +25,29 @@ resource "aws_dynamodb_table" "core" {
     type = "S"
   }
 
+  # GSI2 — búsqueda de jugadores por gamerTag (prefix search).
+  #   GSI2PK = GAMERTAG
+  #   GSI2SK = <normalizedTag>#<userId>
+  attribute {
+    name = "GSI2PK"
+    type = "S"
+  }
+  attribute {
+    name = "GSI2SK"
+    type = "S"
+  }
+
   global_secondary_index {
     name            = "GSI1"
     hash_key        = "GSI1PK"
     range_key       = "GSI1SK"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "GSI2"
+    hash_key        = "GSI2PK"
+    range_key       = "GSI2SK"
     projection_type = "ALL"
   }
 

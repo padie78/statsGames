@@ -12,4 +12,6 @@ export const environment = {
     oauthRedirectSignIn: 'https://REPLACE.cloudfront.net/auth/callback',
     oauthRedirectSignOut: 'https://REPLACE.cloudfront.net/login',
   },
+  webhookUrlPattern:
+    'https://REPLACE.execute-api.eu-central-1.amazonaws.com/webhooks/{platform}',
 };

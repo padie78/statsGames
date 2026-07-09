@@ -16,4 +16,9 @@ export interface IStatsRollupReader {
     periodId: string,
     options?: { platform?: 'fortnite' | 'roblox'; limit?: number },
   ): Promise<MatchStatsRollupDto[]>;
+
+  listRecentDailyRollups(
+    userId: string,
+    options?: { platform?: 'fortnite' | 'roblox'; days?: number },
+  ): Promise<MatchStatsRollupDto[]>;
 }

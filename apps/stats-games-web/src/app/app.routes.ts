@@ -3,8 +3,18 @@ import { authGuard } from './core/auth/auth.guard';
 import { onboardingGuard } from './core/auth/onboarding.guard';
 import { profileGuard } from './core/auth/profile.guard';
 
+const placeholder = (title: string, description: string) => ({
+  placeholderTitle: title,
+  placeholderDescription: description,
+});
+
 export const APP_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'tabs/dashboard' },
+  {
+    path: 'player/:gamerTag',
+    loadComponent: () =>
+      import('./pages/player-public/player-public.page').then((m) => m.PlayerPublicPageComponent),
+  },
   {
     path: 'login',
     loadComponent: () =>
@@ -28,13 +38,42 @@ export const APP_ROUTES: Routes = [
   {
     path: 'tabs',
     canActivate: [authGuard, profileGuard],
-    loadComponent: () => import('./pages/tabs/tabs.page').then((m) => m.TabsPageComponent),
+    loadComponent: () => import('./pages/shell/shell.page').then((m) => m.ShellPageComponent),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'dashboard',
         loadComponent: () =>
           import('./pages/dashboard/dashboard.page').then((m) => m.DashboardPageComponent),
+      },
+      {
+        path: 'matches',
+        loadComponent: () =>
+          import('./pages/matches/matches.page').then((m) => m.MatchesPageComponent),
+      },
+      {
+        path: 'analytics',
+        loadComponent: () =>
+          import('./pages/analytics/analytics.page').then((m) => m.AnalyticsPageComponent),
+      },
+      {
+        path: 'integrations',
+        loadComponent: () =>
+          import('./pages/integrations/integrations.page').then((m) => m.IntegrationsPageComponent),
+      },
+      {
+        path: 'ai-coach',
+        loadComponent: () =>
+          import('./pages/placeholder/placeholder.page').then((m) => m.PlaceholderPageComponent),
+        data: placeholder(
+          'AI Coach',
+          'Insights en tiempo real, recomendaciones post-partida y coaching premium.',
+        ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./pages/settings/settings.page').then((m) => m.SettingsPageComponent),
       },
     ],
   },

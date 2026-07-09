@@ -78,22 +78,80 @@ export class DynamoDbStatsSummaryRepository
 
     if (!result.Item) return [];
 
-    return [
-      {
-        userId,
-        platform,
-        granularity,
-        periodId,
-        kpis: {
-          match_count: Number(result.Item['match_count'] ?? 0),
-          total_kills: Number(result.Item['total_kills'] ?? 0),
-          total_deaths: Number(result.Item['total_deaths'] ?? 0),
-          avg_placement: Number(result.Item['avg_placement'] ?? 0),
-        },
-        versionId: Number(result.Item['versionId'] ?? 1),
-        lastUpdatedIso: String(result.Item['lastUpdatedIso'] ?? new Date().toISOString()),
+    return [this.itemToRollupDto(userId, platform, granularity, periodId, result.Item)];
+  }
+
+  async listRecentDailyRollups(
+    userId: string,
+    options?: { platform?: 'fortnite' | 'roblox'; days?: number },
+  ): Promise<MatchStatsRollupDto[]> {
+    const client = getDocumentClient();
+    const platform = options?.platform ?? 'fortnite';
+    const days = Math.min(Math.max(options?.days ?? 7, 1), 30);
+    const rollups: MatchStatsRollupDto[] = [];
+
+    for (let offset = days - 1; offset >= 0; offset -= 1) {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() - offset);
+      const periodId = formatDailyPeriodId(date);
+
+      const result = await client.send(
+        new GetCommand({
+          TableName: this.tableName,
+          Key: {
+            PK: statsPlayerPk(userId),
+            SK: `${statsMetricsSk('DAILY', periodId)}#${platform}`,
+          },
+        }),
+      );
+
+      if (result.Item) {
+        rollups.push(this.itemToRollupDto(userId, platform, 'DAILY', periodId, result.Item));
+      } else {
+        rollups.push({
+          userId,
+          platform,
+          granularity: 'DAILY',
+          periodId,
+          kpis: {
+            match_count: 0,
+            total_kills: 0,
+            total_deaths: 0,
+            avg_placement: 0,
+          },
+          versionId: 0,
+          lastUpdatedIso: date.toISOString(),
+        });
+      }
+    }
+
+    return rollups;
+  }
+
+  private itemToRollupDto(
+    userId: string,
+    platform: 'fortnite' | 'roblox',
+    granularity: Parameters<IStatsRollupReader['listByPlayerGranularity']>[1],
+    periodId: string,
+    item: Record<string, unknown>,
+  ): MatchStatsRollupDto {
+    const matchCount = Number(item['match_count'] ?? 0);
+    const placementSum = Number(item['placement_sum'] ?? 0);
+
+    return {
+      userId,
+      platform,
+      granularity,
+      periodId,
+      kpis: {
+        match_count: matchCount,
+        total_kills: Number(item['total_kills'] ?? 0),
+        total_deaths: Number(item['total_deaths'] ?? 0),
+        avg_placement: matchCount > 0 ? placementSum / matchCount : 0,
       },
-    ];
+      versionId: Number(item['versionId'] ?? 1),
+      lastUpdatedIso: String(item['lastUpdatedIso'] ?? new Date().toISOString()),
+    };
   }
 
   private async markProcessed(
@@ -152,7 +210,7 @@ export class DynamoDbStatsSummaryRepository
               match_count = if_not_exists(match_count, :zero) + :one,
               total_kills = if_not_exists(total_kills, :zero) + :kills,
               total_deaths = if_not_exists(total_deaths, :zero) + :deaths,
-              avg_placement = if_not_exists(avg_placement, :zero)
+              placement_sum = if_not_exists(placement_sum, :zero) + :placement
         `,
         ExpressionAttributeValues: {
           ':entityType': EntityType.StatsRollup,
@@ -165,8 +223,16 @@ export class DynamoDbStatsSummaryRepository
           ':one': 1,
           ':kills': kpis.kills,
           ':deaths': kpis.deaths,
+          ':placement': kpis.placement,
         },
       }),
     );
   }
+}
+
+function formatDailyPeriodId(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }

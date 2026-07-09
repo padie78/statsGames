@@ -1,6 +1,8 @@
 type Query {
   health: String!
   getPlayerProfile(userId: ID!): PlayerProfile!
+  getProfileByGamerTag(gamerTag: String!): PublicPlayerProfile!
+  searchPlayers(query: String!, limit: Int): [PlayerSearchHit!]!
   listPlayerMatches(userId: ID!, platform: String, limit: Int): [MatchUpdate!]!
   listPlayerStatsRollups(
     userId: ID!
@@ -9,6 +11,7 @@ type Query {
     platform: String
     limit: Int
   ): [PlayerStatsRollup!]!
+  listPlayerDailyTrend(userId: ID!, platform: String, days: Int): [PlayerStatsRollup!]!
 }
 
 type PlayerProfile {
@@ -21,6 +24,21 @@ type PlayerProfile {
   createdAtIso: AWSDateTime!
   updatedAtIso: AWSDateTime!
   versionId: Int!
+}
+
+type PublicPlayerProfile {
+  userId: ID!
+  gamerTag: String!
+  primaryPlatform: String!
+  avatarUrl: String
+  createdAtIso: AWSDateTime!
+}
+
+type PlayerSearchHit {
+  userId: ID!
+  gamerTag: String!
+  primaryPlatform: String!
+  avatarUrl: String
 }
 
 input UpsertPlayerProfileInput {
@@ -38,12 +56,20 @@ input LinkPlatformAccountInput {
   externalId: String!
 }
 
+input MatchStatsInput {
+  kills: Int
+  deaths: Int
+  placement: Int
+  assists: Int
+}
+
 input MatchUpdateInput {
   userId: ID!
   matchId: ID!
   platform: String!
   summary: String!
   updatedAt: AWSDateTime!
+  stats: MatchStatsInput
 }
 
 type Mutation {
@@ -58,12 +84,20 @@ type Subscription {
     @aws_subscribe(mutations: ["publishMatchUpdate"])
 }
 
+type MatchStats {
+  kills: Int
+  deaths: Int
+  placement: Int
+  assists: Int
+}
+
 type MatchUpdate {
   userId: ID!
   matchId: ID!
   platform: String!
   summary: String!
   updatedAt: AWSDateTime!
+  stats: MatchStats
 }
 
 type PlayerStatsRollup {

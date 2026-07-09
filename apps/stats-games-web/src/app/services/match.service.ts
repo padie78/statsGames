@@ -1,7 +1,14 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { generateClient } from 'aws-amplify/api';
-import { Observable, from, map } from 'rxjs';
+import { Observable, firstValueFrom, from, map } from 'rxjs';
 import { authenticatedAppsyncOptions } from '../core/auth/appsync-auth.util';
+
+export interface MatchStatsView {
+  kills?: number | null;
+  deaths?: number | null;
+  placement?: number | null;
+  assists?: number | null;
+}
 
 export interface MatchUpdateView {
   userId: string;
@@ -9,20 +16,31 @@ export interface MatchUpdateView {
   platform: string;
   summary: string;
   updatedAt: string;
+  stats?: MatchStatsView | null;
 }
 
 interface ListPlayerMatchesResp {
   listPlayerMatches: MatchUpdateView[];
 }
 
+const MATCH_STATS_FIELDS = /* GraphQL */ `
+  stats {
+    kills
+    deaths
+    placement
+    assists
+  }
+`;
+
 const LIST_PLAYER_MATCHES = /* GraphQL */ `
-  query ListPlayerMatches($userId: ID!, $limit: Int) {
-    listPlayerMatches(userId: $userId, limit: $limit) {
+  query ListPlayerMatches($userId: ID!, $platform: String, $limit: Int) {
+    listPlayerMatches(userId: $userId, platform: $platform, limit: $limit) {
       userId
       matchId
       platform
       summary
       updatedAt
+      ${MATCH_STATS_FIELDS}
     }
   }
 `;
@@ -35,6 +53,7 @@ const ON_MATCH_UPDATE = /* GraphQL */ `
       platform
       summary
       updatedAt
+      ${MATCH_STATS_FIELDS}
     }
   }
 `;
@@ -43,13 +62,27 @@ const ON_MATCH_UPDATE = /* GraphQL */ `
 export class MatchService {
   private readonly client = generateClient();
 
-  listPlayerMatches(userId: string, limit = 20): Observable<MatchUpdateView[]> {
+  listPlayerMatches(
+    userId: string,
+    options?: { platform?: 'fortnite' | 'roblox'; limit?: number },
+  ): Observable<MatchUpdateView[]> {
     return from(
       this.client.graphql({
         query: LIST_PLAYER_MATCHES,
-        variables: { userId, limit },
+        variables: {
+          userId,
+          platform: options?.platform,
+          limit: options?.limit ?? 50,
+        },
       }),
     ).pipe(map((resp) => (resp as { data: ListPlayerMatchesResp }).data.listPlayerMatches));
+  }
+
+  async listPlayerMatchesOnce(
+    userId: string,
+    options?: { platform?: 'fortnite' | 'roblox'; limit?: number },
+  ): Promise<MatchUpdateView[]> {
+    return firstValueFrom(this.listPlayerMatches(userId, options));
   }
 
   onMatchUpdate(userId: string): Observable<MatchUpdateView> {

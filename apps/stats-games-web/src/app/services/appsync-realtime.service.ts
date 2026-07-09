@@ -18,6 +18,12 @@ const ON_MATCH_UPDATE = /* GraphQL */ `
       platform
       summary
       updatedAt
+      stats {
+        kills
+        deaths
+        placement
+        assists
+      }
     }
   }
 `;
@@ -118,9 +124,8 @@ export class AppSyncRealtimeService {
       });
   }
 
-  seedFromHistory(matches: MatchUpdateView[]): void {
-    if (this._liveMatches().length > 0) return;
-    this._liveMatches.set(matches.slice(0, 25));
+  seedFromHistory(_matches: MatchUpdateView[]): void {
+    // Live feed solo desde subscription — no mezclar con historial.
   }
 
   disconnect(): void {

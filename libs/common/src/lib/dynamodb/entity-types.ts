@@ -8,6 +8,7 @@ export const EntityType = {
   StatsRollup: 'STATS_ROLLUP',
   Telemetry: 'TELEMETRY',
   PlatformAccountLink: 'PLATFORM_ACCOUNT_LINK',
+  GamerTagLookup: 'GAMERTAG_LOOKUP',
 } as const;
 
 export type EntityTypeName = (typeof EntityType)[keyof typeof EntityType];

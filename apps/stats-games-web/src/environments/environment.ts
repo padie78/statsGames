@@ -12,4 +12,6 @@ export const environment = {
     oauthRedirectSignIn: 'http://localhost:4200/auth/callback',
     oauthRedirectSignOut: 'http://localhost:4200/login',
   },
+  webhookUrlPattern:
+    'https://REPLACE.execute-api.eu-central-1.amazonaws.com/webhooks/{platform}',
 };

@@ -1,4 +1,5 @@
 import type { IMatchEventNotifier } from '@stats-games/application';
+import { MatchMapper } from '@stats-games/application';
 import type { Match } from '@stats-games/domain';
 
 const MATCH_UPDATE_FRAGMENT = /* GraphQL */ `
@@ -8,6 +9,12 @@ const MATCH_UPDATE_FRAGMENT = /* GraphQL */ `
     platform
     summary
     updatedAt
+    stats {
+      kills
+      deaths
+      placement
+      assists
+    }
   }
 `;
 
@@ -43,6 +50,8 @@ export class AppSyncMatchUpdatePublisherAdapter implements IMatchEventNotifier {
       return;
     }
 
+    const dto = MatchMapper.toUpdateDto(match);
+
     const res = await fetch(this.endpoint, {
       method: 'POST',
       headers: {
@@ -53,11 +62,12 @@ export class AppSyncMatchUpdatePublisherAdapter implements IMatchEventNotifier {
         query: MUTATION_PUBLISH_MATCH_UPDATE,
         variables: {
           input: {
-            userId: match.userId,
-            matchId: match.matchId,
-            platform: match.platform,
-            summary: match.summary(),
-            updatedAt: match.occurredAtIso,
+            userId: dto.userId,
+            matchId: dto.matchId,
+            platform: dto.platform,
+            summary: dto.summary,
+            updatedAt: dto.updatedAt,
+            stats: dto.stats ?? null,
           },
         },
       }),

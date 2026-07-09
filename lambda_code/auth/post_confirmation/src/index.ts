@@ -9,7 +9,13 @@ const doc = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const KEY_PREFIX = {
   user: 'USER#',
   profile: 'PROFILE',
+  gamerTag: 'GAMERTAG#',
+  gamerTagIndex: 'GAMERTAG',
 } as const;
+
+function normalizeGamerTag(gamerTag: string): string {
+  return gamerTag.trim().toLowerCase();
+}
 
 function userPk(userId: string): string {
   return `${KEY_PREFIX.user}${userId}`;
@@ -57,6 +63,7 @@ export const handler: PostConfirmationTriggerHandler = async (event) => {
   const now = new Date().toISOString();
   const email = attrs['email'] ?? '';
   const gamerTag = deriveGamerTag(attrs);
+  const normalizedTag = normalizeGamerTag(gamerTag);
 
   await doc.send(
     new PutCommand({
@@ -64,10 +71,13 @@ export const handler: PostConfirmationTriggerHandler = async (event) => {
       Item: {
         PK: userPk(userId),
         SK: profileSk(),
+        GSI2PK: KEY_PREFIX.gamerTagIndex,
+        GSI2SK: `${normalizedTag}#${userId}`,
         entityType: 'PLAYER',
         userId,
         email,
         gamerTag,
+        gamerTagNormalized: normalizedTag,
         primaryPlatform: 'roblox',
         avatarUrl: attrs['picture'] ?? null,
         telemetryStatus: 'PENDING_ONBOARDING',
@@ -76,6 +86,20 @@ export const handler: PostConfirmationTriggerHandler = async (event) => {
         versionId: 1,
       },
       ConditionExpression: 'attribute_not_exists(PK)',
+    }),
+  );
+
+  await doc.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        PK: `${KEY_PREFIX.gamerTag}${normalizedTag}`,
+        SK: profileSk(),
+        entityType: 'GAMERTAG_LOOKUP',
+        userId,
+        gamerTag,
+        updatedAtIso: now,
+      },
     }),
   );
 

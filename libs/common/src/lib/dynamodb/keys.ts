@@ -15,9 +15,16 @@ export const KeyPrefix = {
   Match: 'MATCH#',
   Platform: 'PLATFORM#',
   PlatformAccount: 'PLATFORM_ACCOUNT#',
+  GamerTag: 'GAMERTAG#',
+  GamerTagIndex: 'GAMERTAG',
   Profile: 'PROFILE',
   Link: 'LINK',
 } as const;
+
+/** Normaliza gamerTag para índices y lookups (case-insensitive). */
+export function normalizeGamerTag(gamerTag: string): string {
+  return gamerTag.trim().toLowerCase();
+}
 
 export type GamePlatform = 'fortnite' | 'roblox';
 
@@ -48,5 +55,17 @@ export const DynamoKeys = {
 
   platformAccountSk(): string {
     return KeyPrefix.Link;
+  },
+
+  gamerTagPk(normalizedTag: string): string {
+    return `${KeyPrefix.GamerTag}${normalizedTag}`;
+  },
+
+  gamerTagGsi2Pk(): string {
+    return KeyPrefix.GamerTagIndex;
+  },
+
+  gamerTagGsi2Sk(normalizedTag: string, userId: string): string {
+    return `${normalizedTag}#${userId}`;
   },
 };

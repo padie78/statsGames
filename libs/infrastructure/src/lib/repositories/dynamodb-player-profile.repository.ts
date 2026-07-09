@@ -1,6 +1,6 @@
-import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import type { IPlayerProfileRepository } from '@stats-games/application';
-import { DynamoKeys, EntityType, type GamePlatform } from '@stats-games/common';
+import { DynamoKeys, EntityType, normalizeGamerTag } from '@stats-games/common';
 import { PlayerProfile } from '@stats-games/domain';
 import { getDocumentClient } from '../aws/dynamodb-client.factory';
 
@@ -27,22 +27,69 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
     );
 
     if (!result.Item) return null;
+    return this.itemToProfile(result.Item);
+  }
 
-    return PlayerProfile.reconstitute({
-      userId: String(result.Item['userId']),
-      gamerTag: String(result.Item['gamerTag']),
-      primaryPlatform: result.Item['primaryPlatform'] as 'fortnite' | 'roblox',
-      fortniteId: result.Item['fortniteId'] ? String(result.Item['fortniteId']) : undefined,
-      robloxId: result.Item['robloxId'] ? String(result.Item['robloxId']) : undefined,
-      avatarUrl: result.Item['avatarUrl'] ? String(result.Item['avatarUrl']) : undefined,
-      createdAtIso: String(result.Item['createdAtIso']),
-      updatedAtIso: String(result.Item['updatedAtIso']),
-      versionId: Number(result.Item['versionId'] ?? 1),
-    });
+  async findByGamerTag(gamerTag: string): Promise<PlayerProfile | null> {
+    const normalized = normalizeGamerTag(gamerTag);
+    if (!normalized) return null;
+
+    const client = getDocumentClient();
+    const lookup = await client.send(
+      new GetCommand({
+        TableName: this.tableName,
+        Key: {
+          PK: DynamoKeys.gamerTagPk(normalized),
+          SK: DynamoKeys.profileSk(),
+        },
+      }),
+    );
+
+    const userId = lookup.Item?.['userId'];
+    if (!userId) return null;
+
+    return this.findByUserId(String(userId));
+  }
+
+  async searchByGamerTagPrefix(query: string, limit = 10): Promise<PlayerProfile[]> {
+    const normalized = normalizeGamerTag(query);
+    if (!normalized || normalized.length < 2) return [];
+
+    const client = getDocumentClient();
+    const result = await client.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'GSI2',
+        KeyConditionExpression: 'GSI2PK = :pk AND begins_with(GSI2SK, :prefix)',
+        ExpressionAttributeValues: {
+          ':pk': DynamoKeys.gamerTagGsi2Pk(),
+          ':prefix': normalized,
+        },
+        Limit: Math.min(limit, 25),
+      }),
+    );
+
+    const profiles: PlayerProfile[] = [];
+    for (const item of result.Items ?? []) {
+      const userId = item['userId'];
+      if (!userId) continue;
+      const profile = await this.findByUserId(String(userId));
+      if (profile) profiles.push(profile);
+    }
+
+    return profiles;
   }
 
   async save(profile: PlayerProfile): Promise<void> {
     const client = getDocumentClient();
+    const existing = await this.findByUserId(profile.userId);
+    const normalizedTag = normalizeGamerTag(profile.gamerTag);
+
+    if (existing && normalizeGamerTag(existing.gamerTag) !== normalizedTag) {
+      await this.removeGamerTagLookup(normalizeGamerTag(existing.gamerTag));
+    }
+
+    await this.assertGamerTagAvailable(normalizedTag, profile.userId);
 
     await client.send(
       new PutCommand({
@@ -50,9 +97,12 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
         Item: {
           PK: DynamoKeys.userPk(profile.userId),
           SK: DynamoKeys.profileSk(),
+          GSI2PK: DynamoKeys.gamerTagGsi2Pk(),
+          GSI2SK: DynamoKeys.gamerTagGsi2Sk(normalizedTag, profile.userId),
           entityType: EntityType.Player,
           userId: profile.userId,
           gamerTag: profile.gamerTag,
+          gamerTagNormalized: normalizedTag,
           primaryPlatform: profile.primaryPlatform,
           fortniteId: profile.fortniteId,
           robloxId: profile.robloxId,
@@ -64,12 +114,71 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
       }),
     );
 
+    await client.send(
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          PK: DynamoKeys.gamerTagPk(normalizedTag),
+          SK: DynamoKeys.profileSk(),
+          entityType: EntityType.GamerTagLookup,
+          userId: profile.userId,
+          gamerTag: profile.gamerTag,
+          updatedAtIso: profile.updatedAtIso,
+        },
+      }),
+    );
+
     await this.syncPlatformAccountLinks(profile);
+  }
+
+  private async assertGamerTagAvailable(normalizedTag: string, userId: string): Promise<void> {
+    const client = getDocumentClient();
+    const lookup = await client.send(
+      new GetCommand({
+        TableName: this.tableName,
+        Key: {
+          PK: DynamoKeys.gamerTagPk(normalizedTag),
+          SK: DynamoKeys.profileSk(),
+        },
+      }),
+    );
+
+    const owner = lookup.Item?.['userId'];
+    if (owner && String(owner) !== userId) {
+      throw new Error(`El gamerTag "${normalizedTag}" ya está en uso.`);
+    }
+  }
+
+  private async removeGamerTagLookup(normalizedTag: string): Promise<void> {
+    const client = getDocumentClient();
+    await client.send(
+      new DeleteCommand({
+        TableName: this.tableName,
+        Key: {
+          PK: DynamoKeys.gamerTagPk(normalizedTag),
+          SK: DynamoKeys.profileSk(),
+        },
+      }),
+    );
+  }
+
+  private itemToProfile(item: Record<string, unknown>): PlayerProfile {
+    return PlayerProfile.reconstitute({
+      userId: String(item['userId']),
+      gamerTag: String(item['gamerTag']),
+      primaryPlatform: item['primaryPlatform'] as 'fortnite' | 'roblox',
+      fortniteId: item['fortniteId'] ? String(item['fortniteId']) : undefined,
+      robloxId: item['robloxId'] ? String(item['robloxId']) : undefined,
+      avatarUrl: item['avatarUrl'] ? String(item['avatarUrl']) : undefined,
+      createdAtIso: String(item['createdAtIso']),
+      updatedAtIso: String(item['updatedAtIso']),
+      versionId: Number(item['versionId'] ?? 1),
+    });
   }
 
   private async syncPlatformAccountLinks(profile: PlayerProfile): Promise<void> {
     const client = getDocumentClient();
-    const links: Array<{ platform: GamePlatform; externalId: string }> = [];
+    const links: Array<{ platform: 'fortnite' | 'roblox'; externalId: string }> = [];
 
     if (profile.fortniteId) {
       links.push({ platform: 'fortnite', externalId: profile.fortniteId });

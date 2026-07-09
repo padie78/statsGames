@@ -1,16 +1,21 @@
 import type { AppSyncResolverEvent, AppSyncResolverHandler } from 'aws-lambda';
-import type { MatchStatsRollupDto } from '@stats-games/application';
+import type { MatchStatsRollupDto, MatchUpdateDto } from '@stats-games/application';
 import {
   getPlayerProfile,
+  getProfileByGamerTag,
   linkPlatformAccount,
+  listPlayerDailyTrend,
   listPlayerMatches,
   listPlayerStatsRollups,
+  searchPlayers,
   upsertPlayerProfile,
 } from './composition-root';
 import { asPlatform, asStatsGranularity, rethrowAsTyped } from './errors';
 
 type ResolverArgs =
   | { fieldName: 'getPlayerProfile'; args: { userId: string } }
+  | { fieldName: 'getProfileByGamerTag'; args: { gamerTag: string } }
+  | { fieldName: 'searchPlayers'; args: { query: string; limit?: number | null } }
   | {
       fieldName: 'listPlayerMatches';
       args: { userId: string; platform?: string | null; limit?: number | null };
@@ -24,6 +29,10 @@ type ResolverArgs =
         platform?: string | null;
         limit?: number | null;
       };
+    }
+  | {
+      fieldName: 'listPlayerDailyTrend';
+      args: { userId: string; platform?: string | null; days?: number | null };
     }
   | { fieldName: 'upsertPlayerProfile'; args: { input: Record<string, unknown> } }
   | { fieldName: 'linkPlatformAccount'; args: { input: Record<string, unknown> } }
@@ -44,17 +53,39 @@ function mapStatsRollup(dto: MatchStatsRollupDto) {
   };
 }
 
+function mapMatchUpdate(dto: MatchUpdateDto) {
+  return {
+    userId: dto.userId,
+    matchId: dto.matchId,
+    platform: dto.platform,
+    summary: dto.summary,
+    updatedAt: dto.updatedAt,
+    stats: dto.stats ?? null,
+  };
+}
+
 async function dispatch(op: ResolverArgs): Promise<unknown> {
   switch (op.fieldName) {
     case 'getPlayerProfile':
       return getPlayerProfile.execute({ userId: op.args.userId });
 
-    case 'listPlayerMatches':
-      return listPlayerMatches.execute({
+    case 'getProfileByGamerTag':
+      return getProfileByGamerTag.execute({ gamerTag: op.args.gamerTag });
+
+    case 'searchPlayers':
+      return searchPlayers.execute({
+        query: op.args.query,
+        limit: op.args.limit ?? undefined,
+      });
+
+    case 'listPlayerMatches': {
+      const rows = await listPlayerMatches.execute({
         userId: op.args.userId,
         platform: asPlatform(op.args.platform),
         limit: op.args.limit ?? undefined,
       });
+      return rows.map(mapMatchUpdate);
+    }
 
     case 'listPlayerStatsRollups': {
       const rows = await listPlayerStatsRollups.execute({
@@ -63,6 +94,15 @@ async function dispatch(op: ResolverArgs): Promise<unknown> {
         periodId: op.args.periodId,
         platform: asPlatform(op.args.platform),
         limit: op.args.limit ?? undefined,
+      });
+      return rows.map(mapStatsRollup);
+    }
+
+    case 'listPlayerDailyTrend': {
+      const rows = await listPlayerDailyTrend.execute({
+        userId: op.args.userId,
+        platform: asPlatform(op.args.platform),
+        days: op.args.days ?? undefined,
       });
       return rows.map(mapStatsRollup);
     }

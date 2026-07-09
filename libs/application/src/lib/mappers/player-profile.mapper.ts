@@ -1,5 +1,9 @@
 import { PlayerProfile } from '@stats-games/domain';
 import type { PlayerProfileDto } from '../dto/player/player-profile.dto';
+import type {
+  PlayerSearchHitDto,
+  PublicPlayerProfileDto,
+} from '../dto/player/public-player-profile.dto';
 
 export const PlayerProfileMapper = {
   toDto(profile: PlayerProfile): PlayerProfileDto {
@@ -13,6 +17,25 @@ export const PlayerProfileMapper = {
       createdAtIso: profile.createdAtIso,
       updatedAtIso: profile.updatedAtIso,
       versionId: profile.versionId,
+    };
+  },
+
+  toPublicDto(profile: PlayerProfile): PublicPlayerProfileDto {
+    return {
+      userId: profile.userId,
+      gamerTag: profile.gamerTag,
+      primaryPlatform: profile.primaryPlatform,
+      avatarUrl: profile.avatarUrl,
+      createdAtIso: profile.createdAtIso,
+    };
+  },
+
+  toSearchHit(profile: PlayerProfile): PlayerSearchHitDto {
+    return {
+      userId: profile.userId,
+      gamerTag: profile.gamerTag,
+      primaryPlatform: profile.primaryPlatform,
+      avatarUrl: profile.avatarUrl,
     };
   },
 
