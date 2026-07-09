@@ -49,15 +49,15 @@ resource "aws_cognito_identity_provider" "discord" {
   provider_type = "OIDC"
 
   provider_details = {
-    client_id                     = var.discord_client_id
-    client_secret                 = var.discord_client_secret
-    authorize_scopes              = "identify email"
-    attributes_request_method     = "GET"
-    oidc_issuer                   = "https://discord.com/api/oauth2"
-    authorize_url                 = "https://discord.com/api/oauth2/authorize"
-    token_url                     = "https://discord.com/api/oauth2/token"
-    attributes_url                = "https://discord.com/api/users/@me"
-    jwks_uri                      = "https://discord.com/api/oauth2/jwks"
+    client_id                 = var.discord_client_id
+    client_secret             = var.discord_client_secret
+    authorize_scopes          = "identify email"
+    attributes_request_method = "GET"
+    oidc_issuer               = "https://discord.com/api/oauth2"
+    authorize_url             = "https://discord.com/api/oauth2/authorize"
+    token_url                 = "https://discord.com/api/oauth2/token"
+    attributes_url            = "https://discord.com/api/users/@me"
+    jwks_uri                  = "https://discord.com/api/oauth2/jwks"
   }
 
   attribute_mapping = {
