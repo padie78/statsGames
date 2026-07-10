@@ -14,7 +14,7 @@ export interface LiveTickerItem {
   imports: [NeonBadgeComponent],
   template: `
     <div class="sg-live-ticker" aria-live="polite">
-      <sg-neon-badge tone="lime" [pulse]="live">LIVE</sg-neon-badge>
+      <sg-neon-badge tone="cyan" [pulse]="live">Live</sg-neon-badge>
       <div class="sg-live-ticker__track">
         @for (item of items; track item.id) {
           <span class="sg-live-ticker__item sg-live-ticker__item--{{ item.tone }}">

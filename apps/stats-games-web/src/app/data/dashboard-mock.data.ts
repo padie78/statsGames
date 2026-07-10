@@ -39,7 +39,7 @@ export const MOCK_LEADERBOARD: LeaderboardEntry[] = [
 export const MOCK_TRENDING: TrendingItem[] = [
   { id: '1', label: 'Zero Build ranked surge', meta: 'Fortnite · +18% players', tone: 'cyan' },
   { id: '2', label: 'Blox Fruits PvP meta shift', meta: 'Roblox · Hot today', tone: 'purple' },
-  { id: '3', label: 'Placement avg improving', meta: 'Community · Top 15%', tone: 'lime' },
+  { id: '3', label: 'Placement avg improving', meta: 'Community · Top 15%', tone: 'cyan' },
   { id: '4', label: 'New season challenges', meta: 'S37 · 4d left', tone: 'pink' },
 ];
 
@@ -51,8 +51,15 @@ export const MOCK_ACHIEVEMENTS: AchievementItem[] = [
 ];
 
 export const MOCK_TICKER: LiveTickerItem[] = [
-  { id: '1', text: 'NeoFragger just hit #4 placement', tone: 'lime' },
+  { id: '1', text: 'NeoFragger just hit #4 placement', tone: 'cyan' },
   { id: '2', text: '2.4M matches tracked last 24h', tone: 'cyan' },
   { id: '3', text: 'UpStatsPro climbed +5 ranks', tone: 'purple' },
-  { id: '4', text: 'Live feed active in eu-central-1', tone: 'lime' },
+  { id: '4', text: 'Live feed active in eu-central-1', tone: 'cyan' },
+];
+
+export const DASHBOARD_QUICK_ACTIONS = [
+  { id: 'analytics', label: 'Stats avanzadas', route: '/tabs/analytics', icon: '📊', tone: 'cyan' as const },
+  { id: 'matches', label: 'Partidas', route: '/tabs/matches', icon: '⚔', tone: 'lime' as const },
+  { id: 'integrations', label: 'Integrar', route: '/tabs/integrations', icon: '🔗', tone: 'purple' as const },
+  { id: 'ai', label: 'AI Coach', route: '/tabs/ai-coach', icon: '🧠', tone: 'pink' as const, badge: 'NEW' },
 ];

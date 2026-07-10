@@ -21,7 +21,7 @@ export interface LeaderboardEntry {
     <section class="sg-leaderboard-mini u-surface-card u-p-4">
       <header class="sg-panel-header">
         <h2 class="sg-panel-header__title">{{ title }}</h2>
-        <sg-neon-badge tone="lime">TOP 5</sg-neon-badge>
+        <sg-neon-badge tone="muted">Top 5</sg-neon-badge>
       </header>
 
       <ol class="sg-leaderboard-mini__list">
@@ -32,11 +32,11 @@ export interface LeaderboardEntry {
                 #{{ entry.rank }}
               </span>
               <span class="sg-leaderboard-mini__name u-truncate">{{ entry.gamerTag }}</span>
-              <span
+              <img
                 class="sg-leaderboard-mini__platform"
-                [style.background-image]="'url(' + platformIcon(entry.platform) + ')'"
-                [attr.aria-label]="entry.platform"
-              ></span>
+                [src]="platformIcon(entry.platform)"
+                [alt]="entry.platform"
+              />
               <sg-neon-badge [tone]="entry.platform === 'fortnite' ? 'cyan' : 'purple'">
                 {{ entry.platform === 'fortnite' ? 'FN' : 'RBX' }}
               </sg-neon-badge>

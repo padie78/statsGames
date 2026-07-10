@@ -109,7 +109,7 @@ function passwordMatchValidator(control: AbstractControl) {
                   <p class="auth-notice auth-notice--error">{{ error() }}</p>
                 }
 
-                <button type="submit" class="u-btn u-btn--lime u-btn--block u-mt-3" [disabled]="signinForm.invalid || loading()">
+                <button type="submit" class="u-btn u-btn--primary u-btn--block u-mt-3" [disabled]="signinForm.invalid || loading()">
                   {{ loading() ? 'Ingresando...' : 'Ingresar' }}
                 </button>
 
@@ -152,7 +152,7 @@ function passwordMatchValidator(control: AbstractControl) {
             }
           } @else {
             <div class="auth-gate__confirm-head">
-              <h2 class="u-font-display u-text-lg u-fw-bold u-mb-2">Verificar email</h2>
+              <h2 class="sg-page-header__title u-text-lg u-mb-2">Verificar email</h2>
               <p class="u-text-secondary u-text-sm">Código enviado a</p>
               <p class="auth-gate__email u-truncate">{{ registeredEmail() }}</p>
             </div>
@@ -179,7 +179,7 @@ function passwordMatchValidator(control: AbstractControl) {
                 <p class="auth-notice auth-notice--success">{{ notice() }}</p>
               }
 
-              <button type="submit" class="u-btn u-btn--lime u-btn--block u-mt-3" [disabled]="confirmForm.invalid || loading()">
+              <button type="submit" class="u-btn u-btn--primary u-btn--block u-mt-3" [disabled]="confirmForm.invalid || loading()">
                 {{ loading() ? 'Verificando...' : 'Confirmar' }}
               </button>
               <button type="button" class="auth-gate__text-link" [disabled]="loading()" (click)="resendCode()">

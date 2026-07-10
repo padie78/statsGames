@@ -26,9 +26,9 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
     ShareLinkButtonComponent,
   ],
   template: `
-    <ion-content class="ion-padding">
-      <div class="page-shell u-flex u-flex-col u-gap-4">
-        <a routerLink="/tabs/dashboard" class="u-hint">← Volver al dashboard</a>
+    <ion-content class="sg-page-content">
+      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
+        <a routerLink="/" class="u-hint">← Volver al inicio</a>
 
         @if (loading()) {
           <p class="u-hint">Cargando perfil…</p>
@@ -39,15 +39,13 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
           </section>
         } @else if (profile()) {
           <section class="sg-player-hero">
-            <p class="u-text-xs u-font-display u-tracking-wide u-text-muted u-uppercase u-mb-2">
-              Perfil público
-            </p>
+            <p class="u-text-xs u-text-muted u-mb-2">Perfil público</p>
             <h1 class="sg-player-hero__name">{{ profile()!.gamerTag }}</h1>
             <div class="sg-player-hero__meta u-mt-3">
               <sg-neon-badge [tone]="platformTone()">{{ profile()!.primaryPlatform }}</sg-neon-badge>
             </div>
             <div class="u-grid-stats u-mt-3">
-              <sg-stat-value label="Partidas" [value]="matches().length" accent="lime" />
+              <sg-stat-value label="Partidas" [value]="matches().length" />
               <sg-stat-value label="Miembro desde" [value]="memberSince()" />
             </div>
             <div class="u-mt-3">

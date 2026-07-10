@@ -27,8 +27,8 @@ export interface LiveMatchFeedItem {
       <header class="sg-live-feed__header">
         <h2 class="sg-live-feed__title">{{ title }}</h2>
         @if (showLiveIndicator) {
-          <sg-neon-badge tone="lime" [pulse]="true" label="Live data stream">
-            LIVE DATA
+          <sg-neon-badge tone="cyan" [pulse]="true" label="Live data stream">
+            En vivo
           </sg-neon-badge>
         }
       </header>

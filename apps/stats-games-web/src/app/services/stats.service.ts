@@ -120,3 +120,19 @@ function currentWeeklyPeriodId(): string {
 export function currentWeeklyPeriodIdForStats(): string {
   return currentWeeklyPeriodId();
 }
+
+export function previousWeeklyPeriodIdForStats(): string {
+  const current = currentWeeklyPeriodId();
+  const match = /^(\d{4})-W(\d{2})$/.exec(current);
+  if (!match) return current;
+
+  let year = Number(match[1]);
+  let week = Number(match[2]) - 1;
+
+  if (week < 1) {
+    year -= 1;
+    week = 52;
+  }
+
+  return `${year}-W${String(week).padStart(2, '0')}`;
+}

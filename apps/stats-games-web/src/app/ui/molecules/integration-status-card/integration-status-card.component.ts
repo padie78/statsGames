@@ -1,5 +1,6 @@
 import { Component, Input, ViewEncapsulation } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { GAME_PLATFORMS } from '../../../core/game/game-platform.config';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 @Component({
@@ -16,20 +17,34 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
 
       <div class="sg-integration-status__rows">
         <div class="sg-integration-status__row">
-          <span>Fortnite</span>
+          <div class="sg-integration-status__brand">
+            <img
+              class="sg-integration-status__icon"
+              [src]="fortniteMeta.iconUrl"
+              alt="Fortnite"
+            />
+            <span>Fortnite</span>
+          </div>
           <sg-neon-badge [tone]="fortniteConnected ? 'lime' : 'muted'">
             {{ fortniteConnected ? 'Conectado' : 'Pendiente' }}
           </sg-neon-badge>
         </div>
         <div class="sg-integration-status__row">
-          <span>Roblox</span>
+          <div class="sg-integration-status__brand">
+            <img
+              class="sg-integration-status__icon"
+              [src]="robloxMeta.iconUrl"
+              alt="Roblox"
+            />
+            <span>Roblox</span>
+          </div>
           <sg-neon-badge [tone]="robloxConnected ? 'lime' : 'muted'">
             {{ robloxConnected ? 'Conectado' : 'Pendiente' }}
           </sg-neon-badge>
         </div>
         <div class="sg-integration-status__row">
           <span>Live feed</span>
-          <sg-neon-badge [tone]="liveActive ? 'lime' : 'muted'" [pulse]="liveActive">
+          <sg-neon-badge [tone]="liveActive ? 'cyan' : 'muted'" [pulse]="liveActive">
             {{ liveActive ? 'Activo' : 'Idle' }}
           </sg-neon-badge>
         </div>
@@ -41,4 +56,7 @@ export class IntegrationStatusCardComponent {
   @Input() fortniteConnected = false;
   @Input() robloxConnected = false;
   @Input() liveActive = false;
+
+  readonly fortniteMeta = GAME_PLATFORMS['fortnite'];
+  readonly robloxMeta = GAME_PLATFORMS['roblox'];
 }

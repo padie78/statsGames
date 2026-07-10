@@ -1,0 +1,397 @@
+// =============================================================================
+// App-wide Mobalytics refinements — softens legacy TRN patterns
+// =============================================================================
+
+// —— Shared app page canvas ——
+// Background handled globally by body::before (_ambient.scss)
+
+// —— Page headers (analytics, matches, integrations, etc.) ——
+.sg-page-header__title {
+  margin: 0;
+  font-size: var(--sg-fs-xl);
+  font-weight: var(--sg-fw-bold);
+  letter-spacing: -0.02em;
+  color: var(--sg-text-primary);
+}
+
+.sg-page-header__subtitle {
+  margin: var(--sg-space-2) 0 0;
+  font-size: var(--sg-fs-sm);
+  color: var(--sg-text-secondary);
+  line-height: var(--sg-lh-snug);
+}
+
+// —— Topbar & subnav ——
+.sg-topbar {
+  background: rgba(10, 12, 20, 0.78);
+  border-bottom-color: var(--sg-border-subtle);
+}
+
+.sg-topbar--global {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.sg-topbar__logo {
+  box-shadow: var(--sg-glow-lime);
+  color: var(--sg-text-inverse);
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-topbar__brand-name {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: var(--sg-fw-semibold);
+}
+
+.sg-topbar__avatar {
+  border: 1px solid var(--sg-border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  color: var(--sg-text-secondary);
+  font-weight: var(--sg-fw-semibold);
+}
+
+.sg-subnav {
+  background: rgba(10, 12, 20, 0.72);
+  border-bottom: 1px solid var(--sg-border-subtle);
+}
+
+.sg-subnav__link {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--sg-fw-medium);
+  font-size: var(--sg-fs-sm);
+}
+
+.sg-subnav__link--active,
+.sg-subnav__link--active.sg-subnav__link--lime,
+.sg-subnav__link--active.sg-subnav__link--purple,
+.sg-subnav__link--active.sg-subnav__link--cyan {
+  color: var(--sg-neon-lime);
+  border-bottom-color: var(--sg-neon-lime);
+}
+
+.sg-subnav__link:hover {
+  color: var(--sg-text-primary);
+  border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+
+// —— Stats & KPIs ——
+.sg-stat__value--lime {
+  color: var(--sg-neon-lime);
+}
+
+.sg-stat__value--purple {
+  color: var(--sg-neon-cyan);
+}
+
+.sg-stat__label {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--sg-fw-medium);
+}
+
+.sg-kpi-strip__title {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--sg-fw-semibold);
+}
+
+.sg-kpi-strip__platform {
+  border-color: var(--sg-border-subtle);
+  box-shadow: none;
+}
+
+.sg-kpi-strip--roblox .sg-kpi-strip__platform,
+.sg-kpi-strip--fortnite .sg-kpi-strip__platform {
+  border-color: var(--sg-border-subtle);
+  box-shadow: none;
+}
+
+.sg-kpi-strip__platform-label {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--sg-text-secondary);
+}
+
+.sg-kpi-strip--roblox .sg-kpi-strip__platform-label,
+.sg-kpi-strip--fortnite .sg-kpi-strip__platform-label {
+  color: var(--sg-text-secondary);
+}
+
+// —— Match cards ——
+.sg-match-card:hover,
+.sg-match-card--roblox:hover,
+.sg-match-card--fortnite:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.sg-match-card--live {
+  border-color: rgba(var(--sg-accent-primary-rgb), 0.35);
+  box-shadow: var(--sg-glow-card);
+}
+
+.sg-match-card__title {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--sg-fw-semibold);
+}
+
+// —— Dashboard hero ——
+.sg-dashboard-hero {
+  border-color: var(--sg-border-subtle);
+  box-shadow: var(--sg-glow-card);
+}
+
+.sg-dashboard-hero__glow--roblox {
+  background: radial-gradient(circle, rgba(107, 203, 138, 0.12), transparent 70%);
+  opacity: 0.6;
+}
+
+.sg-dashboard-hero__glow--fortnite {
+  background: radial-gradient(circle, rgba(139, 131, 240, 0.14), transparent 70%);
+  opacity: 0.6;
+}
+
+.sg-dashboard-hero__avatar {
+  border-color: var(--sg-border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  color: var(--sg-text-primary);
+}
+
+.sg-dashboard-hero--fortnite .sg-dashboard-hero__avatar,
+.sg-dashboard-hero--roblox .sg-dashboard-hero__avatar {
+  border-color: var(--sg-border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+}
+
+.sg-dashboard-hero__eyebrow {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: var(--sg-fw-medium);
+}
+
+.sg-dashboard-hero__name {
+  text-transform: none;
+  letter-spacing: -0.02em;
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-dashboard-hero__stat-label {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.sg-dashboard-hero__art {
+  opacity: 0.5;
+}
+
+// —— Platform / bento panels ——
+.sg-dual-platform__card--active {
+  border-color: rgba(var(--sg-accent-primary-rgb), 0.4);
+  box-shadow: none;
+}
+
+.sg-dual-platform__card--active.sg-dual-platform__card--fortnite,
+.sg-dual-platform__card--active.sg-dual-platform__card--roblox {
+  border-color: rgba(var(--sg-accent-primary-rgb), 0.4);
+  box-shadow: none;
+}
+
+.sg-platform-spotlight--roblox,
+.sg-platform-spotlight--fortnite {
+  border-color: var(--sg-border-subtle);
+}
+
+.sg-platform-spotlight__title {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-platform-spotlight__eyebrow {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.sg-platform-spotlight__stat-label {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.sg-weekly-overview__hero-value {
+  color: var(--sg-text-primary);
+}
+
+.sg-weekly-overview__bar-fill--lime,
+.sg-weekly-overview__bar-fill--purple,
+.sg-weekly-overview__bar-fill--pink,
+.sg-weekly-overview__bar-fill--cyan {
+  box-shadow: none;
+}
+
+.sg-match-highlight--roblox,
+.sg-match-highlight--fortnite {
+  border-color: var(--sg-border-subtle);
+}
+
+.sg-match-highlight__title {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-quick-actions__item:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sg-quick-actions__label {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--sg-fw-medium);
+}
+
+// —— Platform banner (analytics / matches) ——
+.sg-platform-banner__title {
+  text-transform: none;
+  letter-spacing: -0.02em;
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-platform-banner--roblox .sg-platform-banner__glow {
+  background: radial-gradient(circle, rgba(107, 203, 138, 0.1), transparent 70%);
+}
+
+.sg-platform-banner--fortnite .sg-platform-banner__glow {
+  background: radial-gradient(circle, rgba(139, 131, 240, 0.12), transparent 70%);
+}
+
+.sg-platform-banner__art {
+  opacity: 0.45;
+}
+
+// —— Charts & feeds ——
+.sg-trend-chart__title {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: var(--sg-fw-semibold);
+}
+
+// ECharts canvas inherits card surface from parent .u-surface-card
+
+.sg-live-feed__title {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--sg-fw-semibold);
+}
+
+.sg-live-ticker {
+  background: rgba(20, 24, 33, 0.65);
+  border-color: var(--sg-border-subtle);
+}
+
+.sg-live-ticker__item--lime,
+.sg-live-ticker__item--purple,
+.sg-live-ticker__item--cyan {
+  color: var(--sg-text-secondary);
+}
+
+// —— Panel headers ——
+.sg-panel-header__title {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: var(--sg-fw-semibold);
+}
+
+// —— Leaderboard & trending ——
+.sg-leaderboard-mini__row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sg-trending-rail__dot--lime {
+  background: var(--sg-neon-lime);
+  box-shadow: none;
+}
+
+// —— AI insight ——
+.u-surface-card--ai {
+  box-shadow: var(--sg-glow-card);
+}
+
+.sg-ai-insight__headline {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: var(--sg-fw-semibold);
+}
+
+// —— Game selection (onboarding) ——
+.sg-game-tile:hover,
+.sg-game-tile--selected,
+.sg-game-tile--roblox:hover,
+.sg-game-tile--fortnite:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+.sg-game-tile__title {
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.sg-game-tile__badge {
+  color: var(--sg-text-muted);
+}
+
+.sg-game-tile__stats {
+  color: var(--sg-text-muted);
+}
+
+.sg-game-tile--roblox .sg-game-tile__platform-icon,
+.sg-game-tile--fortnite .sg-game-tile__platform-icon {
+  border-color: var(--sg-border-subtle);
+  box-shadow: none;
+}
+
+// —— Platform switcher ——
+.sg-platform-switch__btn {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--sg-fw-medium);
+}
+
+.sg-platform-switch__btn--active.sg-platform-switch__btn--roblox,
+.sg-platform-switch__btn--active.sg-platform-switch__btn--fortnite {
+  color: var(--sg-text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+}
+
+.sg-platform-switch__btn--active.sg-platform-switch__btn--roblox {
+  border: 1px solid rgba(107, 203, 138, 0.25);
+}
+
+.sg-platform-switch__btn--active.sg-platform-switch__btn--fortnite {
+  border: 1px solid rgba(139, 131, 240, 0.3);
+}
+
+// —— Player public hero ——
+.sg-player-hero__name {
+  text-transform: none;
+  letter-spacing: -0.02em;
+  font-weight: var(--sg-fw-bold);
+}
+
+// —— Settings list ——
+.sg-settings-list__row dt {
+  color: var(--sg-text-muted);
+  font-weight: var(--sg-fw-medium);
+}
+
+.sg-settings-list__row dd {
+  color: var(--sg-text-primary);
+  font-weight: var(--sg-fw-medium);
+}

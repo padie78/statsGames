@@ -33,6 +33,7 @@ export interface UpsertPlayerProfileInput {
   primaryPlatform: 'fortnite' | 'roblox';
   fortniteId?: string;
   robloxId?: string;
+  avatarUrl?: string;
 }
 
 export interface LinkPlatformAccountInput {

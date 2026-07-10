@@ -26,11 +26,12 @@ import { GAME_PLATFORM_LIST } from '../../../core/game/game-platform.config';
           [disabled]="gameContext.switching()"
           (click)="select(platform.id)"
         >
-          <span
+          <img
             class="sg-platform-switch__thumb"
-            [style.background-image]="'url(' + platform.artUrl + ')'"
+            [src]="platform.iconUrl"
+            [alt]="platform.label"
             aria-hidden="true"
-          ></span>
+          />
           <span class="sg-platform-switch__label">{{ platform.label }}</span>
         </button>
       }

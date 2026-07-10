@@ -8,12 +8,12 @@ export interface AppSubnavItem {
 
 /** Barra contextual (topbar 2) — secciones del perfil activo. */
 export const APP_SUBNAV_ITEMS: AppSubnavItem[] = [
-  { id: 'dashboard', label: 'Overview', route: '/tabs/dashboard', tone: 'lime' },
-  { id: 'matches', label: 'Partidas', route: '/tabs/matches', badge: 'LIVE' },
-  { id: 'analytics', label: 'Estadísticas', route: '/tabs/analytics', tone: 'cyan' },
-  { id: 'integrations', label: 'Integraciones', route: '/tabs/integrations' },
-  { id: 'ai-coach', label: 'AI Coach', route: '/tabs/ai-coach', tone: 'purple', badge: 'AI' },
-  { id: 'settings', label: 'Config', route: '/tabs/settings' },
+  { id: 'dashboard', label: 'Overview', route: 'dashboard', tone: 'lime' },
+  { id: 'matches', label: 'Partidas', route: 'matches', badge: 'LIVE' },
+  { id: 'analytics', label: 'Estadísticas', route: 'analytics', tone: 'cyan' },
+  { id: 'integrations', label: 'Integraciones', route: 'integrations' },
+  { id: 'ai-coach', label: 'AI Coach', route: 'ai-coach', tone: 'purple', badge: 'AI' },
+  { id: 'settings', label: 'Config', route: 'settings' },
 ];
 
 export const APP_ROUTE_TITLES: Record<string, string> = {

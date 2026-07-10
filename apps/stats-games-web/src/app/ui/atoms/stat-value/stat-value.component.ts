@@ -1,6 +1,6 @@
 import { Component, Input, ViewEncapsulation } from '@angular/core';
 
-export type StatAccent = 'default' | 'lime' | 'purple' | 'pink';
+export type StatAccent = 'default' | 'lime' | 'purple' | 'pink' | 'cyan';
 
 /**
  * Átomo — valor de KPI compacto (KDA, Win%, Rank).

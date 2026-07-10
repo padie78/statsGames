@@ -1,6 +1,8 @@
 // =============================================================================
-// Global theme entry — tokens, utilities, atomic components (TRN Cyberpunk)
+// Global theme entry — tokens, utilities, atomic components
 // =============================================================================
 @import './tokens/variables';
 @import './utilities/utilities';
 @import './components/atomic';
+@import './components/ambient';
+@import './components/refinements';

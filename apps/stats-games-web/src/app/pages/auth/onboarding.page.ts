@@ -28,9 +28,9 @@ import { GameSelectionCardComponent, NeonBadgeComponent } from '../../ui';
     <ion-content class="auth-page ion-padding">
       <div class="auth-shell auth-shell--wide">
         <section class="u-surface-card u-p-5">
-          <sg-neon-badge tone="purple">TELEMETRY</sg-neon-badge>
-          <h1 class="u-font-display u-text-2xl u-fw-black u-mt-3 u-mb-2">ELEGÍ TU ARENA</h1>
-          <p class="u-text-secondary u-text-sm u-mb-4">
+          <sg-neon-badge tone="purple">Onboarding</sg-neon-badge>
+          <h1 class="sg-page-header__title u-text-2xl u-mt-3 u-mb-2">Elegí tu plataforma</h1>
+          <p class="sg-page-header__subtitle u-mb-4">
             Seleccioná el juego principal para calibrar tu feed en vivo y métricas de rendimiento.
           </p>
 
@@ -54,11 +54,11 @@ import { GameSelectionCardComponent, NeonBadgeComponent } from '../../ui';
           <div class="auth-actions">
             <button
               type="button"
-              class="u-btn u-btn--lime u-btn--block"
+              class="u-btn u-btn--primary u-btn--block"
               [disabled]="!selectedGame() || loading()"
               (click)="confirm()"
             >
-              {{ loading() ? 'Sincronizando...' : 'INGRESAR AL CENTRO DE CONTROL ⚡' }}
+              {{ loading() ? 'Sincronizando...' : 'Continuar al dashboard' }}
             </button>
           </div>
         </section>

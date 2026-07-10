@@ -1,16 +1,28 @@
-import { Component, Input, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  Input,
+  OnChanges,
+  OnInit,
+  SimpleChanges,
+  ViewEncapsulation,
+} from '@angular/core';
+import { NgxEchartsDirective } from 'ngx-echarts';
+import type { EChartsOption } from 'echarts';
+import type { TrendChartPoint } from '../../../core/charts/chart.types';
+import {
+  buildTrendChartOptions,
+  type TrendChartVariant,
+} from '../../../core/charts/echart-theme.util';
 
-export interface TrendChartPoint {
-  label: string;
-  value: number;
-}
+export type { TrendChartPoint };
 
 @Component({
   standalone: true,
   selector: 'sg-trend-chart',
   encapsulation: ViewEncapsulation.None,
+  imports: [NgxEchartsDirective],
   template: `
-    <section class="sg-trend-chart" [attr.aria-label]="title">
+    <section class="sg-trend-chart u-surface-card" [attr.aria-label]="title">
       <header class="sg-trend-chart__header">
         <h3 class="sg-trend-chart__title">{{ title }}</h3>
         @if (unit) {
@@ -21,29 +33,48 @@ export interface TrendChartPoint {
       @if (points.length === 0) {
         <p class="sg-trend-chart__empty">Sin datos para el período.</p>
       } @else {
-        <div class="sg-trend-chart__bars">
-          @for (point of points; track point.label) {
-            <div class="sg-trend-chart__bar-col">
-              <div
-                class="sg-trend-chart__bar"
-                [style.height.%]="barHeight(point.value)"
-                [attr.title]="point.label + ': ' + point.value"
-              ></div>
-              <span class="sg-trend-chart__label">{{ point.label }}</span>
-            </div>
-          }
-        </div>
+        <div
+          class="sg-trend-chart__canvas"
+          echarts
+          [options]="chartOptions"
+          [autoResize]="true"
+        ></div>
       }
     </section>
   `,
 })
-export class TrendChartComponent {
+export class TrendChartComponent implements OnInit, OnChanges {
   @Input() title = 'Tendencia';
   @Input() unit = '';
   @Input() points: TrendChartPoint[] = [];
+  @Input() variant: TrendChartVariant = 'bar';
+  @Input() color = '#22d3ee';
+  @Input() areaColor = 'rgba(117, 105, 240, 0.22)';
 
-  barHeight(value: number): number {
-    const max = Math.max(...this.points.map((p) => p.value), 1);
-    return Math.max(8, (value / max) * 100);
+  chartOptions: EChartsOption = {};
+
+  ngOnInit(): void {
+    this.refreshOptions();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (
+      changes['points'] ||
+      changes['variant'] ||
+      changes['color'] ||
+      changes['areaColor'] ||
+      changes['unit']
+    ) {
+      this.refreshOptions();
+    }
+  }
+
+  private refreshOptions(): void {
+    this.chartOptions = buildTrendChartOptions(this.points, {
+      variant: this.variant,
+      color: this.color,
+      areaColor: this.areaColor,
+      yAxisName: this.unit || undefined,
+    });
   }
 }

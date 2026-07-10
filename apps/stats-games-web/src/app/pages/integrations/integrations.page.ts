@@ -12,7 +12,7 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
-import { NeonBadgeComponent, ShareLinkButtonComponent } from '../../ui';
+import { NeonBadgeComponent } from '../../ui';
 
 @Component({
   standalone: true,
@@ -27,30 +27,29 @@ import { NeonBadgeComponent, ShareLinkButtonComponent } from '../../ui';
     IonSelect,
     IonSelectOption,
     NeonBadgeComponent,
-    ShareLinkButtonComponent,
   ],
   template: `
-    <ion-content class="ion-padding">
-      <div class="page-shell u-flex u-flex-col u-gap-4">
-        <header>
-          <h1 class="u-font-display u-text-lg u-fw-bold u-uppercase">Integraciones</h1>
-          <p class="u-hint">Vinculá tu cuenta de juego y configurá el webhook de telemetría.</p>
+    <ion-content class="sg-page-content">
+      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
+        <header class="sg-page-header">
+          <h1 class="sg-page-header__title">Integraciones</h1>
+          <p class="sg-page-header__subtitle">Vinculá tu cuenta de juego y configurá el webhook de telemetría.</p>
         </header>
 
         <section class="u-surface-card u-p-4">
-          <h2 class="u-font-display u-text-md u-fw-bold u-mb-2">Estado de conexión</h2>
+          <h2 class="sg-page-header__title u-text-md u-mb-2">Estado de conexión</h2>
           <div class="u-flex u-gap-2 u-flex-wrap">
-            <sg-neon-badge [tone]="profile()?.fortniteId ? 'lime' : 'muted'">
+            <sg-neon-badge [tone]="profile()?.fortniteId ? 'cyan' : 'muted'">
               Fortnite {{ profile()?.fortniteId ? '✓' : '—' }}
             </sg-neon-badge>
-            <sg-neon-badge [tone]="profile()?.robloxId ? 'lime' : 'muted'">
+            <sg-neon-badge [tone]="profile()?.robloxId ? 'cyan' : 'muted'">
               Roblox {{ profile()?.robloxId ? '✓' : '—' }}
             </sg-neon-badge>
           </div>
         </section>
 
         <section class="u-surface-card u-p-4">
-          <h2 class="u-font-display u-text-md u-fw-bold u-mb-2">Webhook URL</h2>
+          <h2 class="sg-page-header__title u-text-md u-mb-2">Webhook URL</h2>
           <p class="u-hint u-mb-2">
             POST con header <code>X-Webhook-Secret</code> y body JSON
             (<code>platformUserId</code>, <code>matchId</code>, <code>stats</code>).
@@ -61,7 +60,7 @@ import { NeonBadgeComponent, ShareLinkButtonComponent } from '../../ui';
 
         @if (showLinkForm()) {
           <section class="u-surface-card u-p-4">
-            <h2 class="u-font-display u-text-md u-fw-bold u-mb-2">Vincular cuenta</h2>
+            <h2 class="sg-page-header__title u-text-md u-mb-2">Vincular cuenta</h2>
             <form [formGroup]="linkForm" (ngSubmit)="submitLinkPlatform()">
               <ion-list lines="none">
                 <ion-item>
@@ -83,17 +82,13 @@ import { NeonBadgeComponent, ShareLinkButtonComponent } from '../../ui';
               }
               <button
                 type="submit"
-                class="u-btn u-btn--lime u-btn--block u-mt-3"
+                class="u-btn u-btn--primary u-btn--block u-mt-3"
                 [disabled]="linkForm.invalid || linking()"
               >
                 {{ linking() ? 'Vinculando...' : 'Vincular cuenta' }}
               </button>
             </form>
           </section>
-        }
-
-        @if (profile()?.gamerTag) {
-          <sg-share-link-button [gamerTag]="profile()!.gamerTag" />
         }
       </div>
     </ion-content>

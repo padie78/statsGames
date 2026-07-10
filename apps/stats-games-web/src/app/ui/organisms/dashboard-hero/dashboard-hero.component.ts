@@ -13,36 +13,44 @@ import { ShareLinkButtonComponent } from '../../molecules/share-link-button/shar
   template: `
     <section
       class="sg-dashboard-hero"
-      [class]="'sg-dashboard-hero--' + platform"
+      [class.sg-dashboard-hero--roblox]="platform === 'roblox'"
+      [class.sg-dashboard-hero--fortnite]="platform === 'fortnite'"
       [class.sg-dashboard-hero--animating]="animating"
     >
-      <div
-        class="sg-dashboard-hero__art"
-        [style.background-image]="artUrl ? 'url(' + artUrl + ')' : null"
-        aria-hidden="true"
-      ></div>
+      @if (artUrl) {
+        <img
+          class="sg-dashboard-hero__art"
+          [src]="artUrl"
+          [alt]="platform + ' artwork'"
+          aria-hidden="true"
+        />
+      }
       <div class="sg-dashboard-hero__glow" [class]="'sg-dashboard-hero__glow--' + platform"></div>
 
       <div class="sg-dashboard-hero__main">
         <div class="sg-dashboard-hero__avatar">
-          <span
-            class="sg-dashboard-hero__avatar-icon"
-            [style.background-image]="'url(' + platformIconUrl + ')'"
-            aria-hidden="true"
-          ></span>
+          @if (platformIconUrl) {
+            <img
+              class="sg-dashboard-hero__avatar-icon"
+              [src]="platformIconUrl"
+              [alt]="platform"
+              aria-hidden="true"
+            />
+          }
           <span class="sg-dashboard-hero__avatar-text">{{ initials }}</span>
         </div>
 
         <div class="sg-dashboard-hero__info u-min-w-0">
-          <p class="sg-dashboard-hero__eyebrow">Player Command Center</p>
+          <p class="sg-dashboard-hero__eyebrow">Tu resumen</p>
           <h1 class="sg-dashboard-hero__name">{{ gamerTag }}</h1>
           <div class="sg-dashboard-hero__badges">
             <sg-neon-badge [tone]="platformTone">{{ platform }}</sg-neon-badge>
             @if (live) {
-              <sg-neon-badge tone="lime" [pulse]="true">STREAM ON</sg-neon-badge>
+              <sg-neon-badge tone="cyan" [pulse]="true">En vivo</sg-neon-badge>
             }
-            <sg-neon-badge tone="cyan">S{{ season }}</sg-neon-badge>
-            <sg-neon-badge tone="purple">{{ rankTier }}</sg-neon-badge>
+            @if (playerLevel > 1) {
+              <sg-neon-badge tone="lime">Nivel {{ playerLevel }}</sg-neon-badge>
+            }
             @if (fortniteId) {
               <sg-neon-badge tone="cyan">FN {{ fortniteId }}</sg-neon-badge>
             }
@@ -56,27 +64,27 @@ import { ShareLinkButtonComponent } from '../../molecules/share-link-button/shar
           @if (gamerTag) {
             <sg-share-link-button [gamerTag]="gamerTag" />
           }
-          <a routerLink="/tabs/analytics" class="u-btn u-btn--ghost">Ver stats</a>
-          <a routerLink="/tabs/integrations" class="u-btn u-btn--lime">Conectar</a>
+          <a routerLink="/tabs/analytics" class="u-btn u-btn--ghost">Stats avanzadas</a>
+          <a routerLink="/tabs/integrations" class="u-btn u-btn--primary">Conectar</a>
         </div>
       </div>
 
       <div class="sg-dashboard-hero__footer">
         <div class="sg-dashboard-hero__stat-pill">
-          <span class="sg-dashboard-hero__stat-label">Level</span>
-          <span class="sg-dashboard-hero__stat-value">{{ playerLevel }}</span>
+          <span class="sg-dashboard-hero__stat-label">Victorias</span>
+          <span class="sg-dashboard-hero__stat-value">{{ winsWeek }}</span>
         </div>
         <div class="sg-dashboard-hero__stat-pill">
-          <span class="sg-dashboard-hero__stat-label">Percentile</span>
-          <span class="sg-dashboard-hero__stat-value u-text-lime">{{ percentile }}</span>
+          <span class="sg-dashboard-hero__stat-label">Win rate</span>
+          <span class="sg-dashboard-hero__stat-value">{{ winRate }}</span>
         </div>
         <div class="sg-dashboard-hero__stat-pill">
-          <span class="sg-dashboard-hero__stat-label">Matches (7d)</span>
-          <span class="sg-dashboard-hero__stat-value">{{ matches7d }}</span>
+          <span class="sg-dashboard-hero__stat-label">Mejor lugar</span>
+          <span class="sg-dashboard-hero__stat-value">#{{ bestPlacement }}</span>
         </div>
         <div class="sg-dashboard-hero__stat-pill">
-          <span class="sg-dashboard-hero__stat-label">Best place</span>
-          <span class="sg-dashboard-hero__stat-value u-text-purple">#{{ bestPlacement }}</span>
+          <span class="sg-dashboard-hero__stat-label">K/D</span>
+          <span class="sg-dashboard-hero__stat-value">{{ kd }}</span>
         </div>
       </div>
     </section>
@@ -89,12 +97,11 @@ export class DashboardHeroComponent implements OnChanges {
   @Input() fortniteId?: string | null;
   @Input() robloxId?: string | null;
   @Input() live = false;
-  @Input() season = 37;
-  @Input() rankTier = 'Diamond II';
-  @Input() playerLevel = 42;
-  @Input() percentile = 'Top 18%';
-  @Input() matches7d = 0;
-  @Input() bestPlacement = 4;
+  @Input() playerLevel = 1;
+  @Input() winsWeek = 0;
+  @Input() winRate = '—';
+  @Input() kd = '—';
+  @Input() bestPlacement = 99;
 
   @Output() readonly connectClick = new EventEmitter<void>();
 

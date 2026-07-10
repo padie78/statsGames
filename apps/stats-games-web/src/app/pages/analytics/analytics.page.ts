@@ -15,21 +15,26 @@ import {
   TrendChartComponent,
   type TrendChartPoint,
 } from '../../ui';
-import { computeKdRatio } from '../../utils/match-stats.util';
+import { computeKdRatio, computePlayStreakFromDailyTrend } from '../../utils/match-stats.util';
 import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
 @Component({
   standalone: true,
   selector: 'app-analytics-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [IonContent, PlatformPageBannerComponent, StatValueComponent, TrendChartComponent],
+  imports: [
+    IonContent,
+    PlatformPageBannerComponent,
+    StatValueComponent,
+    TrendChartComponent,
+  ],
   template: `
     <ion-content class="sg-page-content">
       <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
         <sg-platform-page-banner
           [platform]="activePlatform()"
-          title="Estadísticas"
-          subtitle="Rollups semanales y tendencia diaria filtrados por plataforma activa."
+          title="Stats avanzadas"
+          subtitle="Para quien quiere profundizar. Victorias e historial están en Partidas."
         />
 
         @if (error()) {
@@ -47,33 +52,34 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
         @if (weekly()) {
           <section class="u-surface-card u-p-4">
-            <h2 class="u-font-display u-text-md u-fw-bold u-mb-3">
+            <h2 class="sg-page-header__title u-text-md u-mb-3">
               Esta semana · {{ platformMeta().shortLabel }}
             </h2>
             <div class="u-grid-stats">
-              <sg-stat-value label="Partidas" [value]="weekly()!.matchCount" accent="lime" />
-              <sg-stat-value label="Kills" [value]="weekly()!.totalKills" accent="lime" />
-              <sg-stat-value label="Deaths" [value]="weekly()!.totalDeaths" accent="pink" />
+              <sg-stat-value label="Partidas" [value]="weekly()!.matchCount" />
+              <sg-stat-value label="Kills" [value]="weekly()!.totalKills" accent="cyan" />
               <sg-stat-value label="K/D" [value]="weeklyKd()" accent="purple" />
-              <sg-stat-value
-                label="Placement avg"
-                [value]="weekly()!.avgPlacement.toFixed(1)"
-              />
+              <sg-stat-value label="Racha días" [value]="playStreak()" />
             </div>
           </section>
         }
 
-        <sg-trend-chart
-          title="Kills por día (últimos 7)"
-          unit="kills"
-          [points]="killsTrend()"
-        />
+        <div class="sg-analytics-charts sg-analytics-charts--compact">
+          <sg-trend-chart
+            title="Kills por día (últimos 7)"
+            unit="kills"
+            variant="area"
+            [points]="killsTrend()"
+          />
 
-        <sg-trend-chart
-          title="Partidas por día"
-          unit="matches"
-          [points]="matchesTrend()"
-        />
+          <sg-trend-chart
+            title="Partidas por día"
+            unit="matches"
+            variant="bar"
+            color="#22d3ee"
+            [points]="matchesTrend()"
+          />
+        </div>
       </div>
     </ion-content>
   `,
@@ -98,6 +104,8 @@ export class AnalyticsPageComponent implements OnInit {
     if (!w) return '—';
     return computeKdRatio(w.totalKills, w.totalDeaths);
   });
+
+  readonly playStreak = computed(() => computePlayStreakFromDailyTrend(this.dailyTrend()));
 
   readonly killsTrend = computed<TrendChartPoint[]>(() =>
     this.dailyTrend().map((d) => ({

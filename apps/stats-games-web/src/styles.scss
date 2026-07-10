@@ -26,10 +26,12 @@ body {
   margin: 0;
   font-family: var(--sg-font-body);
   color: var(--sg-text-primary);
-  background-color: var(--sg-bg-deep);
-  background-image: var(--sg-gradient-hero), var(--sg-bg-noise);
-  background-attachment: fixed;
+  background-color: var(--sg-bg-ambient-base);
   -webkit-font-smoothing: antialiased;
+}
+
+body.sg-nav-lock {
+  overflow: hidden;
 }
 
 ion-app,
@@ -75,15 +77,13 @@ ion-tab-bar {
 }
 
 .page-shell {
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: var(--sg-page-max-width);
+  margin-inline: auto;
 }
 
 .page-shell--fluid {
-  max-width: none;
-  width: 100%;
-  margin: 0;
-  padding: var(--sg-space-4) clamp(var(--sg-space-4), 2.5vw, var(--sg-space-6));
+  padding: var(--sg-space-4) var(--sg-page-padding-x) var(--sg-space-6);
 }
 
 // Auth gate — Mobalytics-inspired unified sign-in / sign-up
@@ -118,21 +118,17 @@ ion-content.auth-gate::part(scroll) {
   height: 3rem;
   border-radius: var(--sg-radius-md);
   background: var(--sg-gradient-cta);
-  color: var(--sg-text-inverse);
-  font-family: var(--sg-font-display);
-  font-weight: var(--sg-fw-black);
+  color: #fff;
+  font-weight: var(--sg-fw-bold);
   font-size: var(--sg-fs-lg);
-  box-shadow: var(--sg-glow-lime);
   margin-bottom: var(--sg-space-3);
 }
 
 .auth-gate__title {
   margin: 0;
-  font-family: var(--sg-font-display);
   font-size: var(--sg-fs-2xl);
-  font-weight: var(--sg-fw-black);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: var(--sg-fw-bold);
+  letter-spacing: -0.02em;
   color: var(--sg-text-primary);
 }
 
@@ -162,19 +158,16 @@ ion-content.auth-gate::part(scroll) {
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--sg-text-muted);
-  font-family: var(--sg-font-display);
-  font-size: var(--sg-fs-xs);
-  font-weight: var(--sg-fw-bold);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: var(--sg-fs-sm);
+  font-weight: var(--sg-fw-medium);
   cursor: pointer;
   transition: color var(--sg-duration-fast) var(--sg-ease-out),
     border-color var(--sg-duration-fast) var(--sg-ease-out);
 }
 
 .auth-gate__tab--active {
-  color: var(--sg-neon-lime);
-  border-bottom-color: var(--sg-neon-lime);
+  color: var(--sg-accent-primary);
+  border-bottom-color: var(--sg-accent-primary);
 }
 
 .auth-gate__tab:hover:not(.auth-gate__tab--active) {
@@ -241,8 +234,8 @@ ion-content.auth-gate::part(scroll) {
 }
 
 .auth-gate__field:focus-within {
-  border-color: var(--sg-border-lime);
-  box-shadow: 0 0 0 1px rgba(184, 255, 60, 0.15);
+  border-color: rgba(var(--sg-accent-primary-rgb), 0.5);
+  box-shadow: 0 0 0 1px rgba(var(--sg-accent-primary-rgb), 0.12);
 }
 
 .auth-gate__field-icon {
@@ -463,10 +456,10 @@ ion-content.auth-page::part(scroll) {
   0%,
   100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(184, 255, 60, 0.55);
+    box-shadow: 0 0 0 0 rgba(var(--sg-neon-lime-rgb), 0.55);
   }
   50% {
     opacity: 0.75;
-    box-shadow: 0 0 0 8px rgba(184, 255, 60, 0);
+    box-shadow: 0 0 0 8px rgba(var(--sg-neon-lime-rgb), 0);
   }
 }

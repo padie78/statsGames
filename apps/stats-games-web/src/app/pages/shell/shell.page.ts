@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewEncapsulation, computed, inject } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { Router } from '@angular/router';
+import { IonRouterOutlet } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/services/auth.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
@@ -9,7 +10,7 @@ import { AppSubnavComponent, AppTopbarComponent } from '../../ui';
   standalone: true,
   selector: 'app-shell-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [RouterOutlet, AppTopbarComponent, AppSubnavComponent],
+  imports: [IonRouterOutlet, AppTopbarComponent, AppSubnavComponent],
   template: `
     <div
       class="sg-app-shell sg-app-shell--dual-topbar"
@@ -20,7 +21,7 @@ import { AppSubnavComponent, AppTopbarComponent } from '../../ui';
       <sg-app-topbar [live]="realtime.isLive()" (logout)="logout()" />
       <sg-app-subnav />
       <main class="sg-app-shell__content">
-        <router-outlet />
+        <ion-router-outlet />
       </main>
     </div>
   `,

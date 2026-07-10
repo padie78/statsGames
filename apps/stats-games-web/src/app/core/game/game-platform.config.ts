@@ -22,10 +22,10 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     badge: 'Sandbox · Experiences',
     tagline: 'Sesiones largas, XP y economía de experiencias.',
     statsHint: 'Sessions · XP/h · Hops',
-    artUrl: '/assets/games/roblox-hero.svg',
-    iconUrl: '/assets/games/roblox-icon.svg',
+    artUrl: '/assets/games/roblox-hero.png',
+    iconUrl: '/assets/games/roblox-icon.png',
     accent: 'lime',
-    shellGlow: 'rgba(184, 255, 60, 0.12)',
+    shellGlow: 'rgba(139, 131, 240, 0.08)',
   },
   fortnite: {
     id: 'fortnite',
@@ -34,10 +34,10 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     badge: 'Battle Royale · Ranked',
     tagline: 'Placement, eliminations y clutch en cada storm.',
     statsHint: 'Placement · K/D · Win Rate',
-    artUrl: '/assets/games/fortnite-hero.svg',
-    iconUrl: '/assets/games/fortnite-icon.svg',
+    artUrl: '/assets/games/fortnite-hero.png',
+    iconUrl: '/assets/games/fortnite-icon.png',
     accent: 'purple',
-    shellGlow: 'rgba(168, 85, 247, 0.14)',
+    shellGlow: 'rgba(139, 131, 240, 0.1)',
   },
 };
 

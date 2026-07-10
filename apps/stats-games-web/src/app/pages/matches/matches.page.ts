@@ -1,38 +1,41 @@
 import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import {
-  IonContent,
-  IonRefresher,
-  IonRefresherContent,
-  IonSelect,
-  IonSelectOption,
-} from '@ionic/angular/standalone';
+import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import {
-  LiveMatchFeedComponent,
+  KpiStripComponent,
+  MatchFiltersToolbarComponent,
+  MatchHighlightCardComponent,
+  MatchHistoryListComponent,
   PlatformPageBannerComponent,
-  type LiveMatchFeedItem,
+  type KpiStripItem,
+  type MatchDateFilter,
+  type MatchPlatformFilter,
 } from '../../ui';
-import { toMatchCardStats } from '../../utils/match-stats.util';
-
-type PlatformFilter = 'all' | 'fortnite' | 'roblox';
-type DateFilter = 'all' | '7d' | '30d';
+import {
+  aggregateMatchStats,
+  formatMatchRelativeTime,
+  groupMatchesByDay,
+  sortMatches,
+  toMatchCardStats,
+  type MatchSortKey,
+} from '../../utils/match-stats.util';
+import { resolveMatchHistory } from '../../data/match-mock.data';
 
 @Component({
   standalone: true,
   selector: 'app-matches-page',
   encapsulation: ViewEncapsulation.None,
   imports: [
-    ReactiveFormsModule,
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    IonSelect,
-    IonSelectOption,
-    LiveMatchFeedComponent,
     PlatformPageBannerComponent,
+    MatchFiltersToolbarComponent,
+    KpiStripComponent,
+    MatchHighlightCardComponent,
+    MatchHistoryListComponent,
   ],
   template: `
     <ion-content class="sg-page-content">
@@ -40,47 +43,62 @@ type DateFilter = 'all' | '7d' | '30d';
         <ion-refresher-content />
       </ion-refresher>
 
-      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
+      <div class="page-shell page-shell--fluid sg-matches-page u-flex u-flex-col u-gap-4">
         <sg-platform-page-banner
           [platform]="bannerPlatform()"
           title="Partidas"
-          subtitle="Historial completo con filtros por plataforma y fecha."
+          subtitle="Tu historial, victorias y mejores momentos — sin gráficos complicados."
         />
 
-        <section class="u-surface-card u-p-4 u-flex u-gap-3 u-flex-wrap">
-          <ion-select
-            label="Plataforma"
-            labelPlacement="stacked"
-            [formControl]="filterForm.controls.platform"
-            (ionChange)="applyFilters()"
-          >
-            <ion-select-option value="all">Todas</ion-select-option>
-            <ion-select-option value="fortnite">Fortnite</ion-select-option>
-            <ion-select-option value="roblox">Roblox</ion-select-option>
-          </ion-select>
-
-          <ion-select
-            label="Período"
-            labelPlacement="stacked"
-            [formControl]="filterForm.controls.dateRange"
-            (ionChange)="applyFilters()"
-          >
-            <ion-select-option value="all">Todo</ion-select-option>
-            <ion-select-option value="7d">Últimos 7 días</ion-select-option>
-            <ion-select-option value="30d">Últimos 30 días</ion-select-option>
-          </ion-select>
-        </section>
+        <sg-match-filters-toolbar
+          [platform]="platformFilter()"
+          [dateRange]="dateFilter()"
+          [sort]="sortKey()"
+          [resultCount]="filteredMatches().length"
+          [usingMockData]="usingMockData()"
+          (platformChange)="setPlatformFilter($event)"
+          (dateRangeChange)="setDateFilter($event)"
+          (sortChange)="setSortKey($event)"
+        />
 
         @if (error()) {
           <p class="u-error">{{ error() }}</p>
         }
 
-        <sg-live-match-feed
-          title="Resultados"
-          [items]="feedItems()"
-          [showLiveIndicator]="false"
-          [emptyMessage]="loading() ? 'Cargando partidas…' : 'No hay partidas con estos filtros.'"
-        />
+        @if (loading()) {
+          <section class="u-surface-card u-p-5">
+            <p class="u-hint u-m-0">Cargando partidas…</p>
+          </section>
+        } @else if (filteredMatches().length > 0) {
+          <sg-kpi-strip
+            title="Resumen del período"
+            [platform]="bannerPlatform()"
+            [items]="summaryKpis()"
+          />
+
+          @if (highlightMatch(); as match) {
+            <sg-match-highlight-card
+              [matchId]="match.matchId"
+              [platform]="match.platform"
+              [summary]="match.summary"
+              [updatedAt]="match.relativeTime"
+              [stats]="match.stats"
+              [showHistoryLink]="false"
+            />
+          }
+
+          <sg-match-history-list
+            [groups]="groupedMatches()"
+            emptyMessage="No hay partidas con estos filtros."
+          />
+        } @else {
+          <section class="sg-match-history__empty u-surface-card u-p-5">
+            <h2 class="sg-page-header__title u-text-md u-mb-2">Sin partidas</h2>
+            <p class="u-hint u-m-0">
+              No hay resultados con los filtros actuales. Probá ampliar el período o conectá tu cuenta en Integraciones.
+            </p>
+          </section>
+        }
       </div>
     </ion-content>
   `,
@@ -89,33 +107,86 @@ export class MatchesPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
-  private readonly fb = inject(FormBuilder);
 
   readonly allMatches = signal<MatchUpdateView[]>([]);
-  readonly filteredMatches = signal<MatchUpdateView[]>([]);
+  readonly platformFilter = signal<MatchPlatformFilter>('all');
+  readonly dateFilter = signal<MatchDateFilter>('all');
+  readonly sortKey = signal<MatchSortKey>('newest');
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
 
-  readonly filterForm = this.fb.nonNullable.group({
-    platform: ['all' as PlatformFilter],
-    dateRange: ['all' as DateFilter],
+  readonly bannerPlatform = computed((): 'fortnite' | 'roblox' => {
+    const filter = this.platformFilter();
+    if (filter === 'fortnite' || filter === 'roblox') return filter;
+    return this.gameContext.activeGame() ?? 'fortnite';
   });
 
-  readonly bannerPlatform = computed(
-    (): 'fortnite' | 'roblox' => {
-      const filter = this.filterForm.controls.platform.value;
-      if (filter === 'fortnite' || filter === 'roblox') return filter;
-      return this.gameContext.activeGame() ?? 'fortnite';
-    },
+  readonly usingMockData = computed(
+    () => this.allMatches().length === 0 && this.filteredMatches().length > 0,
   );
 
-  readonly feedItems = computed<LiveMatchFeedItem[]>(() =>
-    this.filteredMatches().map((m) => ({
-      matchId: m.matchId,
-      platform: m.platform,
-      summary: m.summary,
-      updatedAt: m.updatedAt,
-      stats: toMatchCardStats(m.stats),
+  readonly filteredMatches = computed(() => {
+    const userId = this.auth.userId() ?? 'mock-user-demo';
+    const platform = this.platformFilter();
+    const platformFilter = platform === 'all' ? null : platform;
+    let rows = resolveMatchHistory(this.allMatches(), userId, platformFilter);
+
+    const range = this.dateFilter();
+    if (range !== 'all') {
+      const days = range === '7d' ? 7 : 30;
+      const cutoff = Date.now() - days * 86_400_000;
+      rows = rows.filter((m) => new Date(m.updatedAt).getTime() >= cutoff);
+    }
+
+    return sortMatches(rows, this.sortKey());
+  });
+
+  readonly summaryKpis = computed<KpiStripItem[]>(() => {
+    const summary = aggregateMatchStats(this.filteredMatches());
+    return [
+      { label: 'Partidas', value: summary.matchCount, icon: 'matches' },
+      { label: 'Victorias', value: summary.winCount, icon: 'placement', accent: 'lime' },
+      { label: 'Win rate', value: summary.winRate, icon: 'kd', accent: 'cyan' },
+      {
+        label: 'Mejor lugar',
+        value: summary.bestPlacement != null ? `#${summary.bestPlacement}` : '—',
+        icon: 'placement',
+        accent: 'lime',
+      },
+    ];
+  });
+
+  readonly highlightMatch = computed(() => {
+    const matches = this.filteredMatches();
+    if (!matches.length) return null;
+
+    const best = [...matches].sort((a, b) => {
+      const pa = a.stats?.placement ?? 999;
+      const pb = b.stats?.placement ?? 999;
+      if (pa !== pb) return pa - pb;
+      return (b.stats?.kills ?? 0) - (a.stats?.kills ?? 0);
+    })[0];
+
+    return {
+      matchId: best.matchId,
+      platform: best.platform,
+      summary: best.summary,
+      relativeTime: formatMatchRelativeTime(best.updatedAt),
+      stats: toMatchCardStats(best.stats),
+    };
+  });
+
+  readonly groupedMatches = computed(() =>
+    groupMatchesByDay(this.filteredMatches()).map((group) => ({
+      ...group,
+      items: group.matches.map((match) => ({
+        matchId: match.matchId,
+        platform: match.platform,
+        summary: match.summary,
+        updatedAt: match.updatedAt,
+        relativeTime: formatMatchRelativeTime(match.updatedAt),
+        stats: toMatchCardStats(match.stats),
+      })),
     })),
   );
 
@@ -126,9 +197,7 @@ export class MatchesPageComponent implements OnInit {
 
       const active = this.gameContext.activeGame();
       if (active) {
-        this.filterForm.controls.platform.setValue(active, { emitEvent: false });
-        this.applyFilters();
-      } else {
+        this.platformFilter.set(active);
         void this.loadMatches();
       }
     });
@@ -136,32 +205,25 @@ export class MatchesPageComponent implements OnInit {
 
   ngOnInit(): void {
     const active = this.gameContext.activeGame();
-    if (active) {
-      this.filterForm.controls.platform.setValue(active, { emitEvent: false });
-    }
+    if (active) this.platformFilter.set(active);
     void this.loadMatches();
+  }
+
+  setPlatformFilter(value: MatchPlatformFilter): void {
+    this.platformFilter.set(value);
+  }
+
+  setDateFilter(value: MatchDateFilter): void {
+    this.dateFilter.set(value);
+  }
+
+  setSortKey(value: MatchSortKey): void {
+    this.sortKey.set(value);
   }
 
   async refresh(event: CustomEvent): Promise<void> {
     await this.loadMatches();
     (event.target as HTMLIonRefresherElement).complete();
-  }
-
-  applyFilters(): void {
-    const { platform, dateRange } = this.filterForm.getRawValue();
-    let rows = [...this.allMatches()];
-
-    if (platform !== 'all') {
-      rows = rows.filter((m) => m.platform === platform);
-    }
-
-    if (dateRange !== 'all') {
-      const days = dateRange === '7d' ? 7 : 30;
-      const cutoff = Date.now() - days * 86_400_000;
-      rows = rows.filter((m) => new Date(m.updatedAt).getTime() >= cutoff);
-    }
-
-    this.filteredMatches.set(rows);
   }
 
   private async loadMatches(): Promise<void> {
@@ -174,7 +236,6 @@ export class MatchesPageComponent implements OnInit {
     try {
       const rows = await this.matchService.listPlayerMatchesOnce(userId, { limit: 100 });
       this.allMatches.set(rows);
-      this.applyFilters();
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Error cargando partidas');
     } finally {

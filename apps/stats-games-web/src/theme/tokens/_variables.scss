@@ -1,55 +1,67 @@
 // =============================================================================
-// StatsGames — TRN Cyberpunk Design Tokens
-// Fuente única de verdad visual. Ningún componente define CSS local.
+// StatsGames — Design Tokens (Mobalytics-inspired: dark, muted, professional)
 // =============================================================================
 
 :root {
-  // —— Surfaces (dark depth) ——
-  --sg-bg-void: #05070d;
-  --sg-bg-deep: #0a0e17;
-  --sg-bg-panel: #111827;
-  --sg-bg-elevated: #1a2234;
-  --sg-bg-overlay: rgba(5, 7, 13, 0.85);
-  --sg-bg-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  // —— Surfaces ——
+  --sg-bg-void: #080910;
+  --sg-bg-deep: #0b0c14;
+  --sg-bg-ambient-base: #0a0b12;
+  --sg-bg-panel: #12141f;
+  --sg-bg-elevated: #181c28;
+  --sg-bg-overlay: rgba(8, 9, 14, 0.9);
+  --sg-bg-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  --sg-bg-stars: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Ccircle cx='114' cy='25' r='1.1' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='250' cy='228' r='0.45' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='558' cy='89' r='0.9' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='32' cy='30' r='0.35' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='238' cy='517' r='0.9' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='574' cy='203' r='1.1' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='225' cy='459' r='0.9' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='6' cy='163' r='1.1' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='348' cy='284' r='0.45' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='344' cy='104' r='0.35' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='99' cy='367' r='0.55' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='44' cy='470' r='0.9' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='387' cy='80' r='0.9' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='370' cy='591' r='0.45' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='46' cy='233' r='0.55' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='238' cy='103' r='0.7' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='464' cy='373' r='0.45' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='363' cy='214' r='1.1' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='73' cy='175' r='0.9' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='167' cy='473' r='0.7' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='570' cy='224' r='1.1' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='57' cy='234' r='0.35' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='410' cy='274' r='0.35' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='580' cy='322' r='0.45' fill='%23fff' fill-opacity='0.45'/%3E%3Ccircle cx='405' cy='469' r='0.45' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='142' cy='252' r='1.1' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='598' cy='438' r='0.9' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='370' cy='224' r='0.45' fill='%23fff' fill-opacity='0.45'/%3E%3Ccircle cx='93' cy='48' r='0.35' fill='%23fff' fill-opacity='0.2'/%3E%3Ccircle cx='163' cy='432' r='0.9' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='394' cy='390' r='0.9' fill='%23fff' fill-opacity='0.45'/%3E%3Ccircle cx='541' cy='257' r='0.9' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='117' cy='549' r='0.55' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='114' cy='300' r='0.7' fill='%23fff' fill-opacity='0.2'/%3E%3Ccircle cx='464' cy='3' r='1.1' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='512' cy='182' r='0.9' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='305' cy='519' r='0.9' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='156' cy='382' r='0.45' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='331' cy='500' r='0.35' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='371' cy='314' r='0.45' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='246' cy='580' r='0.35' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='497' cy='70' r='0.9' fill='%23fff' fill-opacity='0.2'/%3E%3Ccircle cx='131' cy='486' r='0.9' fill='%23fff' fill-opacity='0.2'/%3E%3Ccircle cx='271' cy='540' r='0.9' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='216' cy='552' r='1.1' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='319' cy='408' r='1.1' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='448' cy='529' r='0.7' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='253' cy='230' r='0.35' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='21' cy='567' r='0.45' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='7' cy='72' r='1.1' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='234' cy='69' r='0.35' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='72' cy='526' r='0.45' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='497' cy='219' r='0.9' fill='%23fff' fill-opacity='0.2'/%3E%3Ccircle cx='584' cy='590' r='0.7' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='484' cy='416' r='0.45' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='99' cy='441' r='0.55' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='420' cy='478' r='1.1' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='100' cy='62' r='0.7' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='111' cy='254' r='0.45' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='549' cy='459' r='0.45' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='187' cy='285' r='0.7' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='77' cy='453' r='0.9' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='51' cy='553' r='0.35' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='242' cy='170' r='0.7' fill='%23fff' fill-opacity='0.45'/%3E%3Ccircle cx='492' cy='218' r='0.7' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='168' cy='388' r='0.35' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='271' cy='465' r='0.55' fill='%23fff' fill-opacity='0.38'/%3E%3Ccircle cx='569' cy='498' r='0.45' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='303' cy='222' r='0.35' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='321' cy='58' r='0.35' fill='%23fff' fill-opacity='0.45'/%3E%3Ccircle cx='514' cy='543' r='0.45' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='520' cy='82' r='0.45' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='69' cy='240' r='0.7' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='583' cy='252' r='0.9' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='83' cy='429' r='1.1' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='267' cy='209' r='1.1' fill='%23fff' fill-opacity='0.32'/%3E%3Ccircle cx='244' cy='271' r='0.7' fill='%23fff' fill-opacity='0.2'/%3E%3Ccircle cx='307' cy='468' r='0.55' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='9' cy='469' r='0.9' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='75' cy='550' r='0.45' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='135' cy='357' r='0.35' fill='%23fff' fill-opacity='0.24'/%3E%3Ccircle cx='378' cy='291' r='0.45' fill='%23fff' fill-opacity='0.45'/%3E%3Ccircle cx='556' cy='309' r='0.9' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='567' cy='306' r='1.1' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='137' cy='270' r='0.35' fill='%23fff' fill-opacity='0.16'/%3E%3Ccircle cx='566' cy='159' r='0.55' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='215' cy='351' r='0.45' fill='%23fff' fill-opacity='0.28'/%3E%3Ccircle cx='517' cy='500' r='0.55' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='94' cy='433' r='0.55' fill='%23fff' fill-opacity='0.12'/%3E%3Ccircle cx='3' cy='341' r='0.45' fill='%23fff' fill-opacity='0.28'/%3E%3C/svg%3E");
+  --sg-bg-stars-dense: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Ccircle cx='88' cy='19' r='0.5' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='201' cy='160' r='0.4' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='391' cy='62' r='0.65' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='22' cy='21' r='0.3' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='167' cy='362' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='402' cy='142' r='0.5' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='158' cy='321' r='0.65' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='4' cy='114' r='0.5' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='244' cy='199' r='0.4' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='241' cy='73' r='0.3' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='69' cy='257' r='0.5' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='31' cy='329' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='271' cy='56' r='0.65' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='259' cy='414' r='0.4' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='32' cy='163' r='0.5' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='167' cy='72' r='0.65' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='325' cy='261' r='0.4' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='254' cy='150' r='0.5' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='51' cy='123' r='0.65' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='117' cy='331' r='0.5' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='400' cy='157' r='0.5' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='40' cy='164' r='0.3' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='287' cy='191' r='0.3' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='406' cy='225' r='0.4' fill='%23fff' fill-opacity='0.26'/%3E%3Ccircle cx='284' cy='328' r='0.4' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='199' cy='252' r='0.5' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='399' cy='306' r='0.65' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='248' cy='150' r='0.4' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='65' cy='34' r='0.3' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='114' cy='302' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='276' cy='273' r='0.65' fill='%23fff' fill-opacity='0.26'/%3E%3Ccircle cx='379' cy='180' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='82' cy='384' r='0.5' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='79' cy='210' r='0.65' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='358' cy='5' r='0.5' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='359' cy='127' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='214' cy='363' r='0.65' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='109' cy='267' r='0.4' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='232' cy='350' r='0.3' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='260' cy='219' r='0.4' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='172' cy='406' r='0.3' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='348' cy='70' r='0.3' fill='%23fff' fill-opacity='0.26'/%3E%3Ccircle cx='361' cy='380' r='0.4' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='364' cy='57' r='0.4' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='48' cy='168' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='408' cy='176' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='58' cy='242' r='0.5' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='294' cy='209' r='0.5' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='175' cy='195' r='0.65' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='54' cy='310' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='54' cy='379' r='0.3' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='170' cy='119' r='0.65' fill='%23fff' fill-opacity='0.26'/%3E%3Ccircle cx='344' cy='152' r='0.65' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='190' cy='310' r='0.3' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='189' cy='325' r='0.5' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='398' cy='349' r='0.4' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='213' cy='194' r='0.3' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='18' cy='378' r='0.4' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='6' cy='48' r='0.5' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='164' cy='48' r='0.3' fill='%23fff' fill-opacity='0.22'/%3E%3Ccircle cx='50' cy='368' r='0.4' fill='%23fff' fill-opacity='0.18'/%3E%3Ccircle cx='348' cy='153' r='0.65' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='409' cy='413' r='0.5' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='337' cy='291' r='0.4' fill='%23fff' fill-opacity='0.1'/%3E%3Ccircle cx='70' cy='240' r='0.5' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='409' cy='177' r='0.5' fill='%23fff' fill-opacity='0.14'/%3E%3Ccircle cx='396' cy='349' r='0.4' fill='%23fff' fill-opacity='0.1'/%3E%3C/svg%3E");
 
-  // —— Neon accents ——
-  --sg-neon-lime: #b8ff3c;
-  --sg-neon-lime-rgb: 184, 255, 60;
-  --sg-neon-purple: #a855f7;
-  --sg-neon-purple-rgb: 168, 85, 247;
-  --sg-neon-pink: #ff2d95;
-  --sg-neon-pink-rgb: 255, 45, 149;
+  // —— Accent palette (gaming — gold + cyan) ——
+  --sg-accent-primary: #f5d075;
+  --sg-accent-primary-rgb: 245, 208, 117;
+  --sg-accent-primary-hover: #f8dc8f;
+  --sg-neon-gold: #f5d075;
+  --sg-neon-gold-rgb: 245, 208, 117;
+  --sg-neon-gold-deep: #e8b84a;
+  --sg-neon-lime: #f5d075;
+  --sg-neon-lime-rgb: 245, 208, 117;
+  --sg-neon-purple: #c084fc;
+  --sg-neon-purple-rgb: 192, 132, 252;
+  --sg-neon-pink: #ff6b9d;
+  --sg-neon-pink-rgb: 255, 107, 157;
   --sg-neon-cyan: #22d3ee;
   --sg-neon-cyan-rgb: 34, 211, 238;
 
   // —— Text ——
-  --sg-text-primary: #f1f5f9;
-  --sg-text-secondary: #94a3b8;
-  --sg-text-muted: #64748b;
-  --sg-text-inverse: #05070d;
+  --sg-text-primary: #eef0f4;
+  --sg-text-secondary: #9aa3b2;
+  --sg-text-muted: #6b7280;
+  --sg-text-inverse: #0e1017;
 
   // —— Borders ——
-  --sg-border-subtle: rgba(148, 163, 184, 0.12);
-  --sg-border-strong: rgba(148, 163, 184, 0.28);
-  --sg-border-lime: rgba(184, 255, 60, 0.55);
-  --sg-border-purple: rgba(168, 85, 247, 0.55);
-  --sg-border-pink: rgba(255, 45, 149, 0.55);
+  --sg-border-subtle: rgba(255, 255, 255, 0.06);
+  --sg-border-strong: rgba(255, 255, 255, 0.12);
+  --sg-border-lime: rgba(245, 208, 117, 0.45);
+  --sg-border-gold: rgba(245, 208, 117, 0.45);
+  --sg-border-purple: rgba(192, 132, 252, 0.35);
+  --sg-border-pink: rgba(255, 107, 157, 0.4);
+  --sg-border-cyan: rgba(34, 211, 238, 0.4);
 
-  // —— Glow shadows ——
-  --sg-glow-lime: 0 0 12px rgba(184, 255, 60, 0.45), 0 0 28px rgba(184, 255, 60, 0.18);
-  --sg-glow-purple: 0 0 12px rgba(168, 85, 247, 0.5), 0 0 28px rgba(168, 85, 247, 0.2);
-  --sg-glow-pink: 0 0 12px rgba(255, 45, 149, 0.5), 0 0 28px rgba(255, 45, 149, 0.2);
-  --sg-glow-card: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  // —— Shadows ——
+  --sg-glow-lime: 0 0 28px rgba(245, 208, 117, 0.28);
+  --sg-glow-gold: 0 0 28px rgba(245, 208, 117, 0.28);
+  --sg-glow-cyan: 0 0 24px rgba(34, 211, 238, 0.22);
+  --sg-glow-purple: 0 0 24px rgba(192, 132, 252, 0.15);
+  --sg-glow-pink: 0 0 20px rgba(255, 107, 157, 0.18);
+  --sg-glow-card: 0 4px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 
   // —— Gradients ——
-  --sg-gradient-hero: linear-gradient(145deg, #0a0e17 0%, #15102a 45%, #0a1628 100%);
-  --sg-gradient-panel: linear-gradient(180deg, rgba(26, 34, 52, 0.95) 0%, rgba(10, 14, 23, 0.98) 100%);
-  --sg-gradient-cta: linear-gradient(90deg, #b8ff3c 0%, #7ddf00 100%);
-  --sg-gradient-ai: linear-gradient(90deg, #a855f7 0%, #6366f1 50%, #22d3ee 100%);
-  --sg-gradient-streak: linear-gradient(90deg, #ff2d95 0%, #fb923c 100%);
+  --sg-gradient-hero: linear-gradient(180deg, #0a0b12 0%, #0d0f19 45%, #0b0c14 100%);
+  --sg-gradient-panel: linear-gradient(180deg, rgba(26, 31, 44, 0.65) 0%, rgba(14, 16, 23, 0.95) 100%);
+  --sg-gradient-cta: linear-gradient(135deg, #f5d075 0%, #e8b84a 100%);
+  --sg-gradient-ai: linear-gradient(135deg, #22d3ee 0%, #f5d075 100%);
+  --sg-gradient-streak: linear-gradient(90deg, #ff6b9d 0%, #ffb347 100%);
 
   // —— Typography ——
-  --sg-font-display: 'Orbitron', 'Rajdhani', system-ui, sans-serif;
+  --sg-font-display: 'Inter', 'Segoe UI', system-ui, sans-serif;
   --sg-font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
   --sg-font-mono: 'JetBrains Mono', 'Roboto Mono', ui-monospace, monospace;
 
@@ -71,7 +83,7 @@
   --sg-lh-snug: 1.35;
   --sg-lh-normal: 1.5;
 
-  // —— Spacing scale (4px base) ——
+  // —— Spacing ——
   --sg-space-1: 0.25rem;
   --sg-space-2: 0.5rem;
   --sg-space-3: 0.75rem;
@@ -82,11 +94,15 @@
   --sg-space-10: 2.5rem;
   --sg-space-12: 3rem;
 
+  // —— Page layout (shared with home landing) ——
+  --sg-page-max-width: 1200px;
+  --sg-page-padding-x: clamp(var(--sg-space-4), 3vw, var(--sg-space-8));
+
   // —— Radius ——
-  --sg-radius-sm: 4px;
-  --sg-radius-md: 8px;
-  --sg-radius-lg: 12px;
-  --sg-radius-xl: 16px;
+  --sg-radius-sm: 6px;
+  --sg-radius-md: 10px;
+  --sg-radius-lg: 14px;
+  --sg-radius-xl: 18px;
   --sg-radius-pill: 999px;
 
   // —— Motion ——
@@ -95,21 +111,21 @@
   --sg-duration-base: 220ms;
   --sg-duration-slow: 480ms;
 
-  // —— Ionic bridge (cyberpunk override) ——
+  // —— Ionic bridge ——
   --ion-background-color: var(--sg-bg-deep);
   --ion-text-color: var(--sg-text-primary);
   --ion-toolbar-background: var(--sg-bg-panel);
   --ion-toolbar-color: var(--sg-text-primary);
   --ion-item-background: transparent;
   --ion-card-background: var(--sg-bg-elevated);
-  --ion-color-primary: var(--sg-neon-lime);
-  --ion-color-primary-contrast: var(--sg-text-inverse);
-  --ion-color-primary-rgb: var(--sg-neon-lime-rgb);
+  --ion-color-primary: var(--sg-accent-primary);
+  --ion-color-primary-contrast: #0a0b12;
+  --ion-color-primary-rgb: var(--sg-accent-primary-rgb);
   --ion-color-secondary: var(--sg-neon-purple);
   --ion-color-secondary-rgb: var(--sg-neon-purple-rgb);
   --ion-color-danger: var(--sg-neon-pink);
   --ion-color-danger-rgb: var(--sg-neon-pink-rgb);
-  --ion-color-success: var(--sg-neon-lime);
-  --ion-color-warning: #fb923c;
+  --ion-color-success: var(--sg-neon-gold);
+  --ion-color-warning: #c9a06a;
   --ion-font-family: var(--sg-font-body);
 }

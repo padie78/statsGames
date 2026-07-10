@@ -19,9 +19,23 @@ import type { SelectedGame } from '../../../core/services/auth.service';
       [attr.aria-pressed]="selected"
       (click)="select.emit(game)"
     >
-      <div class="sg-game-tile__art" [style.background-image]="'url(' + meta.artUrl + ')'">
-        <span class="sg-game-tile__art-overlay"></span>
-        <span class="sg-game-tile__icon">{{ game === 'roblox' ? '◆' : '◎' }}</span>
+      <div class="sg-game-tile__art-wrap">
+        @if (meta.artUrl) {
+          <img
+            class="sg-game-tile__art"
+            [src]="meta.artUrl"
+            [alt]="meta.label"
+          />
+        }
+        <span class="sg-game-tile__art-overlay" aria-hidden="true"></span>
+        @if (meta.iconUrl) {
+          <img
+            class="sg-game-tile__platform-icon"
+            [src]="meta.iconUrl"
+            [alt]="meta.label + ' icon'"
+            aria-hidden="true"
+          />
+        }
       </div>
 
       <div class="sg-game-tile__body">

@@ -9,7 +9,11 @@ const placeholder = (title: string, description: string) => ({
 });
 
 export const APP_ROUTES: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'tabs/dashboard' },
+  {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () => import('./pages/home/home.page').then((m) => m.HomePageComponent),
+  },
   {
     path: 'player/:gamerTag',
     loadComponent: () =>
@@ -77,5 +81,5 @@ export const APP_ROUTES: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: 'tabs/dashboard' },
+  { path: '**', redirectTo: '' },
 ];

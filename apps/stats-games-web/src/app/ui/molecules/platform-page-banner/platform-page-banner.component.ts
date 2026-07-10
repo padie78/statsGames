@@ -1,4 +1,4 @@
-import { Component, Input, ViewEncapsulation } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, ViewEncapsulation } from '@angular/core';
 import {
   gamePlatformMeta,
   type GamePlatformMeta,
@@ -16,21 +16,28 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
       class="sg-platform-banner"
       [class.sg-platform-banner--roblox]="platform === 'roblox'"
       [class.sg-platform-banner--fortnite]="platform === 'fortnite'"
+      [class.sg-platform-banner--animating]="animating"
     >
-      <div
-        class="sg-platform-banner__art"
-        [style.background-image]="'url(' + meta.artUrl + ')'"
-        aria-hidden="true"
-      ></div>
+      @if (meta.artUrl) {
+        <img
+          class="sg-platform-banner__art"
+          [src]="meta.artUrl"
+          [alt]="platform + ' artwork'"
+          aria-hidden="true"
+        />
+      }
       <div class="sg-platform-banner__glow" aria-hidden="true"></div>
 
       <div class="sg-platform-banner__content">
         <div class="sg-platform-banner__brand">
-          <span
-            class="sg-platform-banner__icon"
-            [style.background-image]="'url(' + meta.iconUrl + ')'"
-            aria-hidden="true"
-          ></span>
+          @if (meta.iconUrl) {
+            <img
+              class="sg-platform-banner__icon"
+              [src]="meta.iconUrl"
+              [alt]="platform"
+              aria-hidden="true"
+            />
+          }
           <sg-neon-badge [tone]="badgeTone">{{ meta.badge }}</sg-neon-badge>
         </div>
         <h1 class="sg-platform-banner__title">{{ title }}</h1>
@@ -40,10 +47,21 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
     </header>
   `,
 })
-export class PlatformPageBannerComponent {
+export class PlatformPageBannerComponent implements OnChanges {
   @Input({ required: true }) platform!: SelectedGame;
   @Input({ required: true }) title!: string;
   @Input() subtitle = '';
+
+  animating = false;
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['platform'] && !changes['platform'].firstChange) {
+      this.animating = true;
+      window.setTimeout(() => {
+        this.animating = false;
+      }, 480);
+    }
+  }
 
   get meta(): GamePlatformMeta {
     return gamePlatformMeta(this.platform);
