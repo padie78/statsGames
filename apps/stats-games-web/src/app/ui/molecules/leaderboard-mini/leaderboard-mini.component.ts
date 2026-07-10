@@ -18,16 +18,25 @@ export interface LeaderboardEntry {
   encapsulation: ViewEncapsulation.None,
   imports: [RouterLink, NeonBadgeComponent],
   template: `
-    <section class="sg-leaderboard-mini u-surface-card u-p-4">
+    <section class="sg-leaderboard-mini u-surface-card u-p-5">
       <header class="sg-panel-header">
-        <h2 class="sg-panel-header__title">{{ title }}</h2>
+        <div class="sg-leaderboard-mini__heading">
+          <h2 class="sg-panel-header__title">{{ title }}</h2>
+          @if (subtitle) {
+            <p class="sg-leaderboard-mini__subtitle u-m-0">{{ subtitle }}</p>
+          }
+        </div>
         <sg-neon-badge tone="muted">Top 5</sg-neon-badge>
       </header>
 
       <ol class="sg-leaderboard-mini__list">
         @for (entry of entries; track entry.gamerTag) {
           <li>
-            <a [routerLink]="['/player', entry.gamerTag]" class="sg-leaderboard-mini__row">
+            <a
+              [routerLink]="['/player', entry.gamerTag]"
+              class="sg-leaderboard-mini__row"
+              [class.sg-leaderboard-mini__row--you]="highlightGamerTag === entry.gamerTag"
+            >
               <span class="sg-leaderboard-mini__rank" [class.sg-leaderboard-mini__rank--top]="entry.rank <= 3">
                 #{{ entry.rank }}
               </span>
@@ -57,7 +66,9 @@ export interface LeaderboardEntry {
 })
 export class LeaderboardMiniComponent {
   @Input() title = 'Leaderboard';
+  @Input() subtitle = '';
   @Input({ required: true }) entries: LeaderboardEntry[] = [];
+  @Input() highlightGamerTag = '';
 
   platformIcon(platform: 'fortnite' | 'roblox'): string {
     return gamePlatformMeta(platform).iconUrl;

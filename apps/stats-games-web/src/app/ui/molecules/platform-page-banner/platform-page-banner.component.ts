@@ -5,12 +5,13 @@ import {
 } from '../../../core/game/game-platform.config';
 import type { SelectedGame } from '../../../core/services/auth.service';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
+import { AmbientPanelComponent } from '../ambient-panel/ambient-panel.component';
 
 @Component({
   standalone: true,
   selector: 'sg-platform-page-banner',
   encapsulation: ViewEncapsulation.None,
-  imports: [NeonBadgeComponent],
+  imports: [NeonBadgeComponent, AmbientPanelComponent],
   template: `
     <header
       class="sg-platform-banner"
@@ -18,15 +19,13 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
       [class.sg-platform-banner--fortnite]="platform === 'fortnite'"
       [class.sg-platform-banner--animating]="animating"
     >
-      @if (meta.artUrl) {
-        <img
-          class="sg-platform-banner__art"
-          [src]="meta.artUrl"
-          [alt]="platform + ' artwork'"
-          aria-hidden="true"
-        />
-      }
-      <div class="sg-platform-banner__glow" aria-hidden="true"></div>
+      <sg-ambient-panel
+        [platform]="platform"
+        variant="banner"
+        [artUrl]="meta.artUrl"
+        [videoUrl]="meta.ambientVideoUrl ?? ''"
+        [posterUrl]="meta.artUrl"
+      />
 
       <div class="sg-platform-banner__content">
         <div class="sg-platform-banner__brand">

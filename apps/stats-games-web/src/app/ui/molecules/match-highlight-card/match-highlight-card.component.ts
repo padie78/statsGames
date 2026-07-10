@@ -2,6 +2,7 @@ import { Component, Input, ViewEncapsulation } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
 import type { SelectedGame } from '../../../core/services/auth.service';
+import { matchDetailRoute } from '../../../utils/match-analysis.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 import type { MatchCardStats } from '../match-stat-card/match-stat-card.component';
 
@@ -64,9 +65,14 @@ import type { MatchCardStats } from '../match-stat-card/match-stat-card.componen
 
         <div class="sg-match-highlight__footer">
           <span class="sg-match-highlight__meta">{{ matchId }} · {{ updatedAt }}</span>
-          @if (showHistoryLink) {
-            <a routerLink="/tabs/matches" class="u-btn u-btn--ghost">Ver historial</a>
-          }
+          <div class="sg-match-highlight__actions">
+            @if (matchId) {
+              <a [routerLink]="detailLink" class="u-btn u-btn--primary">Ver análisis IA</a>
+            }
+            @if (showHistoryLink) {
+              <a routerLink="/tabs/matches" class="u-btn u-btn--ghost">Ver historial</a>
+            }
+          </div>
         </div>
       </div>
     </section>
@@ -110,5 +116,9 @@ export class MatchHighlightCardComponent {
   get artUrl(): string {
     if (this.platformKey) return gamePlatformMeta(this.platformKey).artUrl;
     return '/assets/games/fortnite-hero.png';
+  }
+
+  get detailLink(): string {
+    return matchDetailRoute(this.matchId);
   }
 }

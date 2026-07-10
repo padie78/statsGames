@@ -43,6 +43,7 @@ export interface MatchHistoryListItem {
                   [live]="item.live ?? false"
                   [stats]="item.stats"
                   [detailed]="true"
+                  [clickable]="clickable"
                 />
               }
             </div>
@@ -55,4 +56,5 @@ export interface MatchHistoryListItem {
 export class MatchHistoryListComponent {
   @Input() groups: Array<MatchDayGroup & { items: MatchHistoryListItem[] }> = [];
   @Input() emptyMessage = 'Sin partidas para mostrar.';
+  @Input() clickable = true;
 }

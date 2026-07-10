@@ -6,7 +6,7 @@ import type { WeekComparisonItem } from '../../../utils/match-stats.util';
   selector: 'sg-week-comparison-panel',
   encapsulation: ViewEncapsulation.None,
   template: `
-    <section class="sg-week-comparison u-surface-card u-p-4" [attr.aria-label]="title">
+    <section class="sg-week-comparison u-surface-card u-p-5" [attr.aria-label]="title">
       <header class="sg-week-comparison__header">
         <h2 class="sg-week-comparison__title">{{ title }}</h2>
         <p class="sg-week-comparison__subtitle">{{ subtitle }}</p>
@@ -40,6 +40,6 @@ import type { WeekComparisonItem } from '../../../utils/match-stats.util';
 })
 export class WeekComparisonPanelComponent {
   @Input() title = 'Vs semana pasada';
-  @Input() subtitle = 'Sin gráficos — solo el progreso que importa.';
+  @Input() subtitle = 'Diferencia vs los 7 días anteriores.';
   @Input() items: WeekComparisonItem[] = [];
 }

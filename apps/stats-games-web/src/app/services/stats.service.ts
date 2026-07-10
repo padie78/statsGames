@@ -15,12 +15,46 @@ export interface PlayerStatsRollupView {
   lastUpdatedIso: string;
 }
 
+export interface CommunityBenchmarksView {
+  platform: string;
+  periodId: string;
+  sampleSize: number;
+  avgWinRate: number;
+  avgKd: number;
+  avgKillsPerWeek: number;
+  avgMatchesPerWeek: number;
+  winRateStd: number;
+  kdStd: number;
+  killsStd: number;
+  lastUpdatedIso: string;
+}
+
+export interface LeaderboardEntryView {
+  rank: number;
+  userId: string;
+  gamerTag: string;
+  platform: string;
+  score: number;
+  totalKills: number;
+  matchCount: number;
+  delta: string;
+  trend: string;
+}
+
 interface ListPlayerStatsRollupsResp {
   listPlayerStatsRollups: PlayerStatsRollupView[];
 }
 
 interface ListPlayerDailyTrendResp {
   listPlayerDailyTrend: PlayerStatsRollupView[];
+}
+
+interface GetCommunityBenchmarksResp {
+  getCommunityBenchmarks: CommunityBenchmarksView;
+}
+
+interface ListWeeklyLeaderboardResp {
+  listWeeklyLeaderboard: LeaderboardEntryView[];
 }
 
 const LIST_PLAYER_STATS_ROLLUPS = /* GraphQL */ `
@@ -65,6 +99,40 @@ const LIST_PLAYER_DAILY_TREND = /* GraphQL */ `
   }
 `;
 
+const GET_COMMUNITY_BENCHMARKS = /* GraphQL */ `
+  query GetCommunityBenchmarks($platform: String!, $periodId: String!) {
+    getCommunityBenchmarks(platform: $platform, periodId: $periodId) {
+      platform
+      periodId
+      sampleSize
+      avgWinRate
+      avgKd
+      avgKillsPerWeek
+      avgMatchesPerWeek
+      winRateStd
+      kdStd
+      killsStd
+      lastUpdatedIso
+    }
+  }
+`;
+
+const LIST_WEEKLY_LEADERBOARD = /* GraphQL */ `
+  query ListWeeklyLeaderboard($platform: String!, $periodId: String!, $limit: Int) {
+    listWeeklyLeaderboard(platform: $platform, periodId: $periodId, limit: $limit) {
+      rank
+      userId
+      gamerTag
+      platform
+      score
+      totalKills
+      matchCount
+      delta
+      trend
+    }
+  }
+`;
+
 @Injectable({ providedIn: 'root' })
 export class StatsService {
   private readonly client = generateClient();
@@ -102,6 +170,41 @@ export class StatsService {
       map((resp) =>
         assertGraphqlData<ListPlayerDailyTrendResp>(resp as { data?: ListPlayerDailyTrendResp })
           .listPlayerDailyTrend,
+      ),
+    );
+  }
+
+  getCommunityBenchmarks(
+    platform: 'fortnite' | 'roblox',
+    periodId: string,
+  ): Observable<CommunityBenchmarksView> {
+    return from(
+      this.client.graphql({
+        query: GET_COMMUNITY_BENCHMARKS,
+        variables: { platform, periodId },
+      }),
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<GetCommunityBenchmarksResp>(resp as { data?: GetCommunityBenchmarksResp })
+          .getCommunityBenchmarks,
+      ),
+    );
+  }
+
+  listWeeklyLeaderboard(
+    platform: 'fortnite' | 'roblox',
+    periodId: string,
+    limit = 5,
+  ): Observable<LeaderboardEntryView[]> {
+    return from(
+      this.client.graphql({
+        query: LIST_WEEKLY_LEADERBOARD,
+        variables: { platform, periodId, limit },
+      }),
+    ).pipe(
+      map((resp) =>
+        assertGraphqlData<ListWeeklyLeaderboardResp>(resp as { data?: ListWeeklyLeaderboardResp })
+          .listWeeklyLeaderboard,
       ),
     );
   }

@@ -17,6 +17,29 @@ export function statsMetricsSk(granularity: StatsGranularity, periodId: string):
   return `${METRICS_PREFIX}${granularity}#${periodId}`;
 }
 
+const COMMUNITY_PREFIX = 'COMMUNITY#';
+const LEADERBOARD_PREFIX = 'LEADERBOARD#';
+
+export function communityBenchmarkPk(platform: GamePlatform): string {
+  return `${COMMUNITY_PREFIX}${platform}`;
+}
+
+export function communityBenchmarkSk(periodId: string): string {
+  return `BENCHMARK#WEEKLY#${periodId}`;
+}
+
+export function communityPlayerSeenSk(periodId: string, platform: GamePlatform): string {
+  return `COMMUNITY_SEEN#WEEKLY#${periodId}#${platform}`;
+}
+
+export function leaderboardPk(platform: GamePlatform, periodId: string): string {
+  return `${LEADERBOARD_PREFIX}${platform}#WEEKLY#${periodId}`;
+}
+
+export function leaderboardUserSk(userId: string): string {
+  return `USER#${userId}`;
+}
+
 export function telemetryEventSk(occurredAtIso: string, correlationId: string): string {
   return `${TELEMETRY_PREFIX}${occurredAtIso}#${correlationId}`;
 }

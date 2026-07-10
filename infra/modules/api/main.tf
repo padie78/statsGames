@@ -212,6 +212,26 @@ resource "aws_appsync_resolver" "list_player_daily_trend" {
   response_template = local.direct_lambda_response_template
 }
 
+resource "aws_appsync_resolver" "get_community_benchmarks" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Query"
+  field             = "getCommunityBenchmarks"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
+resource "aws_appsync_resolver" "list_weekly_leaderboard" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Query"
+  field             = "listWeeklyLeaderboard"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
 resource "aws_appsync_resolver" "upsert_player_profile" {
   api_id            = aws_appsync_graphql_api.this.id
   type              = "Mutation"

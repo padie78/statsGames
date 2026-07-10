@@ -9,6 +9,8 @@ export interface GamePlatformMeta {
   statsHint: string;
   artUrl: string;
   iconUrl: string;
+  /** Loop WebM opcional — si falta, usa animación CSS */
+  ambientVideoUrl?: string;
   accent: 'lime' | 'purple';
   /** Color para fondos y glow del shell cuando este juego está activo */
   shellGlow: string;
@@ -22,8 +24,9 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     badge: 'Sandbox · Experiences',
     tagline: 'Sesiones largas, XP y economía de experiencias.',
     statsHint: 'Sessions · XP/h · Hops',
-    artUrl: '/assets/games/roblox-hero.png',
-    iconUrl: '/assets/games/roblox-icon.png',
+    artUrl: '/assets/games/roblox-hero.svg',
+    iconUrl: '/assets/games/roblox-icon.svg',
+    ambientVideoUrl: '',
     accent: 'lime',
     shellGlow: 'rgba(139, 131, 240, 0.08)',
   },
@@ -34,8 +37,9 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     badge: 'Battle Royale · Ranked',
     tagline: 'Placement, eliminations y clutch en cada storm.',
     statsHint: 'Placement · K/D · Win Rate',
-    artUrl: '/assets/games/fortnite-hero.png',
-    iconUrl: '/assets/games/fortnite-icon.png',
+    artUrl: '/assets/games/fortnite-hero.svg',
+    iconUrl: '/assets/games/fortnite-icon.svg',
+    ambientVideoUrl: '',
     accent: 'purple',
     shellGlow: 'rgba(139, 131, 240, 0.1)',
   },

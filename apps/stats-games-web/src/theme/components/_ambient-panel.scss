@@ -1,0 +1,279 @@
+// =============================================================================
+// Ambient panel — motion layers (CSS + optional video), no third-party IP
+// =============================================================================
+
+.sg-ambient-panel {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sg-ambient-panel--hero {
+  z-index: 0;
+}
+
+.sg-ambient-panel--banner {
+  z-index: 0;
+}
+
+.sg-ambient-panel__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.42;
+}
+
+.sg-ambient-panel__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.sg-ambient-panel__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+  transform: perspective(480px) rotateX(58deg) translateY(-8%);
+  animation: sg-ambient-grid-drift 18s linear infinite;
+}
+
+.sg-ambient-panel--roblox .sg-ambient-panel__grid {
+  opacity: 0.35;
+}
+
+.sg-ambient-panel__storm {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: repeating-linear-gradient(
+    -32deg,
+    transparent 0,
+    transparent 18px,
+    rgba(34, 211, 238, 0.07) 18px,
+    rgba(34, 211, 238, 0.07) 19px
+  );
+  animation: sg-ambient-storm-sweep 6s linear infinite;
+}
+
+.sg-ambient-panel--fortnite .sg-ambient-panel__storm {
+  opacity: 0.55;
+}
+
+.sg-ambient-panel__particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(var(--sg-neon-cyan-rgb), 0.55);
+  box-shadow: 0 0 10px rgba(var(--sg-neon-cyan-rgb), 0.35);
+  animation: sg-ambient-particle-float ease-in-out infinite;
+}
+
+.sg-ambient-panel--roblox .sg-ambient-panel__particle {
+  border-radius: 2px;
+  background: rgba(var(--sg-neon-gold-rgb), 0.65);
+  box-shadow: 0 0 8px rgba(var(--sg-neon-gold-rgb), 0.35);
+  animation-name: sg-ambient-block-float;
+}
+
+.sg-ambient-panel--fortnite .sg-ambient-panel__particle:nth-child(3n) {
+  background: rgba(var(--sg-neon-purple-rgb), 0.5);
+  box-shadow: 0 0 10px rgba(var(--sg-neon-purple-rgb), 0.28);
+}
+
+.sg-ambient-panel__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(28px);
+  animation: sg-ambient-orb-drift 8s ease-in-out infinite;
+}
+
+.sg-ambient-panel__orb--1 {
+  top: 8%;
+  right: 12%;
+  width: 120px;
+  height: 120px;
+  background: rgba(var(--sg-neon-cyan-rgb), 0.22);
+}
+
+.sg-ambient-panel__orb--2 {
+  bottom: 10%;
+  right: 28%;
+  width: 90px;
+  height: 90px;
+  animation-delay: -2.4s;
+  background: rgba(var(--sg-neon-gold-rgb), 0.2);
+}
+
+.sg-ambient-panel__orb--3 {
+  top: 42%;
+  right: 6%;
+  width: 70px;
+  height: 70px;
+  animation-delay: -4.1s;
+  background: rgba(var(--sg-neon-purple-rgb), 0.18);
+}
+
+.sg-ambient-panel--roblox .sg-ambient-panel__orb--1 {
+  background: rgba(var(--sg-neon-purple-rgb), 0.24);
+}
+
+.sg-ambient-panel--roblox .sg-ambient-panel__orb--2 {
+  background: rgba(var(--sg-neon-gold-rgb), 0.22);
+}
+
+.sg-ambient-panel__art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(52%, 420px);
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.72;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 48%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 48%);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.sg-ambient-panel--banner .sg-ambient-panel__art {
+  width: min(48%, 380px);
+  opacity: 0.68;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 42%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 42%);
+}
+
+.sg-ambient-panel__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(8, 9, 14, 0.92) 0%, rgba(8, 9, 14, 0.35) 52%, rgba(8, 9, 14, 0.08) 100%),
+    linear-gradient(180deg, transparent 55%, rgba(8, 9, 14, 0.55) 100%);
+}
+
+.sg-ambient-panel__glow {
+  position: absolute;
+  inset: auto -12% -65% -12%;
+  height: 78%;
+  opacity: 0.42;
+  filter: blur(46px);
+  background: radial-gradient(circle, rgba(var(--sg-neon-cyan-rgb), 0.45), transparent 70%);
+  animation: sg-ambient-glow-pulse 5.5s ease-in-out infinite;
+}
+
+.sg-ambient-panel--roblox .sg-ambient-panel__glow {
+  background: radial-gradient(circle, rgba(var(--sg-neon-purple-rgb), 0.42), transparent 70%);
+}
+
+.sg-ambient-panel--fortnite .sg-ambient-panel__glow {
+  background: radial-gradient(
+    circle,
+    rgba(var(--sg-neon-cyan-rgb), 0.38),
+    rgba(var(--sg-neon-purple-rgb), 0.18),
+    transparent 72%
+  );
+}
+
+.sg-ambient-panel--animating .sg-ambient-panel__art {
+  animation: sg-platform-art-in 0.52s ease;
+}
+
+.sg-ambient-panel--animating .sg-ambient-panel__glow {
+  animation: sg-platform-glow-in 0.52s ease, sg-ambient-glow-pulse 5.5s ease-in-out 0.52s infinite;
+}
+
+.sg-ambient-panel--static .sg-ambient-panel__canvas,
+.sg-ambient-panel--static .sg-ambient-panel__glow,
+.sg-ambient-panel--static .sg-ambient-panel__storm,
+.sg-ambient-panel--static .sg-ambient-panel__grid,
+.sg-ambient-panel--static .sg-ambient-panel__particle,
+.sg-ambient-panel--static .sg-ambient-panel__orb {
+  animation: none !important;
+}
+
+@media (max-width: 640px) {
+  .sg-ambient-panel__art {
+    width: 68%;
+    opacity: 0.48;
+    -webkit-mask-image: linear-gradient(90deg, transparent 8%, #000 52%);
+    mask-image: linear-gradient(90deg, transparent 8%, #000 52%);
+  }
+
+  .sg-ambient-panel__particle:nth-child(n + 9) {
+    display: none;
+  }
+}
+
+@keyframes sg-ambient-grid-drift {
+  from { transform: perspective(480px) rotateX(58deg) translateY(-8%) translateX(0); }
+  to { transform: perspective(480px) rotateX(58deg) translateY(-8%) translateX(-28px); }
+}
+
+@keyframes sg-ambient-storm-sweep {
+  from { transform: translateX(-8%) translateY(-4%); }
+  to { transform: translateX(8%) translateY(4%); }
+}
+
+@keyframes sg-ambient-particle-float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.35; }
+  50% { transform: translate3d(-6px, -14px, 0) scale(1.25); opacity: 0.85; }
+}
+
+@keyframes sg-ambient-block-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0.4; }
+  50% { transform: translate3d(8px, -12px, 0) rotate(18deg); opacity: 0.9; }
+}
+
+@keyframes sg-ambient-orb-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-12px, 10px, 0) scale(1.08); }
+}
+
+@keyframes sg-ambient-glow-pulse {
+  0%, 100% { opacity: 0.34; }
+  50% { opacity: 0.52; }
+}
+
+// Hero stat pills — staggered entrance
+.sg-dashboard-hero__footer--animated .sg-dashboard-hero__stat-pill {
+  animation: sg-stat-pill-in 0.55s var(--sg-ease-out) both;
+}
+
+.sg-dashboard-hero__footer--animated .sg-dashboard-hero__stat-pill:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.sg-dashboard-hero__footer--animated .sg-dashboard-hero__stat-pill:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.sg-dashboard-hero__footer--animated .sg-dashboard-hero__stat-pill:nth-child(3) {
+  animation-delay: 0.19s;
+}
+.sg-dashboard-hero__footer--animated .sg-dashboard-hero__stat-pill:nth-child(4) {
+  animation-delay: 0.26s;
+}
+
+.sg-dashboard-hero__stat-value--animated {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes sg-stat-pill-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-dashboard-hero__footer--animated .sg-dashboard-hero__stat-pill {
+    animation: none;
+  }
+}

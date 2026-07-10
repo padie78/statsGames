@@ -56,6 +56,11 @@ export const APP_ROUTES: Routes = [
           import('./pages/matches/matches.page').then((m) => m.MatchesPageComponent),
       },
       {
+        path: 'matches/:matchId',
+        loadComponent: () =>
+          import('./pages/matches/match-detail.page').then((m) => m.MatchDetailPageComponent),
+      },
+      {
         path: 'analytics',
         loadComponent: () =>
           import('./pages/analytics/analytics.page').then((m) => m.AnalyticsPageComponent),

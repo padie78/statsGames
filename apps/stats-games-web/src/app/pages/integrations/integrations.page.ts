@@ -6,13 +6,11 @@ import {
   IonInput,
   IonItem,
   IonList,
-  IonSelect,
-  IonSelectOption,
 } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
-import { NeonBadgeComponent } from '../../ui';
+import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui';
 
 @Component({
   standalone: true,
@@ -24,8 +22,7 @@ import { NeonBadgeComponent } from '../../ui';
     IonList,
     IonItem,
     IonInput,
-    IonSelect,
-    IonSelectOption,
+    SelectComponent,
     NeonBadgeComponent,
   ],
   template: `
@@ -61,18 +58,14 @@ import { NeonBadgeComponent } from '../../ui';
         @if (showLinkForm()) {
           <section class="u-surface-card u-p-4">
             <h2 class="sg-page-header__title u-text-md u-mb-2">Vincular cuenta</h2>
-            <form [formGroup]="linkForm" (ngSubmit)="submitLinkPlatform()">
-              <ion-list lines="none">
-                <ion-item>
-                  <ion-select label="Plataforma" labelPlacement="stacked" formControlName="platform">
-                    @if (!profile()?.fortniteId) {
-                      <ion-select-option value="fortnite">Fortnite</ion-select-option>
-                    }
-                    @if (!profile()?.robloxId) {
-                      <ion-select-option value="roblox">Roblox</ion-select-option>
-                    }
-                  </ion-select>
-                </ion-item>
+            <form [formGroup]="linkForm" (ngSubmit)="submitLinkPlatform()" class="u-flex u-flex-col u-gap-4">
+              <sg-select
+                label="Plataforma"
+                formControlName="platform"
+                [options]="platformOptions()"
+              />
+
+              <ion-list lines="none" class="u-m-0">
                 <ion-item>
                   <ion-input label="ID externo" labelPlacement="stacked" formControlName="externalId" />
                 </ion-item>
@@ -111,6 +104,14 @@ export class IntegrationsPageComponent implements OnInit {
     const p = this.profile();
     if (!p) return false;
     return !p.fortniteId || !p.robloxId;
+  });
+
+  readonly platformOptions = computed((): SelectOption<'fortnite' | 'roblox'>[] => {
+    const p = this.profile();
+    const options: SelectOption<'fortnite' | 'roblox'>[] = [];
+    if (!p?.fortniteId) options.push({ value: 'fortnite', label: 'Fortnite' });
+    if (!p?.robloxId) options.push({ value: 'roblox', label: 'Roblox' });
+    return options;
   });
 
   readonly linkForm = this.fb.nonNullable.group({

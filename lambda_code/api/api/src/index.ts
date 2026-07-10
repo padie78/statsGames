@@ -1,12 +1,14 @@
 import type { AppSyncResolverEvent, AppSyncResolverHandler } from 'aws-lambda';
 import type { MatchStatsRollupDto, MatchUpdateDto } from '@stats-games/application';
 import {
+  getCommunityBenchmarks,
   getPlayerProfile,
   getProfileByGamerTag,
   linkPlatformAccount,
   listPlayerDailyTrend,
   listPlayerMatches,
   listPlayerStatsRollups,
+  listWeeklyLeaderboard,
   searchPlayers,
   upsertPlayerProfile,
 } from './composition-root';
@@ -33,6 +35,14 @@ type ResolverArgs =
   | {
       fieldName: 'listPlayerDailyTrend';
       args: { userId: string; platform?: string | null; days?: number | null };
+    }
+  | {
+      fieldName: 'getCommunityBenchmarks';
+      args: { platform: string; periodId: string };
+    }
+  | {
+      fieldName: 'listWeeklyLeaderboard';
+      args: { platform: string; periodId: string; limit?: number | null };
     }
   | { fieldName: 'upsertPlayerProfile'; args: { input: Record<string, unknown> } }
   | { fieldName: 'linkPlatformAccount'; args: { input: Record<string, unknown> } }
@@ -106,6 +116,36 @@ async function dispatch(op: ResolverArgs): Promise<unknown> {
       });
       return rows.map(mapStatsRollup);
     }
+
+    case 'getCommunityBenchmarks': {
+      const platform = asPlatform(op.args.platform) ?? 'fortnite';
+      const row = await getCommunityBenchmarks.execute({
+        platform,
+        periodId: op.args.periodId,
+      });
+      return (
+        row ?? {
+          platform,
+          periodId: op.args.periodId,
+          sampleSize: 0,
+          avgWinRate: 0,
+          avgKd: 0,
+          avgKillsPerWeek: 0,
+          avgMatchesPerWeek: 0,
+          winRateStd: platform === 'roblox' ? 13 : 14,
+          kdStd: platform === 'roblox' ? 0.4 : 0.45,
+          killsStd: platform === 'roblox' ? 30 : 38,
+          lastUpdatedIso: new Date().toISOString(),
+        }
+      );
+    }
+
+    case 'listWeeklyLeaderboard':
+      return listWeeklyLeaderboard.execute({
+        platform: asPlatform(op.args.platform) ?? 'fortnite',
+        periodId: op.args.periodId,
+        limit: op.args.limit ?? undefined,
+      });
 
     case 'upsertPlayerProfile':
       return upsertPlayerProfile.execute(op.args.input);

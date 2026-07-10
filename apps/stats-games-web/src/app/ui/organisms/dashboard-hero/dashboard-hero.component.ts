@@ -2,14 +2,22 @@ import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewE
 import { RouterLink } from '@angular/router';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
 import type { SelectedGame } from '../../../core/services/auth.service';
+import { AnimatedValueComponent } from '../../atoms/animated-value/animated-value.component';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
+import { AmbientPanelComponent } from '../../molecules/ambient-panel/ambient-panel.component';
 import { ShareLinkButtonComponent } from '../../molecules/share-link-button/share-link-button.component';
 
 @Component({
   standalone: true,
   selector: 'sg-dashboard-hero',
   encapsulation: ViewEncapsulation.None,
-  imports: [RouterLink, NeonBadgeComponent, ShareLinkButtonComponent],
+  imports: [
+    RouterLink,
+    NeonBadgeComponent,
+    ShareLinkButtonComponent,
+    AmbientPanelComponent,
+    AnimatedValueComponent,
+  ],
   template: `
     <section
       class="sg-dashboard-hero"
@@ -17,15 +25,13 @@ import { ShareLinkButtonComponent } from '../../molecules/share-link-button/shar
       [class.sg-dashboard-hero--fortnite]="platform === 'fortnite'"
       [class.sg-dashboard-hero--animating]="animating"
     >
-      @if (artUrl) {
-        <img
-          class="sg-dashboard-hero__art"
-          [src]="artUrl"
-          [alt]="platform + ' artwork'"
-          aria-hidden="true"
-        />
-      }
-      <div class="sg-dashboard-hero__glow" [class]="'sg-dashboard-hero__glow--' + platform"></div>
+      <sg-ambient-panel
+        [platform]="platform"
+        variant="hero"
+        [artUrl]="artUrl"
+        [videoUrl]="ambientVideoUrl"
+        [posterUrl]="artUrl"
+      />
 
       <div class="sg-dashboard-hero__main">
         <div class="sg-dashboard-hero__avatar">
@@ -69,22 +75,34 @@ import { ShareLinkButtonComponent } from '../../molecules/share-link-button/shar
         </div>
       </div>
 
-      <div class="sg-dashboard-hero__footer">
+      <div class="sg-dashboard-hero__footer sg-dashboard-hero__footer--animated">
         <div class="sg-dashboard-hero__stat-pill">
           <span class="sg-dashboard-hero__stat-label">Victorias</span>
-          <span class="sg-dashboard-hero__stat-value">{{ winsWeek }}</span>
+          <sg-animated-value
+            class="sg-dashboard-hero__stat-value sg-dashboard-hero__stat-value--animated"
+            [value]="winsWeek"
+          />
         </div>
         <div class="sg-dashboard-hero__stat-pill">
           <span class="sg-dashboard-hero__stat-label">Win rate</span>
-          <span class="sg-dashboard-hero__stat-value">{{ winRate }}</span>
+          <sg-animated-value
+            class="sg-dashboard-hero__stat-value sg-dashboard-hero__stat-value--animated"
+            [value]="winRate"
+          />
         </div>
         <div class="sg-dashboard-hero__stat-pill">
           <span class="sg-dashboard-hero__stat-label">Mejor lugar</span>
-          <span class="sg-dashboard-hero__stat-value">#{{ bestPlacement }}</span>
+          <sg-animated-value
+            class="sg-dashboard-hero__stat-value sg-dashboard-hero__stat-value--animated"
+            [value]="bestPlacementLabel"
+          />
         </div>
         <div class="sg-dashboard-hero__stat-pill">
           <span class="sg-dashboard-hero__stat-label">K/D</span>
-          <span class="sg-dashboard-hero__stat-value">{{ kd }}</span>
+          <sg-animated-value
+            class="sg-dashboard-hero__stat-value sg-dashboard-hero__stat-value--animated"
+            [value]="kd"
+          />
         </div>
       </div>
     </section>
@@ -118,6 +136,14 @@ export class DashboardHeroComponent implements OnChanges {
 
   get platformIconUrl(): string {
     return gamePlatformMeta(this.platform as SelectedGame).iconUrl;
+  }
+
+  get ambientVideoUrl(): string {
+    return gamePlatformMeta(this.platform as SelectedGame).ambientVideoUrl ?? '';
+  }
+
+  get bestPlacementLabel(): string {
+    return `#${this.bestPlacement}`;
   }
 
   get initials(): string {

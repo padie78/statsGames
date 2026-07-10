@@ -1,4 +1,6 @@
+export { AnimatedValueComponent } from './atoms/animated-value/animated-value.component';
 export { NeonBadgeComponent, type NeonBadgeTone } from './atoms/neon-badge/neon-badge.component';
+export { SelectComponent, type SelectOption } from './atoms/select/select.component';
 export { StatValueComponent, type StatAccent } from './atoms/stat-value/stat-value.component';
 export {
   MatchStatCardComponent,
@@ -30,6 +32,7 @@ export {
 } from './organisms/live-match-feed/live-match-feed.component';
 export { GameSelectionCardComponent } from './molecules/game-selection-card/game-selection-card.component';
 export { GamePlatformSwitcherComponent } from './molecules/game-platform-switcher/game-platform-switcher.component';
+export { AmbientPanelComponent, type AmbientPanelVariant } from './molecules/ambient-panel/ambient-panel.component';
 export { PlatformPageBannerComponent } from './molecules/platform-page-banner/platform-page-banner.component';
 export { PlatformSpotlightCardComponent } from './molecules/platform-spotlight-card/platform-spotlight-card.component';
 export {
@@ -38,12 +41,13 @@ export {
 } from './molecules/weekly-overview-panel/weekly-overview-panel.component';
 export { QuickActionsBarComponent, type QuickActionItem } from './molecules/quick-actions-bar/quick-actions-bar.component';
 export { MatchHighlightCardComponent } from './molecules/match-highlight-card/match-highlight-card.component';
+export { CommunityComparisonPanelComponent } from './molecules/community-comparison-panel/community-comparison-panel.component';
 export { WeekComparisonPanelComponent } from './molecules/week-comparison-panel/week-comparison-panel.component';
-export {
-  MatchFiltersToolbarComponent,
+export { MatchFiltersToolbarComponent,
   type MatchDateFilter,
   type MatchPlatformFilter,
 } from './molecules/match-filters-toolbar/match-filters-toolbar.component';
+export { MatchAnalysisPanelComponent } from './molecules/match-analysis-panel/match-analysis-panel.component';
 export { MatchHistoryListComponent } from './organisms/match-history-list/match-history-list.component';
 export { DualPlatformStripComponent } from './molecules/dual-platform-strip/dual-platform-strip.component';
 export { DashboardHeroComponent } from './organisms/dashboard-hero/dashboard-hero.component';

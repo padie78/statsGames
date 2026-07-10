@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output, ViewEncapsulation } from '@angular/core';
-import { IonSelect, IonSelectOption } from '@ionic/angular/standalone';
+import { SelectComponent, type SelectOption } from '../../atoms/select/select.component';
 import type { MatchSortKey } from '../../../utils/match-stats.util';
 
 export type MatchPlatformFilter = 'all' | 'fortnite' | 'roblox';
@@ -9,7 +9,7 @@ export type MatchDateFilter = 'all' | '7d' | '30d';
   standalone: true,
   selector: 'sg-match-filters-toolbar',
   encapsulation: ViewEncapsulation.None,
-  imports: [IonSelect, IonSelectOption],
+  imports: [SelectComponent],
   template: `
     <section class="sg-match-filters u-surface-card u-p-4" aria-label="Filtros de partidas">
       <div class="sg-match-filters__row">
@@ -56,18 +56,13 @@ export type MatchDateFilter = 'all' | '7d' | '30d';
           }
         </p>
 
-        <ion-select
+        <sg-select
           class="sg-match-filters__sort"
           label="Ordenar"
-          labelPlacement="stacked"
+          [options]="sortOptions"
           [value]="sort"
-          (ionChange)="onSortChange($event)"
-        >
-          <ion-select-option value="newest">Más recientes</ion-select-option>
-          <ion-select-option value="oldest">Más antiguas</ion-select-option>
-          <ion-select-option value="placement">Mejor placement</ion-select-option>
-          <ion-select-option value="kills">Más kills</ion-select-option>
-        </ion-select>
+          (valueChange)="onSortChange($event)"
+        />
       </div>
     </section>
   `,
@@ -95,8 +90,14 @@ export class MatchFiltersToolbarComponent {
     { value: '30d' as const, label: '30 días' },
   ];
 
-  onSortChange(event: CustomEvent): void {
-    const value = (event.detail as { value?: MatchSortKey }).value;
-    if (value) this.sortChange.emit(value);
+  readonly sortOptions: SelectOption<MatchSortKey>[] = [
+    { value: 'newest', label: 'Más recientes' },
+    { value: 'oldest', label: 'Más antiguas' },
+    { value: 'placement', label: 'Mejor placement' },
+    { value: 'kills', label: 'Más kills' },
+  ];
+
+  onSortChange(value: string): void {
+    this.sortChange.emit(value as MatchSortKey);
   }
 }

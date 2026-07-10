@@ -1,0 +1,18 @@
+import type {
+  CommunityBenchmarksDto,
+  LeaderboardEntryDto,
+  SyncWeeklyCommunityInput,
+} from '../../dto/event-network/community-stats.dto';
+
+export interface ICommunityStatsRepository {
+  syncWeeklyPlayerStats(input: SyncWeeklyCommunityInput): Promise<void>;
+  getCommunityBenchmarks(
+    platform: 'fortnite' | 'roblox',
+    periodId: string,
+  ): Promise<CommunityBenchmarksDto | null>;
+  listWeeklyLeaderboard(
+    platform: 'fortnite' | 'roblox',
+    periodId: string,
+    limit: number,
+  ): Promise<LeaderboardEntryDto[]>;
+}

@@ -45,6 +45,7 @@ export interface LiveMatchFeedItem {
               [updatedAt]="item.updatedAt"
               [live]="item.live ?? false"
               [stats]="item.stats ?? {}"
+              [clickable]="!item.live"
             />
           }
         </div>

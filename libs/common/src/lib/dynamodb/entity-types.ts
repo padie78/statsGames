@@ -9,6 +9,9 @@ export const EntityType = {
   Telemetry: 'TELEMETRY',
   PlatformAccountLink: 'PLATFORM_ACCOUNT_LINK',
   GamerTagLookup: 'GAMERTAG_LOOKUP',
+  CommunityBenchmark: 'COMMUNITY_BENCHMARK',
+  LeaderboardEntry: 'LEADERBOARD_ENTRY',
+  CommunityPlayerSeen: 'COMMUNITY_PLAYER_SEEN',
 } as const;
 
 export type EntityTypeName = (typeof EntityType)[keyof typeof EntityType];

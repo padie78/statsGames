@@ -20,6 +20,9 @@ type Query {
   listPlayerDailyTrend(userId: ID!, platform: String, days: Int): [PlayerStatsRollup!]!
     @aws_api_key
     @aws_cognito_user_pools
+  getCommunityBenchmarks(platform: String!, periodId: String!): CommunityBenchmarks! @aws_api_key
+  listWeeklyLeaderboard(platform: String!, periodId: String!, limit: Int): [LeaderboardEntry!]!
+    @aws_api_key
 }
 
 type PlayerProfile @aws_api_key @aws_cognito_user_pools {
@@ -124,4 +127,30 @@ type PlayerStatsRollup @aws_api_key @aws_cognito_user_pools {
   avgPlacement: Float!
   versionId: Int!
   lastUpdatedIso: AWSDateTime!
+}
+
+type CommunityBenchmarks @aws_api_key {
+  platform: String!
+  periodId: String!
+  sampleSize: Int!
+  avgWinRate: Float!
+  avgKd: Float!
+  avgKillsPerWeek: Float!
+  avgMatchesPerWeek: Float!
+  winRateStd: Float!
+  kdStd: Float!
+  killsStd: Float!
+  lastUpdatedIso: AWSDateTime!
+}
+
+type LeaderboardEntry @aws_api_key {
+  rank: Int!
+  userId: ID!
+  gamerTag: String!
+  platform: String!
+  score: Int!
+  totalKills: Int!
+  matchCount: Int!
+  delta: String!
+  trend: String!
 }

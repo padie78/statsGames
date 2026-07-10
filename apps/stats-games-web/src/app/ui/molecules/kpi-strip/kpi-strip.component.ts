@@ -51,7 +51,7 @@ export interface KpiStripItem {
 
       <div class="sg-kpi-strip__grid">
         @for (kpi of items; track kpi.label) {
-          <div class="sg-kpi-strip__cell u-surface-card u-p-3">
+          <div class="sg-kpi-strip__cell u-p-4" [class.u-surface-card]="!embedded" [class.sg-kpi-strip__cell--embedded]="embedded">
             @if (kpi.icon) {
               <span
                 class="sg-kpi-strip__metric-icon"
@@ -76,6 +76,7 @@ export class KpiStripComponent implements OnChanges {
   @Input() title = '';
   @Input() platform?: SelectedGame | null;
   @Input({ required: true }) items: KpiStripItem[] = [];
+  @Input() embedded = false;
 
   animating = false;
 

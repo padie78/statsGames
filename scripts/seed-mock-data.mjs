@@ -201,6 +201,7 @@ function buildRollupItem(userId, platform, granularity, periodId, kpis, now) {
     total_kills: kpis.totalKills,
     total_deaths: kpis.totalDeaths,
     placement_sum: kpis.placementSum,
+    win_count: kpis.winCount ?? 0,
     lastUpdatedIso: now,
     versionId: 1,
   };
@@ -251,16 +252,112 @@ function aggregateRollups(matches, platform) {
         totalKills: 0,
         totalDeaths: 0,
         placementSum: 0,
+        winCount: 0,
       };
       cur.matchCount += 1;
       cur.totalKills += m.stats.kills;
       cur.totalDeaths += m.stats.deaths;
       cur.placementSum += m.stats.placement;
+      if (m.stats.placement === 1) cur.winCount += 1;
       map.set(key, cur);
     }
   }
 
   return { daily, weekly, monthly };
+}
+
+function computeLeaderboardScore(rollup) {
+  return rollup.totalKills * 10 + rollup.winCount * 100 + rollup.matchCount * 5;
+}
+
+function buildCommunitySeedItems(allItems, now) {
+  const weeklyRollups = allItems.filter(
+    (item) => typeof item.SK === 'string' && item.SK.startsWith('METRICS#WEEKLY#'),
+  );
+  const communityItems = [];
+  const seenPlayers = new Set();
+
+  for (const rollup of weeklyRollups) {
+    const platform = rollup.platform;
+    const periodId = rollup.periodId;
+    const userId = rollup.userId;
+    const seenKey = `${platform}#${periodId}#${userId}`;
+
+    communityItems.push({
+      PK: `LEADERBOARD#${platform}#WEEKLY#${periodId}`,
+      SK: `USER#${userId}`,
+      entityType: 'LEADERBOARD_ENTRY',
+      userId,
+      platform,
+      periodId,
+      score: computeLeaderboardScore({
+        totalKills: rollup.total_kills,
+        winCount: rollup.win_count ?? 0,
+        matchCount: rollup.match_count,
+      }),
+      totalKills: rollup.total_kills,
+      matchCount: rollup.match_count,
+      winCount: rollup.win_count ?? 0,
+      totalDeaths: rollup.total_deaths,
+      lastUpdatedIso: now,
+    });
+
+    if (!seenPlayers.has(seenKey)) {
+      seenPlayers.add(seenKey);
+      communityItems.push({
+        PK: `USER#${userId}`,
+        SK: `COMMUNITY_SEEN#WEEKLY#${periodId}#${platform}`,
+        entityType: 'COMMUNITY_PLAYER_SEEN',
+        userId,
+        platform,
+        periodId,
+      });
+    }
+  }
+
+  const benchmarkMap = new Map();
+  for (const rollup of weeklyRollups) {
+    const key = `${rollup.platform}#${rollup.periodId}`;
+    const cur = benchmarkMap.get(key) ?? {
+      platform: rollup.platform,
+      periodId: rollup.periodId,
+      match_count: 0,
+      total_kills: 0,
+      total_deaths: 0,
+      win_count: 0,
+      player_count: 0,
+    };
+    cur.match_count += rollup.match_count;
+    cur.total_kills += rollup.total_kills;
+    cur.total_deaths += rollup.total_deaths;
+    cur.win_count += rollup.win_count ?? 0;
+    benchmarkMap.set(key, cur);
+  }
+
+  for (const seenKey of seenPlayers) {
+    const [platform, periodId] = seenKey.split('#');
+    const key = `${platform}#${periodId}`;
+    const cur = benchmarkMap.get(key);
+    if (cur) cur.player_count += 1;
+  }
+
+  for (const benchmark of benchmarkMap.values()) {
+    communityItems.push({
+      PK: `COMMUNITY#${benchmark.platform}`,
+      SK: `BENCHMARK#WEEKLY#${benchmark.periodId}`,
+      entityType: 'COMMUNITY_BENCHMARK',
+      platform: benchmark.platform,
+      periodId: benchmark.periodId,
+      match_count: benchmark.match_count,
+      total_kills: benchmark.total_kills,
+      total_deaths: benchmark.total_deaths,
+      win_count: benchmark.win_count,
+      player_count: benchmark.player_count,
+      lastUpdatedIso: now,
+    });
+  }
+
+  return communityItems;
 }
 
 function seedPlayerBundle(player, now, matchCount) {
@@ -364,6 +461,8 @@ async function main() {
     allItems.push(...seedCurrentUserMatches(args.userId, 'fortnite', now, 20));
     allItems.push(...seedCurrentUserMatches(args.userId, 'roblox', now, 8));
   }
+
+  allItems.push(...buildCommunitySeedItems(allItems, now));
 
   console.log(`Tabla: ${tableName}`);
   console.log(`Ítems a escribir: ${allItems.length}`);

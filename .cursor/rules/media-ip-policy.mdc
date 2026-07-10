@@ -1,0 +1,153 @@
+---
+description: Do's and Don'ts de multimedia Fortnite/Roblox — IP, video e imágenes en UpStats AI (Cyberpunk PWA)
+globs: apps/stats-games-web/**/*.{ts,html,scss},apps/stats-games-web/src/assets/**
+alwaysApply: false
+---
+
+# UpStats AI — Política de Multimedia e IP Digital
+
+Principio rector: **mostramos datos del jugador, no promocionamos IP ajena**. UpStats AI no está afiliado a Epic Games ni Roblox Corporation.
+
+## Estética Cyberpunk (componentes multimedia)
+
+| Token | Valor | Uso |
+|---|---|---|
+| Fondo void | `#080910` / `#0b0c14` | Canvas |
+| Panel | `#12141f` | Cards |
+| **Cyber Lime** | `#B8FF3C` | Wins, KPIs, bordes activos, live |
+| **Electric Purple** | `#A855F7` | AI Coach, insights, premium |
+| Cyan data | `#22D3EE` | Gráficos, telemetría |
+| Display | **Orbitron** 700–900 | Títulos, KPIs |
+| Body | **Inter** / **JetBrains Mono** | Copy, metadata |
+
+Contenido de terceros (avatar, thumbnail) **≤ 30%** del área visual del componente. Alta densidad de datos; decoración siempre secundaria.
+
+---
+
+## IMÁGENES — ✅ Permitido
+
+### Roblox avatar (API del jugador conectado)
+```typescript
+// ✅ URL desde API oficial — solo userId del jugador autenticado
+avatarUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxId}&size=150x150&format=Png`;
+```
+- Marco circular con glow Cyber Lime; fondo panel oscuro texturizado.
+- `alt="Avatar de [gamerTag]"` — nunca `alt="Roblox"`.
+- Fallback: iniciales del gamer tag, **no** logo Roblox.
+- Max render: **150×150px** (retina 300×300). No cachear en S3 sin revisar ToS.
+
+### Fortnite item thumbnail (telemetría secundaria)
+- Thumbnail 48×48px desde API dev de cosméticos/items asociados al jugador.
+- Métrica principal ocupa ~70% del card; thumbnail sin glow (secundario).
+- Fallback: SVG propio (`weapon-silhouette`), nunca asset Epic local.
+
+### Otros permitidos
+| Asset | Fuente | Max size |
+|---|---|---|
+| Avatar Roblox | Roblox Thumbnails API | 150px |
+| Item/skin icon Fortnite | API dev (cosmetic/weapon ID) | 64px |
+| Icono plataforma | SVG propio UpStats | 32px |
+
+---
+
+## IMÁGENES — ❌ Prohibido
+
+- Logo oficial Roblox o letras FORTNITE como **marca principal** de UpStats (splash, app icon, premium banner).
+- Arte promocional oficial (loading screens, temporada, personajes con copyright) como fondo comercial.
+- Descargar arte de wiki/fandom a `assets/` o S3.
+- Hotlink sin CDN/API autorizada.
+- Escalar thumbnails de API a tamaño hero/banner.
+
+```typescript
+// ❌ PROHIBIDO
+// assets/branding/roblox-logo.svg
+// assets/branding/fortnite-logo.svg
+// s3://bucket/fortnite-loading-screen.jpg
+
+// ✅ PERMITIDO
+// assets/platforms/roblox-icon-generic.svg  (silueta abstracta, NO logo oficial)
+// Texto descriptivo "Roblox" / "Fortnite" en Inter, sin logotipo
+```
+
+---
+
+## VIDEOS — ✅ Permitido
+
+### YouTube embed (AI Coach / tips)
+- Thumbnail estática (`i.ytimg.com`) + botón Play → iframe **solo al click**.
+- Allowlist: `youtube-nocookie.com`, `www.youtube-nocookie.com`.
+- `DomSanitizer` solo para dominios allowlist. Lazy-load iframe.
+- Disclaimer visible: *"Video © [creator]. UpStats AI no está afiliado a Epic Games ni Roblox Corp."*
+- **No descargar** el `.mp4` a S3.
+
+### Loop WebM abstracto propio (fondo estético)
+- Usar `sg-ambient-panel` existente o patrón equivalente.
+- Spec: ≤ **3s**, ≤ **200KB**, WebM VP9, **sin audio**.
+- Contenido: partículas, gráficos abstractos, cubos/pixeles — **sin personajes IP, sin logos**.
+- Props obligatorias: `muted`, `loop`, `playsinline`, `preload="metadata"`.
+- Pausar en `document.visibilitychange → hidden`.
+- Mobile ≤767px o `prefers-reduced-motion`: poster estático, sin video.
+
+```html
+<!-- ✅ PATRÓN APROBADO -->
+<video class="sg-ambient-panel__video" autoplay muted loop playsinline preload="metadata" [poster]="posterUrl">
+  <source src="/assets/ambient/abstract-loop.webm" type="video/webm" />
+</video>
+```
+
+---
+
+## VIDEOS — ❌ Prohibido
+
+- Hostear trailers/gameplay oficial en S3/CloudFront (`epic-gameplay-4k.mp4`, etc.).
+- Autoplay con **audio** activo.
+- **> 1 video** reproduciéndose simultáneamente en viewport.
+- Videos > 8s excepto embeds YouTube bajo demanda del usuario.
+- Fondos de video en listas (match history con N autoplay).
+- Fuentes directas: `epicgames.com/video`, CDN TikTok, MP4 promocionales descargados.
+
+```typescript
+// apps/stats-games-web/src/app/core/media/media.policy.ts
+import { MEDIA_POLICY } from '../../core/media';
+```
+
+---
+
+## Matriz de decisión (aplicar antes de `<img>`, `<video>`, `<iframe>`)
+
+```
+¿API oficial del jugador conectado? → ✅ thumbnail pequeño, secundario
+¿Logo o arte promocional oficial?   → ❌ PROHIBIDO
+¿Video? → ¿YouTube allowlist + click? → ✅ iframe lazy
+        → ¿Loop abstracto propio ≤200KB? → ✅ muted/loop
+        → else → ❌ PROHIBIDO
+¿SVG/ilustración propia UpStats?    → ✅ OK
+```
+
+---
+
+## Contrato TypeScript (implementado)
+
+Archivos: `apps/stats-games-web/src/app/core/media/`
+- `media.policy.ts` — constantes `MEDIA_POLICY`
+- `media.types.ts` — `SafeMediaAsset`, `MediaSourceType`
+- `media-policy.util.ts` — validación runtime + `MediaPolicyService`
+- `MediaPlaybackRegistry` — max 1 video concurrente
+
+```typescript
+import { MEDIA_POLICY, MediaPolicyService, validateSafeMediaAsset } from '../../core/media';
+```
+
+---
+
+## Copy legal (footer en secciones con contenido de terceros)
+
+> UpStats AI no está afiliado, respaldado ni patrocinado por Epic Games, Roblox Corporation ni sus licenciantes. Fortnite y Roblox son marcas de sus respectivos titulares.
+
+---
+
+## Referencia de componentes existentes
+
+- `sg-ambient-panel` — loops abstractos por plataforma (`game-platform.config.ts` → `ambientVideoUrl`)
+- `sg-dashboard-hero`, `sg-platform-page-banner` — integración ambiente permitida
+- Nunca reemplazar estos fondos con trailers oficiales Epic/Roblox

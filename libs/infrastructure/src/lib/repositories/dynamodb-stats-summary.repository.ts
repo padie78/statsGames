@@ -10,6 +10,7 @@ import type {
 } from '@stats-games/application';
 import { resolveStatsPeriodIds } from '@stats-games/application';
 import { EntityType, type StatsGranularity, statsMetricsSk, statsPlayerPk } from '@stats-games/common';
+import { DynamoDbCommunityStatsRepository } from './dynamodb-community-stats.repository';
 import { getDocumentClient } from '../aws/dynamodb-client.factory';
 
 function extractKpis(stats: Record<string, unknown>) {
@@ -23,12 +24,14 @@ export class DynamoDbStatsSummaryRepository
   implements IStatsSummaryRepository, IStatsRollupReader
 {
   private readonly tableName: string;
+  private readonly communityStats: DynamoDbCommunityStatsRepository;
 
   constructor(tableName = process.env['TABLE_NAME'] ?? '') {
     if (!tableName) {
       throw new Error('DynamoDbStatsSummaryRepository: TABLE_NAME no configurado.');
     }
     this.tableName = tableName;
+    this.communityStats = new DynamoDbCommunityStatsRepository(tableName);
   }
 
   async aggregateMatchEvent(
@@ -48,6 +51,9 @@ export class DynamoDbStatsSummaryRepository
       }
 
       await this.incrementRollup(event, period.granularity, period.periodId, kpis);
+      if (period.granularity === 'WEEKLY') {
+        await this.syncWeeklyCommunityFromRollup(event.userId, event.platform, period.periodId);
+      }
       rollupsUpdated.push(period.granularity);
     }
 
@@ -192,6 +198,8 @@ export class DynamoDbStatsSummaryRepository
     const sk = `${statsMetricsSk(granularity, periodId)}#${event.platform}`;
     const now = new Date().toISOString();
 
+    const winIncrement = kpis.placement === 1 ? 1 : 0;
+
     await client.send(
       new UpdateCommand({
         TableName: this.tableName,
@@ -210,7 +218,8 @@ export class DynamoDbStatsSummaryRepository
               match_count = if_not_exists(match_count, :zero) + :one,
               total_kills = if_not_exists(total_kills, :zero) + :kills,
               total_deaths = if_not_exists(total_deaths, :zero) + :deaths,
-              placement_sum = if_not_exists(placement_sum, :zero) + :placement
+              placement_sum = if_not_exists(placement_sum, :zero) + :placement,
+              win_count = if_not_exists(win_count, :zero) + :winInc
         `,
         ExpressionAttributeValues: {
           ':entityType': EntityType.StatsRollup,
@@ -224,9 +233,39 @@ export class DynamoDbStatsSummaryRepository
           ':kills': kpis.kills,
           ':deaths': kpis.deaths,
           ':placement': kpis.placement,
+          ':winInc': winIncrement,
         },
       }),
     );
+  }
+
+  private async syncWeeklyCommunityFromRollup(
+    userId: string,
+    platform: 'fortnite' | 'roblox',
+    periodId: string,
+  ): Promise<void> {
+    const client = getDocumentClient();
+    const result = await client.send(
+      new GetCommand({
+        TableName: this.tableName,
+        Key: {
+          PK: statsPlayerPk(userId),
+          SK: `${statsMetricsSk('WEEKLY', periodId)}#${platform}`,
+        },
+      }),
+    );
+
+    if (!result.Item) return;
+
+    await this.communityStats.syncWeeklyPlayerStats({
+      userId,
+      platform,
+      periodId,
+      matchCount: Number(result.Item['match_count'] ?? 0),
+      totalKills: Number(result.Item['total_kills'] ?? 0),
+      totalDeaths: Number(result.Item['total_deaths'] ?? 0),
+      winCount: Number(result.Item['win_count'] ?? 0),
+    });
   }
 }
 

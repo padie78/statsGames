@@ -104,6 +104,79 @@ export function buildTrendChartOptions(
   };
 }
 
+export interface MatchComparisonChartRow {
+  label: string;
+  matchValue: number;
+  averageValue: number;
+}
+
+export function buildMatchComparisonChartOptions(rows: MatchComparisonChartRow[]): EChartsOption {
+  if (rows.length === 0) return {};
+
+  const categories = rows.map((row) => row.label);
+
+  return {
+    animationDuration: 520,
+    grid: { left: 8, right: 8, top: 36, bottom: 0, containLabel: true },
+    legend: {
+      top: 0,
+      right: 0,
+      textStyle: { color: CHART_COLORS.text, fontSize: 11 },
+      itemWidth: 10,
+      itemHeight: 10,
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(14, 16, 23, 0.94)',
+      borderColor: CHART_COLORS.border,
+      textStyle: { color: '#eef0f4', fontSize: 12 },
+    },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: CHART_COLORS.textMuted, fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: CHART_COLORS.grid, type: 'dashed' } },
+      axisLabel: { color: CHART_COLORS.textMuted, fontSize: 11 },
+    },
+    series: [
+      {
+        name: 'Esta partida',
+        type: 'bar',
+        barWidth: '30%',
+        data: rows.map((row) => row.matchValue),
+        itemStyle: { color: CHART_COLORS.gold, borderRadius: [5, 5, 0, 0] },
+      },
+      {
+        name: 'Tu promedio',
+        type: 'bar',
+        barWidth: '30%',
+        data: rows.map((row) => row.averageValue),
+        itemStyle: { color: CHART_COLORS.cyan, borderRadius: [5, 5, 0, 0] },
+      },
+    ],
+  };
+}
+
+export function buildMatchRadarOptions(
+  axes: StatsRadarAxis[],
+  seriesName = 'Esta partida',
+): EChartsOption {
+  const base = buildStatsRadarOptions(axes);
+  const series = base.series;
+  if (Array.isArray(series) && series[0] && typeof series[0] === 'object') {
+    const radarSeries = series[0] as { data?: Array<{ name?: string; value: number[] }> };
+    if (radarSeries.data?.[0]) {
+      radarSeries.data[0].name = seriesName;
+    }
+  }
+  return base;
+}
+
 export function buildDualTrendChartOptions(
   primary: TrendChartPoint[],
   secondary: TrendChartPoint[],

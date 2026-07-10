@@ -13,7 +13,7 @@ export interface AchievementItem {
   selector: 'sg-achievement-strip',
   encapsulation: ViewEncapsulation.None,
   template: `
-    <section class="sg-achievement-strip u-surface-card u-p-4">
+    <section class="sg-achievement-strip u-surface-card u-p-5">
       <header class="sg-panel-header">
         <h2 class="sg-panel-header__title">{{ title }}</h2>
       </header>

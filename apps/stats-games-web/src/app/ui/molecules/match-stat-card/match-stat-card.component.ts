@@ -1,4 +1,6 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, Input, ViewEncapsulation } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
 import type { SelectedGame } from '../../../core/services/auth.service';
 import {
@@ -6,6 +8,7 @@ import {
   formatMatchRelativeTime,
   getMatchOutcome,
 } from '../../../utils/match-stats.util';
+import { matchDetailRoute } from '../../../utils/match-analysis.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 import { StatValueComponent } from '../../atoms/stat-value/stat-value.component';
 
@@ -20,8 +23,17 @@ export interface MatchCardStats {
   standalone: true,
   selector: 'sg-match-stat-card',
   encapsulation: ViewEncapsulation.None,
-  imports: [NeonBadgeComponent, StatValueComponent],
+  imports: [NgTemplateOutlet, RouterLink, NeonBadgeComponent, StatValueComponent],
   template: `
+    @if (clickable && detailLink) {
+      <a [routerLink]="detailLink" class="sg-match-card-link">
+        <ng-container *ngTemplateOutlet="cardInner" />
+      </a>
+    } @else {
+      <ng-container *ngTemplateOutlet="cardInner" />
+    }
+
+    <ng-template #cardInner>
     <article
       class="sg-match-card"
       [class.sg-match-card--live]="live"
@@ -30,6 +42,7 @@ export interface MatchCardStats {
       [class.sg-match-card--podium]="isPodium"
       [class.sg-match-card--fortnite]="platformKey === 'fortnite'"
       [class.sg-match-card--roblox]="platformKey === 'roblox'"
+      [class.sg-match-card--clickable]="clickable"
     >
       @if (isVictory) {
         <div class="sg-match-card__victory-glow" aria-hidden="true"></div>
@@ -106,6 +119,7 @@ export interface MatchCardStats {
         </div>
       </div>
     </article>
+    </ng-template>
   `,
 })
 export class MatchStatCardComponent {
@@ -116,7 +130,13 @@ export class MatchStatCardComponent {
   @Input() relativeTime = '';
   @Input() live = false;
   @Input() detailed = false;
+  @Input() clickable = false;
   @Input() stats: MatchCardStats = {};
+
+  get detailLink(): string | null {
+    if (!this.clickable || this.live) return null;
+    return matchDetailRoute(this.matchId);
+  }
 
   get isVictory(): boolean {
     return this.stats.placement === 1;

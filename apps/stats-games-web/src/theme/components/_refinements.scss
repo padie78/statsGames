@@ -22,14 +22,7 @@
 }
 
 // —— Topbar & subnav ——
-.sg-topbar {
-  background: rgba(10, 12, 20, 0.78);
-  border-bottom-color: var(--sg-border-subtle);
-}
-
-.sg-topbar--global {
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
-}
+// Scroll-driven transparency is set on .sg-app-shell via --sg-chrome-scroll (_atomic.scss).
 
 .sg-topbar__logo {
   box-shadow: var(--sg-glow-lime);
@@ -49,11 +42,6 @@
   box-shadow: none;
   color: var(--sg-text-secondary);
   font-weight: var(--sg-fw-semibold);
-}
-
-.sg-subnav {
-  background: rgba(10, 12, 20, 0.72);
-  border-bottom: 1px solid var(--sg-border-subtle);
 }
 
 .sg-subnav__link {
@@ -394,4 +382,50 @@
 .sg-settings-list__row dd {
   color: var(--sg-text-primary);
   font-weight: var(--sg-fw-medium);
+}
+
+// —— Dashboard overview — readability & hierarchy ——
+.sg-dashboard {
+  .sg-stat__label {
+    font-size: var(--sg-fs-sm);
+    color: var(--sg-text-secondary);
+  }
+
+  .sg-stat__value {
+    font-size: var(--sg-fs-2xl);
+  }
+
+  .sg-live-feed {
+    gap: var(--sg-space-5);
+  }
+
+  .sg-live-feed__header {
+    padding-bottom: var(--sg-space-3);
+    border-bottom: 1px solid var(--sg-border-subtle);
+  }
+
+  .sg-live-feed__title {
+    font-size: var(--sg-fs-lg);
+    font-weight: var(--sg-fw-bold);
+  }
+
+  .sg-leaderboard-mini__list {
+    gap: var(--sg-space-2);
+  }
+
+  .sg-leaderboard-mini__row {
+    padding: var(--sg-space-3) var(--sg-space-3);
+  }
+
+  .sg-community-comparison__disclaimer {
+    margin-top: var(--sg-space-2);
+    padding-top: var(--sg-space-3);
+    border-top: 1px solid var(--sg-border-subtle);
+  }
+}
+
+@media (min-width: 768px) {
+  .sg-dashboard__section-title {
+    font-size: var(--sg-fs-2xl);
+  }
 }
