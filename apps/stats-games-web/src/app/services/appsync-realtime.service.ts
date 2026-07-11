@@ -105,18 +105,34 @@ export class AppSyncRealtimeService {
             this._connectionState.set('live');
             const payload = msg.data?.onMatchUpdate;
             if (!payload) return;
-            this._liveMatches.update((current) => [payload, ...current].slice(0, 25));
+            this._liveMatches.update((current) => {
+              if (current.some((m) => m.matchId === payload.matchId)) {
+                return current;
+              }
+              return [payload, ...current].slice(0, 25);
+            });
           },
           error: (err) => {
             this._connectionState.set('error');
             this._lastError.set(err instanceof Error ? err.message : 'Subscription error');
             this.handle = undefined;
+            // Reintento suave: la UI puede llamar ensureConnected de nuevo.
+            window.setTimeout(() => {
+              if (this.activeUserId && !this.handle) {
+                const uid = this.activeUserId;
+                this.activeUserId = null;
+                this.ensureConnected(uid);
+              }
+            }, 2500);
           },
           complete: () => {
             this._connectionState.set('idle');
             this.handle = undefined;
           },
         });
+
+        // Suscripción armada — no esperar el primer evento para marcar live.
+        this._connectionState.set('live');
       })
       .catch((err) => {
         this._connectionState.set('error');

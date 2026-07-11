@@ -50,12 +50,15 @@ export class MatchNotificationsStore {
   );
 
   constructor() {
-    effect(() => {
-      const matches = this.realtime.liveMatches();
-      for (const match of [...matches].reverse()) {
-        this.ingestLiveMatch(match);
-      }
-    });
+    effect(
+      () => {
+        const matches = this.realtime.liveMatches();
+        for (const match of [...matches].reverse()) {
+          this.ingestLiveMatch(match);
+        }
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   togglePanel(): void {
