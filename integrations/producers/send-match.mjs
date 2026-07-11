@@ -71,20 +71,45 @@ const matchId =
   values['match-id'] ||
   `${platform}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const mode =
+  values.mode ||
+  (platform === 'roblox' ? 'Demo Experience' : 'Battle Royale');
+const map = values.map || (platform === 'roblox' ? 'Lobby Arena' : undefined);
+const summary =
+  values.summary ||
+  [
+    platform === 'roblox' ? 'Demo Experience' : 'Fortnite',
+    mode,
+    map,
+    values.placement != null ? `Top ${values.placement}` : null,
+    `${values.kills ?? 0} kills`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
 const body = {
   ...(userId ? { userId } : {}),
   ...(platformUserId ? { platformUserId } : {}),
   matchId,
   occurredAt: new Date().toISOString(),
-  ...(values.mode ? { mode: values.mode } : {}),
-  ...(values.map ? { map: values.map } : {}),
-  ...(values.summary ? { summary: values.summary } : {}),
+  mode,
+  ...(map ? { map } : {}),
+  summary,
   stats: {
     kills: Number(values.kills) || 0,
     deaths: Number(values.deaths) || 0,
     ...(values.placement != null ? { placement: Number(values.placement) } : {}),
     ...(values.assists != null ? { assists: Number(values.assists) } : {}),
     source: 'send-match-cli',
+    ...(platform === 'roblox'
+      ? {
+          placeName: 'Demo Experience',
+          experienceName: 'Demo Experience',
+          placeId: '0',
+          jobId: `cli-${matchId}`,
+          durationSec: 180,
+        }
+      : {}),
   },
 };
 

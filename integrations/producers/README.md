@@ -24,8 +24,29 @@ Roblox **sí** permite que *tu experiencia* (server script) envíe HTTP al termi
 ### Roblox (push al terminar partida)
 
 1. Pegá `roblox/MatchEndReporter.luau` en ServerScriptService (ModuleScript).
-2. Seteá `WebhookUrl`, `WebhookSecret`, `PlatformUserId` (Roblox UserId del jugador).
+2. Seteá `WebhookUrl` y `WebhookSecret` (el `platformUserId` sale de `player.UserId`).
 3. Al finalizar el round, llamá `MatchEndReporter.report(player, stats)`.
+
+El reporter **auto-completa** contexto del servidor:
+
+- `occurredAt` (ISO), `placeId`, `placeName` / `experienceName`, `universeId`, `jobId`
+- `playerName`, `playerDisplayName`, `playerUserId`
+- `mode` (default = `game.Name`), `summary` armado si no lo pasás
+- `durationSec` si mandás `durationSec` o `startedAt` (`os.clock()` al inicio del round)
+
+Ejemplo mínimo:
+
+```lua
+MatchEndReporter.report(player, {
+  matchId = HttpService:GenerateGUID(false),
+  kills = kills,
+  deaths = deaths,
+  placement = placement,
+  durationSec = roundDuration,
+  mode = "Ranked",
+  map = currentMapName,
+})
+```
 
 ### Fortnite (poller Route B)
 
