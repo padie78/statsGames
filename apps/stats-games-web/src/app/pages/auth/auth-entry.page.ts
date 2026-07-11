@@ -1,12 +1,11 @@
-import { Component, inject, OnInit, signal, ViewEncapsulation } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewEncapsulation } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonInput } from '@ionic/angular/standalone';
 import { AuthPendingConfirmationError, isAlreadyAuthenticatedError, mapAuthErrorMessage } from '../../core/auth/auth.errors';
-import { GAME_PLATFORM_LIST } from '../../core/game/game-platform.config';
 import { AuthService, type SocialProvider } from '../../core/services/auth.service';
 import { FortniteCosmeticsService, type FortniteCosmeticThumb } from '../../services/fortnite-cosmetics.service';
-import { AmbientPanelComponent } from '../../ui/molecules/ambient-panel/ambient-panel.component';
+import { RobloxExperiencesService } from '../../services/roblox-experiences.service';
 
 type AuthMode = 'signin' | 'signup' | 'confirm';
 
@@ -21,53 +20,34 @@ function passwordMatchValidator(control: AbstractControl) {
   standalone: true,
   selector: 'app-auth-entry-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [ReactiveFormsModule, IonContent, IonInput, AmbientPanelComponent],
+  imports: [ReactiveFormsModule, IonContent, IonInput],
   template: `
     <ion-content class="auth-gate">
       <div class="auth-gate__shell">
-        <div class="auth-gate__backdrop" aria-hidden="true">
-          <sg-ambient-panel
-            platform="fortnite"
-            variant="hero"
-            [artUrl]="fortniteArt"
-            [videoUrl]="ambientVideoUrl"
-            [posterUrl]="fortniteArt"
-          />
-        </div>
-
         <div class="auth-gate__content">
           <aside class="auth-gate__visual" aria-hidden="true">
-            <div class="auth-gate__visual-copy">
-              <p class="auth-gate__eyebrow">Stats · AI Coach · Live</p>
-              <h2 class="auth-gate__visual-title">Tu rendimiento, en tiempo real</h2>
-              <p class="auth-gate__visual-lead">
-                Conectá Fortnite y Roblox. KPIs, partidas y coach con IA — sin ruido de trailers.
-              </p>
-            </div>
+            <div class="auth-gate__visual-bg"></div>
 
-            <div class="auth-gate__platform-split">
-              @for (p of platforms; track p.id) {
-                <figure
-                  class="auth-gate__platform-card"
-                  [class.auth-gate__platform-card--fortnite]="p.id === 'fortnite'"
-                  [class.auth-gate__platform-card--roblox]="p.id === 'roblox'"
-                >
-                  <img class="auth-gate__platform-art" [src]="p.artUrl" [alt]="" loading="eager" />
-                  <figcaption class="auth-gate__platform-caption">
-                    <img class="auth-gate__platform-icon" [src]="p.iconUrl" [alt]="" />
-                    <span>{{ p.label }}</span>
-                  </figcaption>
-                </figure>
+            <div class="auth-gate__stage">
+              <p class="auth-gate__watermark">STATS</p>
+              <span class="auth-gate__slash"></span>
+
+              @for (char of stageCharacters(); track char.id; let i = $index) {
+                <img
+                  class="auth-gate__hero-char"
+                  [attr.data-layer]="i + 1"
+                  [class.auth-gate__hero-char--rbx]="char.platform === 'roblox'"
+                  [src]="char.imageUrl"
+                  alt=""
+                  loading="eager"
+                />
               }
             </div>
 
-            @if (shopThumbs().length) {
-              <div class="auth-gate__shop-thumbs" aria-hidden="true">
-                @for (item of shopThumbs(); track item.id) {
-                  <img [src]="item.iconUrl" [alt]="" width="48" height="48" loading="lazy" />
-                }
-              </div>
-            }
+            <div class="auth-gate__visual-mark">
+              <span class="auth-gate__visual-logo">SG</span>
+              <span class="auth-gate__visual-name">StatsGames</span>
+            </div>
           </aside>
 
           <div class="auth-gate__layout">
@@ -78,14 +58,14 @@ function passwordMatchValidator(control: AbstractControl) {
           </header>
 
           <div class="auth-gate__mobile-platforms" aria-hidden="true">
-            @for (p of platforms; track p.id) {
+            @for (char of stageCharacters().slice(0, 2); track char.id) {
               <div
                 class="auth-gate__mobile-chip"
-                [class.auth-gate__mobile-chip--fortnite]="p.id === 'fortnite'"
-                [class.auth-gate__mobile-chip--roblox]="p.id === 'roblox'"
+                [class.auth-gate__mobile-chip--fortnite]="char.platform === 'fortnite'"
+                [class.auth-gate__mobile-chip--roblox]="char.platform === 'roblox'"
               >
-                <img [src]="p.iconUrl" [alt]="" width="28" height="28" />
-                <span>{{ p.shortLabel }}</span>
+                <img [src]="char.imageUrl" [alt]="" width="40" height="40" />
+                <span>{{ char.name }}</span>
               </div>
             }
           </div>
@@ -272,14 +252,33 @@ export class AuthEntryPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly fortniteCosmetics = inject(FortniteCosmeticsService);
+  private readonly robloxExperiences = inject(RobloxExperiencesService);
 
-  readonly platforms = [...GAME_PLATFORM_LIST].sort((a, b) =>
-    a.id === 'fortnite' ? -1 : b.id === 'fortnite' ? 1 : 0,
-  );
-  readonly fortniteArt = '/assets/games/fortnite-hero.png';
-  /** Loop abstracto propio (sin IP de juego) */
-  readonly ambientVideoUrl = '/assets/ambient/fortnite-abstract-loop.webm';
-  readonly shopThumbs = signal<FortniteCosmeticThumb[]>([]);
+  readonly fortniteOutfits = signal<FortniteCosmeticThumb[]>([]);
+  readonly robloxAvatars = signal<
+    Array<{ userId: number; name: string; imageUrl: string }>
+  >([]);
+
+  /** Collage full-bleed estilo Mobalytics — sin cards. */
+  readonly stageCharacters = computed(() => {
+    const fn = this.fortniteOutfits().map((item) => ({
+      id: `fn-${item.id}`,
+      name: item.name,
+      imageUrl: item.iconUrl,
+      platform: 'fortnite' as const,
+    }));
+    const rbx = this.robloxAvatars().map((item) => ({
+      id: `rbx-${item.userId}`,
+      name: item.name,
+      imageUrl: item.imageUrl,
+      platform: 'roblox' as const,
+    }));
+
+    const layered = [fn[1], rbx[0], fn[0], rbx[1], fn[2]].filter(
+      (item): item is NonNullable<typeof item> => !!item,
+    );
+    return layered.slice(0, 4);
+  });
 
   readonly mode = signal<AuthMode>('signin');
   readonly registeredEmail = signal('');
@@ -315,7 +314,7 @@ export class AuthEntryPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    void this.fortniteCosmetics.loadFeatured(6).then((items) => this.shopThumbs.set(items));
+    void this.loadOfficialCharacters();
 
     const step = this.route.snapshot.queryParamMap.get('step');
     const email = this.route.snapshot.queryParamMap.get('email');
@@ -340,6 +339,27 @@ export class AuthEntryPageComponent implements OnInit {
     }
 
     void this.redirectIfAlreadyAuthenticated();
+  }
+
+  private async loadOfficialCharacters(): Promise<void> {
+    // Cargas independientes: Roblox thumbs a menudo cuelga por CORS y no debe bloquear FN.
+    void this.fortniteCosmetics.loadFeatured(10).then((shopItems) => {
+      const outfits = shopItems.filter((item) => item.type === 'outfit');
+      const withFeaturedArt = outfits.filter((item) => /\/featured\./i.test(item.iconUrl));
+      const hero = withFeaturedArt[0] ?? outfits[0] ?? shopItems[0];
+      if (!hero) {
+        this.fortniteOutfits.set([]);
+        return;
+      }
+      const rest = [...withFeaturedArt, ...outfits]
+        .filter((item) => item.id !== hero.id)
+        .filter((item, index, arr) => arr.findIndex((x) => x.id === item.id) === index);
+      this.fortniteOutfits.set([hero, ...rest].slice(0, 4));
+    });
+
+    void this.robloxExperiences.loadShowcaseAvatars(4).then((avatars) => {
+      this.robloxAvatars.set(avatars);
+    });
   }
 
   private async redirectIfAlreadyAuthenticated(): Promise<void> {

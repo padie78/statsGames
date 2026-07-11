@@ -53,6 +53,8 @@ export { MatchMapPanelComponent } from './molecules/match-map-panel/match-map-pa
 export { MatchHistoryListComponent } from './organisms/match-history-list/match-history-list.component';
 export { DualPlatformStripComponent } from './molecules/dual-platform-strip/dual-platform-strip.component';
 export { PlatformCosmeticsRailComponent } from './molecules/platform-cosmetics-rail/platform-cosmetics-rail.component';
+export { OfficialNewsRailComponent } from './molecules/official-news-rail/official-news-rail.component';
+export { RobloxExperiencesRailComponent } from './molecules/roblox-experiences-rail/roblox-experiences-rail.component';
 export { DashboardHeroComponent } from './organisms/dashboard-hero/dashboard-hero.component';
 export { AppSubnavComponent } from './organisms/app-subnav/app-subnav.component';
 export { AppTopbarComponent } from './organisms/app-topbar/app-topbar.component';

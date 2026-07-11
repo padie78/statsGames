@@ -1,6 +1,7 @@
 import {
   Component,
   HostListener,
+  OnInit,
   ViewEncapsulation,
   computed,
   effect,
@@ -13,17 +14,32 @@ import { AuthService } from '../../core/auth/auth.service';
 import { GAME_PLATFORM_LIST } from '../../core/game/game-platform.config';
 import { HOME_FEATURES, HOME_STATS } from '../../data/home.data';
 import { MOCK_LEADERBOARD, MOCK_TICKER } from '../../data/dashboard-mock.data';
+import { coachTipsForPlatform } from '../../data/coach-video-tips.data';
+import { FortniteOfficialMediaService } from '../../services/fortnite-official-media.service';
+import { RobloxExperiencesService } from '../../services/roblox-experiences.service';
 import {
   LeaderboardMiniComponent,
   LiveTickerComponent,
   NeonBadgeComponent,
+  OfficialNewsRailComponent,
+  RobloxExperiencesRailComponent,
+  YoutubeTipCardComponent,
 } from '../../ui';
 
 @Component({
   standalone: true,
   selector: 'app-home-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [RouterLink, IonContent, NeonBadgeComponent, LiveTickerComponent, LeaderboardMiniComponent],
+  imports: [
+    RouterLink,
+    IonContent,
+    NeonBadgeComponent,
+    LiveTickerComponent,
+    LeaderboardMiniComponent,
+    OfficialNewsRailComponent,
+    RobloxExperiencesRailComponent,
+    YoutubeTipCardComponent,
+  ],
   template: `
     <ion-content class="sg-home-content">
       <div class="sg-home">
@@ -36,6 +52,7 @@ import {
           <nav class="sg-home-header__nav" aria-label="Principal">
             <a href="#features" class="sg-home-header__link">Features</a>
             <a href="#platforms" class="sg-home-header__link">Plataformas</a>
+            <a href="#media" class="sg-home-header__link">Media</a>
             <a href="#leaderboard" class="sg-home-header__link">Leaderboard</a>
           </nav>
 
@@ -78,6 +95,7 @@ import {
           <nav class="sg-home-header__mobile-nav" aria-label="Principal móvil">
             <a href="#features" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Features</a>
             <a href="#platforms" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Plataformas</a>
+            <a href="#media" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Media</a>
             <a href="#leaderboard" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Leaderboard</a>
           </nav>
 
@@ -198,6 +216,38 @@ import {
           </div>
         </section>
 
+        <section id="media" class="sg-home-section sg-home-media">
+          <header class="sg-home-section__header">
+            <h2 class="sg-home-section__title">Media oficial</h2>
+            <p class="sg-home-section__subtitle">
+              News MOTD, icons de experiences y trailers oficiales vía APIs / YouTube — sin scrapear wikis.
+            </p>
+          </header>
+
+          <div class="sg-home-media__grid">
+            <sg-official-news-rail
+              [items]="fortniteNews()"
+              [bannerUrl]="fortniteNewsBanner()"
+              [loading]="fortniteMediaLoading()"
+            />
+            <div class="u-flex u-flex-col u-gap-5">
+              <sg-roblox-experiences-rail
+                [items]="robloxExperiences()"
+                [loading]="robloxMediaLoading()"
+              />
+              @if (homeTrailer(); as tip) {
+                <sg-youtube-tip-card
+                  [videoId]="tip.videoId"
+                  [title]="tip.title"
+                  [subtitle]="tip.subtitle"
+                  [creatorName]="tip.creatorName"
+                  badgeLabel="Oficial"
+                />
+              }
+            </div>
+          </div>
+        </section>
+
         <section id="leaderboard" class="sg-home-section sg-home-leaderboard-wrap">
           <div class="sg-home-leaderboard__copy">
             <sg-neon-badge tone="muted">Community</sg-neon-badge>
@@ -237,8 +287,10 @@ import {
     </ion-content>
   `,
 })
-export class HomePageComponent {
+export class HomePageComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly fortniteOfficial = inject(FortniteOfficialMediaService);
+  private readonly robloxExperiencesSvc = inject(RobloxExperiencesService);
 
   readonly platforms = GAME_PLATFORM_LIST;
   readonly features = HOME_FEATURES;
@@ -248,11 +300,22 @@ export class HomePageComponent {
   readonly mobileMenuOpen = signal(false);
 
   readonly isAuthenticated = computed(() => this.auth.isAuthenticated());
+  readonly fortniteNews = computed(() => this.fortniteOfficial.news().slice(0, 4));
+  readonly fortniteNewsBanner = computed(() => this.fortniteOfficial.newsBannerUrl());
+  readonly fortniteMediaLoading = computed(() => this.fortniteOfficial.loading());
+  readonly robloxExperiences = computed(() => this.robloxExperiencesSvc.items());
+  readonly robloxMediaLoading = computed(() => this.robloxExperiencesSvc.loading());
+  readonly homeTrailer = computed(() => coachTipsForPlatform('fortnite')[0] ?? null);
 
   constructor() {
     effect(() => {
       document.body.classList.toggle('sg-nav-lock', this.mobileMenuOpen());
     });
+  }
+
+  ngOnInit(): void {
+    void this.fortniteOfficial.hydrate({ newsLimit: 6, featuredLimit: 4 });
+    void this.robloxExperiencesSvc.load(8);
   }
 
   @HostListener('document:keydown.escape')

@@ -26,7 +26,9 @@ import {
 import type { CommunityBenchmarks } from '../../data/community-mock.data';
 import { PlayerAvatarService } from '../../services/player-avatar.service';
 import { PlatformMediaService } from '../../services/platform-media.service';
-import { coachTipForPlatform } from '../../data/coach-video-tips.data';
+import { FortniteOfficialMediaService } from '../../services/fortnite-official-media.service';
+import { RobloxExperiencesService } from '../../services/roblox-experiences.service';
+import { coachTipsForPlatform } from '../../data/coach-video-tips.data';
 import {
   AchievementStripComponent,
   AiInsightCardComponent,
@@ -36,9 +38,11 @@ import {
   KpiStripComponent,
   LiveMatchFeedComponent,
   MatchHighlightCardComponent,
+  OfficialNewsRailComponent,
   PlatformCosmeticsRailComponent,
   PlatformSpotlightCardComponent,
   QuickActionsBarComponent,
+  RobloxExperiencesRailComponent,
   WeekComparisonPanelComponent,
   CommunityComparisonPanelComponent,
   LeaderboardMiniComponent,
@@ -89,6 +93,8 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     LeaderboardMiniComponent,
     YoutubeTipCardComponent,
     PlatformCosmeticsRailComponent,
+    OfficialNewsRailComponent,
+    RobloxExperiencesRailComponent,
   ],
   template: `
     <ion-content class="sg-page-content">
@@ -214,7 +220,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
             <sg-achievement-strip title="Logros de la semana" [items]="achievements()" />
 
-            @if (coachTip(); as tip) {
+            @for (tip of coachTips(); track tip.videoId) {
               <sg-youtube-tip-card
                 [videoId]="tip.videoId"
                 [title]="tip.title"
@@ -228,6 +234,16 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               <sg-platform-cosmetics-rail
                 [items]="fortniteCosmetics()"
                 [loading]="mediaLoading()"
+              />
+              <sg-official-news-rail
+                [items]="fortniteNews()"
+                [bannerUrl]="fortniteNewsBanner()"
+                [loading]="officialMediaLoading()"
+              />
+            } @else {
+              <sg-roblox-experiences-rail
+                [items]="robloxExperiences()"
+                [loading]="robloxExperiencesLoading()"
               />
             }
 
@@ -251,6 +267,8 @@ export class DashboardPageComponent implements OnInit {
   private readonly playerService = inject(PlayerService);
   private readonly avatarService = inject(PlayerAvatarService);
   private readonly platformMedia = inject(PlatformMediaService);
+  private readonly fortniteOfficial = inject(FortniteOfficialMediaService);
+  private readonly robloxExperiencesSvc = inject(RobloxExperiencesService);
   private readonly statsService = inject(StatsService);
   private readonly router = inject(Router);
 
@@ -275,16 +293,37 @@ export class DashboardPageComponent implements OnInit {
 
   readonly playerAvatar = computed(() => this.avatarService.url());
 
-  readonly coachTip = computed(() => coachTipForPlatform(this.heroPlatform()));
+  readonly coachTips = computed(() => coachTipsForPlatform(this.heroPlatform()).slice(0, 2));
 
-  readonly fortniteCosmetics = computed(() => this.platformMedia.fortniteFeatured());
+  readonly fortniteCosmetics = computed(() => {
+    const featured = this.fortniteOfficial.featuredOutfits();
+    return featured.length ? featured : this.platformMedia.fortniteFeatured();
+  });
 
-  readonly mediaLoading = computed(() => this.platformMedia.loading());
+  readonly fortniteNews = computed(() => this.fortniteOfficial.news().slice(0, 4));
+
+  readonly fortniteNewsBanner = computed(() => this.fortniteOfficial.newsBannerUrl());
+
+  readonly officialMediaLoading = computed(() => this.fortniteOfficial.loading());
+
+  readonly robloxExperiences = computed(() => this.robloxExperiencesSvc.items());
+
+  readonly robloxExperiencesLoading = computed(() => this.robloxExperiencesSvc.loading());
+
+  readonly mediaLoading = computed(
+    () => this.platformMedia.loading() || this.fortniteOfficial.loading(),
+  );
 
   readonly weeklyKd = computed(() => {
     const w = this.weekly();
-    if (!w) return '—';
-    return computeKdRatio(w.totalKills, w.totalDeaths);
+    if (w && w.matchCount > 0) {
+      return computeKdRatio(w.totalKills, w.totalDeaths);
+    }
+    const summary = this.weekSummary();
+    if (summary.matchCount > 0) {
+      return computeKdRatio(summary.totalKills, summary.totalDeaths);
+    }
+    return '—';
   });
 
   readonly weekMatches = computed(() =>
@@ -315,7 +354,13 @@ export class DashboardPageComponent implements OnInit {
     const benchmarks =
       this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform];
     const summary = this.weekSummary();
-    const kd = this.weeklyKd();
+    const weekly = this.weekly();
+    const matchCount = weekly?.matchCount || summary.matchCount;
+    const kills = weekly?.totalKills || summary.totalKills;
+    const kd =
+      weekly != null
+        ? this.weeklyKd()
+        : computeKdRatio(summary.totalKills, summary.totalDeaths);
 
     return buildCommunityComparison({
       benchmarks,
@@ -323,8 +368,8 @@ export class DashboardPageComponent implements OnInit {
       winRateNumeric: parsePlayerWinRateForCommunity(summary.winRate),
       kd,
       kdNumeric: parsePlayerKdForCommunity(kd),
-      kills: this.weekly()?.totalKills ?? 0,
-      matchCount: this.weekly()?.matchCount ?? 0,
+      kills,
+      matchCount,
     });
   });
 
@@ -587,7 +632,7 @@ export class DashboardPageComponent implements OnInit {
 
       const periodId = currentWeeklyPeriodIdForStats();
       const activePlatform = platform ?? 'fortnite';
-      void this.platformMedia.hydrateForPlatform(activePlatform);
+      void this.hydratePlatformMedia(activePlatform);
 
       const [matches, weeklyRows, previousWeeklyRows, daily, community, leaderboard] =
         await Promise.all([
@@ -657,6 +702,15 @@ export class DashboardPageComponent implements OnInit {
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err, 'Error cargando dashboard'));
     }
+  }
+
+  private async hydratePlatformMedia(platform: 'fortnite' | 'roblox'): Promise<void> {
+    void this.platformMedia.hydrateForPlatform(platform);
+    if (platform === 'fortnite') {
+      await this.fortniteOfficial.hydrate({ newsLimit: 6, featuredLimit: 8 });
+      return;
+    }
+    await this.robloxExperiencesSvc.load(8);
   }
 }
 

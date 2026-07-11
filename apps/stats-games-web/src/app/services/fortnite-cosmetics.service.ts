@@ -20,7 +20,7 @@ interface ShopEntry {
     name?: string;
     type?: { value?: string };
     rarity?: { value?: string };
-    images?: { smallIcon?: string; icon?: string };
+    images?: { smallIcon?: string; icon?: string; featured?: string };
   }>;
 }
 
@@ -50,7 +50,8 @@ export class FortniteCosmeticsService {
 
       for (const entry of payload.data?.entries ?? []) {
         for (const item of entry.brItems ?? []) {
-          const iconUrl = item.images?.smallIcon || item.images?.icon;
+          const iconUrl =
+            item.images?.featured || item.images?.icon || item.images?.smallIcon;
           if (!item.id || !iconUrl || !isApiThumbnailHost(iconUrl)) continue;
           const thumb: FortniteCosmeticThumb = {
             id: item.id,
@@ -96,7 +97,8 @@ export class FortniteCosmeticsService {
     try {
       const payload = await this.fetchCosmeticJson(cosmeticId);
       const item = payload.data;
-      const iconUrl = item?.images?.smallIcon || item?.images?.icon;
+      const iconUrl =
+        item?.images?.featured || item?.images?.icon || item?.images?.smallIcon;
       if (!item?.id || !iconUrl || !isApiThumbnailHost(iconUrl)) return null;
       const thumb: FortniteCosmeticThumb = {
         id: item.id,
@@ -151,7 +153,7 @@ export class FortniteCosmeticsService {
       name?: string;
       type?: { value?: string };
       rarity?: { value?: string };
-      images?: { smallIcon?: string; icon?: string };
+      images?: { smallIcon?: string; icon?: string; featured?: string };
     };
   }> {
     const language = 'en';
@@ -170,7 +172,7 @@ export class FortniteCosmeticsService {
               name?: string;
               type?: { value?: string };
               rarity?: { value?: string };
-              images?: { smallIcon?: string; icon?: string };
+              images?: { smallIcon?: string; icon?: string; featured?: string };
             };
           };
         }
@@ -191,7 +193,7 @@ export class FortniteCosmeticsService {
         name?: string;
         type?: { value?: string };
         rarity?: { value?: string };
-        images?: { smallIcon?: string; icon?: string };
+        images?: { smallIcon?: string; icon?: string; featured?: string };
       };
     };
   }

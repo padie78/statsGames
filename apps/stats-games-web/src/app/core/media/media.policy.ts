@@ -32,12 +32,13 @@ export const MEDIA_POLICY = {
     'cdn.fortnite-api.com',
     'media.fortnite.com',
     'cdn2.unrealengine.com',
+    'cdn-live.prm.ol.epicgames.com',
   ] as const,
-  /** Tamaños máx. de render para thumbs de API (px CSS) */
   maxApiThumbPx: {
     avatar: 150,
     cosmetic: 64,
-    featuredCosmetic: 96,
+    featuredCosmetic: 160,
+    newsTile: 400,
   } as const,
 } as const;
 

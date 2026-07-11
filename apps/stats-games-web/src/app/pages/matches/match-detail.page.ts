@@ -4,6 +4,7 @@ import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { resolveMatchHistory } from '../../data/match-mock.data';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
+import { FortniteOfficialMediaService } from '../../services/fortnite-official-media.service';
 import { MatchAnalysisPanelComponent, MatchMapPanelComponent, MatchStatCardComponent } from '../../ui';
 import {
   buildMatchAnalysisReport,
@@ -74,6 +75,7 @@ export class MatchDetailPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly matchService = inject(MatchService);
+  private readonly fortniteOfficial = inject(FortniteOfficialMediaService);
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -103,7 +105,12 @@ export class MatchDetailPageComponent implements OnInit {
 
   readonly mapTelemetry = computed(() => {
     const current = this.match();
-    return current ? resolveMatchMapTelemetry(current) : null;
+    if (!current) return null;
+    const base = resolveMatchMapTelemetry(current);
+    if (!base) return null;
+    const official = this.fortniteOfficial.map();
+    const mapAssetUrl = official?.poisUrl || official?.blankUrl || base.mapAssetUrl;
+    return { ...base, mapAssetUrl };
   });
 
   ngOnInit(): void {
@@ -138,6 +145,8 @@ export class MatchDetailPageComponent implements OnInit {
     this.error.set(null);
 
     try {
+      void this.fortniteOfficial.loadMap();
+
       const rows = await this.matchService.listPlayerMatchesOnce(userId, { limit: 100 });
       const resolved = resolveMatchHistory(rows, userId, null);
       this.recentMatches.set(resolved);

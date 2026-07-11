@@ -144,6 +144,18 @@ resource "aws_apigatewayv2_route" "media_fortnite_cosmetic" {
   target    = "integrations/${aws_apigatewayv2_integration.media_proxy.id}"
 }
 
+resource "aws_apigatewayv2_route" "media_fortnite_news" {
+  api_id    = aws_apigatewayv2_api.webhooks.id
+  route_key = "GET /media/fortnite/news"
+  target    = "integrations/${aws_apigatewayv2_integration.media_proxy.id}"
+}
+
+resource "aws_apigatewayv2_route" "media_fortnite_map" {
+  api_id    = aws_apigatewayv2_api.webhooks.id
+  route_key = "GET /media/fortnite/map"
+  target    = "integrations/${aws_apigatewayv2_integration.media_proxy.id}"
+}
+
 resource "aws_lambda_permission" "apigw_media_proxy" {
   statement_id  = "AllowAPIGatewayInvokeMediaProxy"
   action        = "lambda:InvokeFunction"
