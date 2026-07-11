@@ -25,12 +25,26 @@ function parsePathname(url: string): string {
   }
 }
 
-export function shouldUseStaticMediaMode(): boolean {
+export function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return true;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** Sin video ambient en mobile o reduced-motion (CSS motion puede seguir). */
+export function shouldDisableAmbientVideo(): boolean {
   if (typeof window === 'undefined') return true;
   return (
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    prefersReducedMotion() ||
     window.matchMedia(`(max-width: ${MEDIA_POLICY.mobileMaxWidthPx}px)`).matches
   );
+}
+
+/**
+ * Solo `prefers-reduced-motion` — no usar el breakpoint mobile aquí.
+ * Antes mobile apagaba TODAS las animaciones CSS del dashboard.
+ */
+export function shouldUseStaticMediaMode(): boolean {
+  return prefersReducedMotion();
 }
 
 export function isAllowedEmbedHost(url: string): boolean {
@@ -145,5 +159,9 @@ export class MediaPolicyService {
 
   staticMediaMode(): boolean {
     return shouldUseStaticMediaMode();
+  }
+
+  disableAmbientVideo(): boolean {
+    return shouldDisableAmbientVideo();
   }
 }

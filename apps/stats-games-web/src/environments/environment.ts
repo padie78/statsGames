@@ -14,4 +14,10 @@ export const environment = {
   },
   webhookUrlPattern:
     'https://REPLACE.execute-api.eu-central-1.amazonaws.com/webhooks/{platform}',
+  /**
+   * Base del HTTP API (mismo execute-api que webhooks).
+   * Vacío = fetch directo a fortnite-api.com (puede fallar por CORS).
+   * Tras terraform apply: terraform output -raw media_proxy_base_url
+   */
+  mediaProxyBaseUrl: '',
 };

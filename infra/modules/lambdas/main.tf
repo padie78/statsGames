@@ -66,6 +66,13 @@ resource "aws_apigatewayv2_api" "webhooks" {
   name          = "${var.name_prefix}-webhooks"
   protocol_type = "HTTP"
 
+  cors_configuration {
+    allow_headers = ["content-type"]
+    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_origins = ["*"]
+    max_age       = 3600
+  }
+
   tags = {
     Layer = "event-network"
   }
@@ -94,6 +101,53 @@ resource "aws_lambda_permission" "apigw_game_ingestion" {
   statement_id  = "AllowAPIGatewayInvokeGameIngestion"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.game_ingestion.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.webhooks.execution_arn}/*/*"
+}
+
+# ─────────── Media proxy (Fortnite shop/cosmetics → CORS-safe GET) ───────────
+
+resource "aws_lambda_function" "media_proxy" {
+  function_name    = "${var.name_prefix}-media-proxy"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = 20
+  memory_size      = 256
+  architectures    = ["arm64"]
+
+  environment {
+    variables = {
+      LOG_LEVEL = "INFO"
+    }
+  }
+}
+
+resource "aws_apigatewayv2_integration" "media_proxy" {
+  api_id                 = aws_apigatewayv2_api.webhooks.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.media_proxy.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "media_fortnite_shop" {
+  api_id    = aws_apigatewayv2_api.webhooks.id
+  route_key = "GET /media/fortnite/shop"
+  target    = "integrations/${aws_apigatewayv2_integration.media_proxy.id}"
+}
+
+resource "aws_apigatewayv2_route" "media_fortnite_cosmetic" {
+  api_id    = aws_apigatewayv2_api.webhooks.id
+  route_key = "GET /media/fortnite/cosmetics/{id}"
+  target    = "integrations/${aws_apigatewayv2_integration.media_proxy.id}"
+}
+
+resource "aws_lambda_permission" "apigw_media_proxy" {
+  statement_id  = "AllowAPIGatewayInvokeMediaProxy"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.media_proxy.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.webhooks.execution_arn}/*/*"
 }

@@ -1,22 +1,24 @@
 // =============================================================================
-// Mobalytics-style ambient canvas — starfield, nebula glows, deep navy base
+// Ambient canvas — vivid nebula glows over deep navy
 // =============================================================================
 
 @mixin sg-ambient-layers {
   background-color: var(--sg-bg-ambient-base);
   background-image:
-    radial-gradient(ellipse 130% 90% at 50% 50%, transparent 35%, rgba(8, 14, 28, 0.62) 100%),
-    radial-gradient(ellipse 95% 60% at 50% -18%, rgba(56, 132, 220, 0.16), transparent 58%),
-    radial-gradient(ellipse 55% 48% at 108% 28%, rgba(245, 208, 117, 0.08), transparent 55%),
-    radial-gradient(ellipse 50% 42% at -8% 72%, rgba(34, 211, 238, 0.1), transparent 52%),
-    radial-gradient(ellipse 75% 45% at 50% 112%, rgba(36, 52, 120, 0.18), transparent 58%),
-    radial-gradient(ellipse 70% 50% at 50% 35%, rgba(22, 34, 68, 0.42), transparent 70%),
+    radial-gradient(ellipse 130% 90% at 50% 50%, transparent 32%, rgba(6, 8, 15, 0.72) 100%),
+    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(56, 140, 255, 0.22), transparent 58%),
+    radial-gradient(ellipse 50% 45% at 105% 18%, rgba(184, 255, 60, 0.14), transparent 55%),
+    radial-gradient(ellipse 48% 42% at -6% 68%, rgba(34, 211, 238, 0.16), transparent 52%),
+    radial-gradient(ellipse 55% 40% at 88% 88%, rgba(168, 85, 247, 0.12), transparent 55%),
+    radial-gradient(ellipse 75% 45% at 50% 110%, rgba(36, 60, 140, 0.28), transparent 58%),
+    radial-gradient(ellipse 70% 50% at 50% 35%, rgba(22, 34, 68, 0.35), transparent 70%),
     var(--sg-bg-stars),
     var(--sg-bg-stars-dense),
     var(--sg-bg-noise),
-    linear-gradient(180deg, #0d1528 0%, #101c34 38%, #0c1428 72%, #0a101f 100%);
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, no-repeat;
+    linear-gradient(180deg, #0b1326 0%, #101c36 38%, #0c1428 72%, #080e1a 100%);
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, no-repeat;
   background-size:
+    100% 100%,
     100% 100%,
     100% 100%,
     100% 100%,
@@ -28,6 +30,7 @@
     256px 256px,
     100% 100%;
   background-position:
+    center,
     center,
     center,
     center,

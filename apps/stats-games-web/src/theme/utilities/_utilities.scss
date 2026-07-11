@@ -18,7 +18,9 @@
 .u-gap-2 { gap: var(--sg-space-2); }
 .u-gap-3 { gap: var(--sg-space-3); }
 .u-gap-4 { gap: var(--sg-space-4); }
+.u-gap-5 { gap: var(--sg-space-5); }
 .u-gap-6 { gap: var(--sg-space-6); }
+.u-gap-8 { gap: var(--sg-space-8); }
 .u-flex-1 { flex: 1 1 0%; }
 .u-w-full { width: 100%; }
 .u-min-w-0 { min-width: 0; }
@@ -104,7 +106,7 @@
 
 .u-surface-card {
   background: var(--sg-gradient-panel);
-  border: 1px solid var(--sg-border-subtle);
+  border: 1px solid var(--sg-border-strong);
   border-radius: var(--sg-radius-lg);
   box-shadow: var(--sg-glow-card);
   position: relative;
@@ -115,8 +117,14 @@
   content: '';
   position: absolute;
   inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--sg-neon-gold-rgb), 0.35), transparent);
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--sg-accent-primary-rgb), 0.55),
+    rgba(var(--sg-neon-cyan-rgb), 0.35),
+    transparent
+  );
   pointer-events: none;
 }
 
@@ -141,7 +149,8 @@
   align-items: center;
   justify-content: center;
   gap: var(--sg-space-2);
-  padding: var(--sg-space-3) var(--sg-space-5);
+  min-height: 2.75rem;
+  padding: 0.8rem 1.35rem;
   border: none;
   border-radius: var(--sg-radius-md);
   font-family: var(--sg-font-display);

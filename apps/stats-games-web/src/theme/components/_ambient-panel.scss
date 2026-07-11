@@ -2,11 +2,30 @@
 // Ambient panel — motion layers (CSS + optional video), no third-party IP
 // =============================================================================
 
+// Host must fill the relative parent (hero/banner); inner panel is absolute.
+sg-ambient-panel {
+  position: absolute;
+  inset: 0;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .sg-ambient-panel {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  background: radial-gradient(ellipse at 70% 30%, rgba(168, 85, 247, 0.22), transparent 55%),
+    radial-gradient(ellipse at 20% 80%, rgba(34, 211, 238, 0.18), transparent 50%),
+    #0b0d16;
+}
+
+.sg-ambient-panel--roblox {
+  background: radial-gradient(ellipse at 70% 30%, rgba(168, 85, 247, 0.28), transparent 55%),
+    radial-gradient(ellipse at 25% 75%, rgba(245, 197, 66, 0.16), transparent 50%),
+    #0b0d16;
 }
 
 .sg-ambient-panel--hero {
@@ -20,130 +39,170 @@
 .sg-ambient-panel__video {
   position: absolute;
   inset: 0;
+  z-index: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.42;
+  opacity: 0.72;
+  animation: sg-ambient-video-breathe 7s ease-in-out infinite;
+}
+
+.sg-ambient-panel--hero .sg-ambient-panel__video {
+  opacity: 0.9;
+  animation: sg-ambient-video-cinematic 9s ease-in-out infinite;
 }
 
 .sg-ambient-panel__canvas {
   position: absolute;
   inset: 0;
+  z-index: 1;
 }
 
 .sg-ambient-panel__grid {
   position: absolute;
   inset: 0;
-  opacity: 0;
+  opacity: 0.35;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
   background-size: 28px 28px;
   transform: perspective(480px) rotateX(58deg) translateY(-8%);
-  animation: sg-ambient-grid-drift 18s linear infinite;
+  animation: sg-ambient-grid-drift 10s linear infinite;
 }
 
 .sg-ambient-panel--roblox .sg-ambient-panel__grid {
-  opacity: 0.35;
+  opacity: 0.48;
 }
 
 .sg-ambient-panel__storm {
   position: absolute;
-  inset: 0;
-  opacity: 0;
+  inset: -20%;
+  opacity: 0.55;
   background: repeating-linear-gradient(
     -32deg,
     transparent 0,
-    transparent 18px,
-    rgba(34, 211, 238, 0.07) 18px,
-    rgba(34, 211, 238, 0.07) 19px
+    transparent 16px,
+    rgba(34, 211, 238, 0.14) 16px,
+    rgba(34, 211, 238, 0.14) 18px
   );
-  animation: sg-ambient-storm-sweep 6s linear infinite;
+  animation: sg-ambient-storm-sweep 4s linear infinite;
 }
 
 .sg-ambient-panel--fortnite .sg-ambient-panel__storm {
-  opacity: 0.55;
+  opacity: 0.75;
+}
+
+.sg-ambient-panel--roblox .sg-ambient-panel__storm {
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    -28deg,
+    transparent 0,
+    transparent 16px,
+    rgba(168, 85, 247, 0.16) 16px,
+    rgba(168, 85, 247, 0.16) 18px
+  );
+}
+
+.sg-ambient-panel__shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.07) 48%,
+    rgba(34, 211, 238, 0.12) 50%,
+    rgba(255, 255, 255, 0.07) 52%,
+    transparent 65%
+  );
+  background-size: 220% 100%;
+  animation: sg-ambient-shimmer 3.8s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .sg-ambient-panel__particle {
   position: absolute;
   border-radius: 50%;
-  background: rgba(var(--sg-neon-cyan-rgb), 0.55);
-  box-shadow: 0 0 10px rgba(var(--sg-neon-cyan-rgb), 0.35);
+  background: rgb(34, 211, 238);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.85), 0 0 4px #fff;
+  opacity: 0.85;
   animation: sg-ambient-particle-float ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 .sg-ambient-panel--roblox .sg-ambient-panel__particle {
-  border-radius: 2px;
-  background: rgba(var(--sg-neon-gold-rgb), 0.65);
-  box-shadow: 0 0 8px rgba(var(--sg-neon-gold-rgb), 0.35);
+  border-radius: 3px;
+  background: rgb(245, 197, 66);
+  box-shadow: 0 0 14px rgba(245, 197, 66, 0.8), 0 0 3px #fff;
   animation-name: sg-ambient-block-float;
 }
 
 .sg-ambient-panel--fortnite .sg-ambient-panel__particle:nth-child(3n) {
-  background: rgba(var(--sg-neon-purple-rgb), 0.5);
-  box-shadow: 0 0 10px rgba(var(--sg-neon-purple-rgb), 0.28);
+  background: rgb(168, 85, 247);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.85), 0 0 3px #fff;
 }
 
 .sg-ambient-panel__orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(28px);
-  animation: sg-ambient-orb-drift 8s ease-in-out infinite;
+  filter: blur(22px);
+  animation: sg-ambient-orb-drift 5s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 .sg-ambient-panel__orb--1 {
-  top: 8%;
-  right: 12%;
-  width: 120px;
-  height: 120px;
-  background: rgba(var(--sg-neon-cyan-rgb), 0.22);
+  top: 4%;
+  right: 8%;
+  width: 180px;
+  height: 180px;
+  background: rgba(34, 211, 238, 0.45);
 }
 
 .sg-ambient-panel__orb--2 {
-  bottom: 10%;
-  right: 28%;
-  width: 90px;
-  height: 90px;
-  animation-delay: -2.4s;
-  background: rgba(var(--sg-neon-gold-rgb), 0.2);
+  bottom: 6%;
+  right: 24%;
+  width: 140px;
+  height: 140px;
+  animation-delay: -1.6s;
+  background: rgba(245, 197, 66, 0.38);
 }
 
 .sg-ambient-panel__orb--3 {
-  top: 42%;
-  right: 6%;
-  width: 70px;
-  height: 70px;
-  animation-delay: -4.1s;
-  background: rgba(var(--sg-neon-purple-rgb), 0.18);
+  top: 38%;
+  right: 2%;
+  width: 110px;
+  height: 110px;
+  animation-delay: -3.2s;
+  background: rgba(168, 85, 247, 0.4);
 }
 
 .sg-ambient-panel--roblox .sg-ambient-panel__orb--1 {
-  background: rgba(var(--sg-neon-purple-rgb), 0.24);
+  background: rgba(168, 85, 247, 0.48);
 }
 
 .sg-ambient-panel--roblox .sg-ambient-panel__orb--2 {
-  background: rgba(var(--sg-neon-gold-rgb), 0.22);
+  background: rgba(245, 197, 66, 0.42);
 }
 
 .sg-ambient-panel__art {
   position: absolute;
   top: 0;
   right: 0;
-  width: min(52%, 420px);
+  z-index: 2;
+  width: min(62%, 560px);
   height: 100%;
   object-fit: cover;
-  object-position: center;
-  opacity: 0.72;
-  mix-blend-mode: screen;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 48%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 48%);
+  object-position: center top;
+  opacity: 0.95;
+  mix-blend-mode: normal;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 38%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 38%);
   transition: opacity 0.45s ease, transform 0.45s ease;
+  animation: sg-ambient-art-kenburns 12s ease-in-out infinite alternate;
 }
 
 .sg-ambient-panel--banner .sg-ambient-panel__art {
   width: min(48%, 380px);
-  opacity: 0.68;
+  opacity: 0.85;
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 42%);
   mask-image: linear-gradient(90deg, transparent 0%, #000 42%);
 }
@@ -151,48 +210,65 @@
 .sg-ambient-panel__scrim {
   position: absolute;
   inset: 0;
+  z-index: 3;
   background:
-    linear-gradient(90deg, rgba(8, 9, 14, 0.92) 0%, rgba(8, 9, 14, 0.35) 52%, rgba(8, 9, 14, 0.08) 100%),
-    linear-gradient(180deg, transparent 55%, rgba(8, 9, 14, 0.55) 100%);
+    linear-gradient(90deg, rgba(8, 9, 14, 0.78) 0%, rgba(8, 9, 14, 0.28) 52%, rgba(8, 9, 14, 0.12) 100%),
+    linear-gradient(180deg, transparent 45%, rgba(8, 9, 14, 0.55) 100%);
+}
+
+.sg-ambient-panel--hero .sg-ambient-panel__scrim {
+  background:
+    linear-gradient(180deg, rgba(8, 9, 14, 0.35) 0%, rgba(8, 9, 14, 0.15) 40%, rgba(8, 9, 14, 0.72) 100%),
+    linear-gradient(90deg, rgba(8, 9, 14, 0.55) 0%, rgba(8, 9, 14, 0.12) 55%, rgba(8, 9, 14, 0.28) 100%);
+}
+
+.sg-ambient-panel--hero .sg-ambient-panel__art {
+  width: min(62%, 560px);
+  opacity: 0.95;
+  mix-blend-mode: normal;
 }
 
 .sg-ambient-panel__glow {
   position: absolute;
   inset: auto -12% -65% -12%;
+  z-index: 3;
   height: 78%;
-  opacity: 0.42;
+  opacity: 0.48;
   filter: blur(46px);
-  background: radial-gradient(circle, rgba(var(--sg-neon-cyan-rgb), 0.45), transparent 70%);
-  animation: sg-ambient-glow-pulse 5.5s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(var(--sg-neon-cyan-rgb), 0.5), transparent 70%);
+  animation: sg-ambient-glow-pulse 4.2s ease-in-out infinite;
 }
 
 .sg-ambient-panel--roblox .sg-ambient-panel__glow {
-  background: radial-gradient(circle, rgba(var(--sg-neon-purple-rgb), 0.42), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--sg-neon-purple-rgb), 0.48), transparent 70%);
 }
 
 .sg-ambient-panel--fortnite .sg-ambient-panel__glow {
   background: radial-gradient(
     circle,
-    rgba(var(--sg-neon-cyan-rgb), 0.38),
-    rgba(var(--sg-neon-purple-rgb), 0.18),
+    rgba(var(--sg-neon-cyan-rgb), 0.42),
+    rgba(var(--sg-neon-purple-rgb), 0.22),
     transparent 72%
   );
 }
 
 .sg-ambient-panel--animating .sg-ambient-panel__art {
-  animation: sg-platform-art-in 0.52s ease;
+  animation: sg-platform-art-in 0.52s ease, sg-ambient-art-kenburns 18s ease-in-out 0.52s infinite alternate;
 }
 
 .sg-ambient-panel--animating .sg-ambient-panel__glow {
-  animation: sg-platform-glow-in 0.52s ease, sg-ambient-glow-pulse 5.5s ease-in-out 0.52s infinite;
+  animation: sg-platform-glow-in 0.52s ease, sg-ambient-glow-pulse 4.2s ease-in-out 0.52s infinite;
 }
 
 .sg-ambient-panel--static .sg-ambient-panel__canvas,
 .sg-ambient-panel--static .sg-ambient-panel__glow,
 .sg-ambient-panel--static .sg-ambient-panel__storm,
 .sg-ambient-panel--static .sg-ambient-panel__grid,
+.sg-ambient-panel--static .sg-ambient-panel__shimmer,
 .sg-ambient-panel--static .sg-ambient-panel__particle,
-.sg-ambient-panel--static .sg-ambient-panel__orb {
+.sg-ambient-panel--static .sg-ambient-panel__orb,
+.sg-ambient-panel--static .sg-ambient-panel__art,
+.sg-ambient-panel--static .sg-ambient-panel__video {
   animation: none !important;
 }
 
@@ -209,34 +285,55 @@
   }
 }
 
+@keyframes sg-ambient-video-breathe {
+  0%, 100% { opacity: 0.62; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.03); }
+}
+
+@keyframes sg-ambient-video-cinematic {
+  0%, 100% { opacity: 0.78; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.045); }
+}
+
+@keyframes sg-ambient-art-kenburns {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to { transform: scale(1.12) translate3d(-3%, 2%, 0); }
+}
+
 @keyframes sg-ambient-grid-drift {
   from { transform: perspective(480px) rotateX(58deg) translateY(-8%) translateX(0); }
-  to { transform: perspective(480px) rotateX(58deg) translateY(-8%) translateX(-28px); }
+  to { transform: perspective(480px) rotateX(58deg) translateY(-8%) translateX(-40px); }
 }
 
 @keyframes sg-ambient-storm-sweep {
-  from { transform: translateX(-8%) translateY(-4%); }
-  to { transform: translateX(8%) translateY(4%); }
+  from { transform: translateX(-14%) translateY(-8%); }
+  to { transform: translateX(14%) translateY(8%); }
+}
+
+@keyframes sg-ambient-shimmer {
+  0% { background-position: 120% 0; opacity: 0.35; }
+  40% { opacity: 0.9; }
+  100% { background-position: -40% 0; opacity: 0.35; }
 }
 
 @keyframes sg-ambient-particle-float {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.35; }
-  50% { transform: translate3d(-6px, -14px, 0) scale(1.25); opacity: 0.85; }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(0.85); opacity: 0.35; }
+  50% { transform: translate3d(-14px, -28px, 0) scale(1.45); opacity: 1; }
 }
 
 @keyframes sg-ambient-block-float {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0.4; }
-  50% { transform: translate3d(8px, -12px, 0) rotate(18deg); opacity: 0.9; }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(0.9); opacity: 0.4; }
+  50% { transform: translate3d(16px, -22px, 0) rotate(28deg) scale(1.35); opacity: 1; }
 }
 
 @keyframes sg-ambient-orb-drift {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(-12px, 10px, 0) scale(1.08); }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.55; }
+  50% { transform: translate3d(-28px, 18px, 0) scale(1.25); opacity: 0.95; }
 }
 
 @keyframes sg-ambient-glow-pulse {
-  0%, 100% { opacity: 0.34; }
-  50% { opacity: 0.52; }
+  0%, 100% { opacity: 0.36; }
+  50% { opacity: 0.72; }
 }
 
 // Hero stat pills — staggered entrance

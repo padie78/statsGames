@@ -126,13 +126,19 @@ export class AuthService {
   }
 
   async updateSelectedGame(game: SelectedGame): Promise<void> {
-    await updateUserAttributes({
-      userAttributes: {
-        'custom:selected_game': game,
-        'custom:primary_platform': game,
-      },
-    });
+    const previous = this._selectedGame();
     this._selectedGame.set(game);
+    try {
+      await updateUserAttributes({
+        userAttributes: {
+          'custom:selected_game': game,
+          'custom:primary_platform': game,
+        },
+      });
+    } catch (err) {
+      this._selectedGame.set(previous);
+      throw err;
+    }
   }
 
   async refreshUserAttributes(): Promise<void> {

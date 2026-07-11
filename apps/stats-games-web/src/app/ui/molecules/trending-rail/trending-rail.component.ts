@@ -14,7 +14,7 @@ export interface TrendingItem {
   encapsulation: ViewEncapsulation.None,
   imports: [NeonBadgeComponent],
   template: `
-    <section class="sg-trending-rail u-surface-card u-p-4">
+    <section class="sg-trending-rail u-surface-card u-p-5">
       <header class="sg-panel-header">
         <h2 class="sg-panel-header__title">{{ title }}</h2>
         <sg-neon-badge tone="cyan">TRENDING</sg-neon-badge>

@@ -25,24 +25,23 @@ export class GameContextService {
     this._switching.set(true);
     try {
       await this.auth.updateSelectedGame(game);
+      this._refreshTick.update((n) => n + 1);
 
       const userId = this.auth.userId();
-      if (userId) {
-        const profile = await this.player.getPlayerProfileOrNull(userId);
-        if (profile) {
-          await firstValueFrom(
-            this.player.upsertPlayerProfile({
-              userId,
-              gamerTag: profile.gamerTag,
-              primaryPlatform: game,
-              fortniteId: profile.fortniteId ?? undefined,
-              robloxId: profile.robloxId ?? undefined,
-            }),
-          );
-        }
-      }
+      if (!userId) return;
 
-      this._refreshTick.update((n) => n + 1);
+      void this.player.getPlayerProfileOrNull(userId).then((profile) => {
+        if (!profile) return;
+        void firstValueFrom(
+          this.player.upsertPlayerProfile({
+            userId,
+            gamerTag: profile.gamerTag,
+            primaryPlatform: game,
+            fortniteId: profile.fortniteId ?? undefined,
+            robloxId: profile.robloxId ?? undefined,
+          }),
+        ).catch(() => undefined);
+      });
     } finally {
       this._switching.set(false);
     }

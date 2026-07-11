@@ -14,4 +14,6 @@ export const environment = {
   },
   webhookUrlPattern:
     'https://REPLACE.execute-api.eu-central-1.amazonaws.com/webhooks/{platform}',
+  /** Mismo host que webhook_api_endpoint (sin /webhooks). */
+  mediaProxyBaseUrl: 'https://REPLACE.execute-api.eu-central-1.amazonaws.com',
 };

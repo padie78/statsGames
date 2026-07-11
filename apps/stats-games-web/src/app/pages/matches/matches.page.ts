@@ -43,7 +43,7 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
         <ion-refresher-content />
       </ion-refresher>
 
-      <div class="page-shell page-shell--fluid sg-matches-page u-flex u-flex-col u-gap-4">
+      <div class="page-shell page-shell--fluid sg-matches-page u-flex u-flex-col u-gap-6">
         <sg-platform-page-banner
           [platform]="bannerPlatform()"
           title="Partidas"

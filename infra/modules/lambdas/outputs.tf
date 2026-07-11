@@ -29,3 +29,12 @@ output "webhook_api_endpoint" {
 output "webhook_url_pattern" {
   value = "${aws_apigatewayv2_api.webhooks.api_endpoint}/webhooks/{platform}"
 }
+
+output "media_proxy_name" {
+  value = aws_lambda_function.media_proxy.function_name
+}
+
+output "media_proxy_base_url" {
+  description = "Base HTTP API para GET /media/fortnite/* (mismo execute-api que webhooks)."
+  value       = aws_apigatewayv2_api.webhooks.api_endpoint
+}

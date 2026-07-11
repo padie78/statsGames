@@ -51,6 +51,9 @@ jobs:
           - path: auth/post_confirmation
             artifact: post_confirmation
             tf_output: post_confirmation_name
+          - path: api/media_proxy
+            artifact: media_proxy
+            tf_output: media_proxy_name
 
     steps:
       - name: Checkout
@@ -103,6 +106,9 @@ jobs:
           - path: auth/post_confirmation
             artifact: post_confirmation
             tf_output: post_confirmation_name
+          - path: api/media_proxy
+            artifact: media_proxy
+            tf_output: media_proxy_name
 
     steps:
       - name: Checkout

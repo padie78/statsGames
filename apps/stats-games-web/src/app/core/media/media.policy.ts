@@ -8,29 +8,47 @@ export const MEDIA_POLICY = {
   mobileMaxWidthPx: 767,
   embedAllowlist: ['youtube-nocookie.com', 'www.youtube-nocookie.com'] as const,
   ambientPathPrefix: '/assets/ambient/',
-  ownAssetPrefixes: ['/assets/games/', '/assets/platforms/', '/assets/ambient/'] as const,
+  /** Arte propio + press kits descargados manualmente tras revisar licencia */
+  ownAssetPrefixes: [
+    '/assets/games/',
+    '/assets/platforms/',
+    '/assets/ambient/',
+    '/assets/press/',
+  ] as const,
   forbiddenHostPatterns: [
-    /epicgames\.com/i,
-    /fortnite\.com/i,
     /tiktok\.com/i,
     /tiktokcdn\.com/i,
   ] as const,
+  /** No hostear trailers como MP4 propio; usar YouTube embed */
   forbiddenPathPatterns: [
-    /\/fortnite-trailer/i,
-    /\/roblox-promo/i,
     /\/official-logo/i,
     /epic-gameplay/i,
-    /\/video\//i,
+    /\/hosted-trailer/i,
   ] as const,
   apiThumbnailHosts: [
     'thumbnails.roblox.com',
     'tr.rbxcdn.com',
     'fortnite-api.com',
+    'cdn.fortnite-api.com',
+    'media.fortnite.com',
     'cdn2.unrealengine.com',
   ] as const,
+  /** Tamaños máx. de render para thumbs de API (px CSS) */
+  maxApiThumbPx: {
+    avatar: 150,
+    cosmetic: 64,
+    featuredCosmetic: 96,
+  } as const,
 } as const;
 
 export const MEDIA_LEGAL_DISCLAIMER =
-  'UpStats AI no está afiliado, respaldado ni patrocinado por Epic Games, Roblox Corporation ni sus licenciantes. Fortnite y Roblox son marcas de sus respectivos titulares.';
+  'StatsGames no está afiliado, respaldado ni patrocinado por Epic Games, Roblox Corporation ni sus licenciantes. Fortnite y Roblox son marcas de sus respectivos titulares.';
 
 export const MEDIA_YOUTUBE_ATTRIBUTION_PREFIX = 'Video ©';
+
+/** Docs / press — el usuario debe aceptar términos antes de copiar assets */
+export const MEDIA_PRESS_KIT_GUIDE = {
+  fortnite: 'https://www.epicgames.com/fortnite/news',
+  roblox: 'https://create.roblox.com/docs/production/promotion',
+  epicBrand: 'https://brand.epicgames.com/',
+} as const;

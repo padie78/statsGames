@@ -9,7 +9,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
   encapsulation: ViewEncapsulation.None,
   imports: [RouterLink, NeonBadgeComponent],
   template: `
-    <section class="sg-integration-status u-surface-card u-p-4">
+    <section class="sg-integration-status u-surface-card u-p-5">
       <header class="sg-panel-header">
         <h2 class="sg-panel-header__title">Conexiones</h2>
         <a routerLink="/tabs/integrations" class="sg-panel-header__link">Gestionar</a>

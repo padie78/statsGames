@@ -83,10 +83,10 @@ ion-tab-bar {
 }
 
 .page-shell--fluid {
-  padding: var(--sg-space-4) var(--sg-page-padding-x) var(--sg-space-6);
+  padding: var(--sg-space-6) var(--sg-page-padding-x) var(--sg-space-10);
 }
 
-// Auth gate — Mobalytics-inspired unified sign-in / sign-up
+// Auth gate — cinematic split: ambient + own platform art + form
 ion-content.auth-gate {
   --background: transparent;
 }
@@ -96,9 +96,49 @@ ion-content.auth-gate::part(scroll) {
   min-height: 100%;
 }
 
+.auth-gate__shell {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  flex: 1;
+  isolation: isolate;
+}
+
+.auth-gate__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-gate__backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(105deg, rgba(6, 8, 15, 0.35) 0%, rgba(6, 8, 15, 0.72) 48%, rgba(6, 8, 15, 0.92) 100%),
+    radial-gradient(ellipse 70% 50% at 20% 40%, rgba(184, 255, 60, 0.08), transparent 60%);
+  pointer-events: none;
+}
+
+.auth-gate__content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  min-height: 100%;
+}
+
+.auth-gate__visual {
+  display: none;
+}
+
 .auth-gate__layout {
   width: 100%;
-  max-width: 24rem;
+  max-width: 26rem;
   margin: auto;
   padding: var(--sg-space-6) var(--sg-space-4) var(--sg-space-8);
   display: flex;
@@ -114,33 +154,78 @@ ion-content.auth-gate::part(scroll) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3rem;
-  height: 3rem;
+  width: 3.25rem;
+  height: 3.25rem;
   border-radius: var(--sg-radius-md);
   background: var(--sg-gradient-cta);
-  color: #fff;
+  color: var(--sg-text-inverse);
+  font-family: var(--sg-font-display);
   font-weight: var(--sg-fw-bold);
   font-size: var(--sg-fs-lg);
   margin-bottom: var(--sg-space-3);
+  box-shadow: var(--sg-glow-lime);
 }
 
 .auth-gate__title {
   margin: 0;
+  font-family: var(--sg-font-display);
   font-size: var(--sg-fs-2xl);
   font-weight: var(--sg-fw-bold);
-  letter-spacing: -0.02em;
+  letter-spacing: 0.04em;
   color: var(--sg-text-primary);
 }
 
 .auth-gate__tagline {
   margin: var(--sg-space-2) 0 0;
   font-size: var(--sg-fs-sm);
-  color: var(--sg-text-muted);
+  color: var(--sg-text-secondary);
+}
+
+.auth-gate__mobile-platforms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sg-space-3);
+}
+
+.auth-gate__mobile-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--sg-space-2);
+  padding: var(--sg-space-3);
+  border-radius: var(--sg-radius-md);
+  border: 1px solid var(--sg-border-subtle);
+  background: rgba(12, 18, 32, 0.72);
+  backdrop-filter: blur(8px);
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sg-text-secondary);
+}
+
+.auth-gate__mobile-chip img {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--sg-radius-sm);
+  object-fit: cover;
+}
+
+.auth-gate__mobile-chip--fortnite {
+  border-color: rgba(139, 131, 240, 0.4);
+  box-shadow: 0 0 18px rgba(139, 131, 240, 0.12);
+}
+
+.auth-gate__mobile-chip--roblox {
+  border-color: rgba(107, 203, 138, 0.4);
+  box-shadow: 0 0 18px rgba(107, 203, 138, 0.12);
 }
 
 .auth-gate__card {
   padding: var(--sg-space-5);
   border-radius: var(--sg-radius-lg);
+  background: rgba(18, 26, 44, 0.88);
+  backdrop-filter: blur(14px);
+  border-color: rgba(var(--sg-accent-primary-rgb), 0.22);
 }
 
 .auth-gate__tabs {
@@ -288,9 +373,206 @@ ion-content.auth-gate::part(scroll) {
 
 .auth-gate__footer {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sg-space-2);
+}
+
+.auth-gate__footer-line {
+  margin: 0;
   font-size: var(--sg-fs-xs);
   color: var(--sg-text-muted);
   letter-spacing: 0.02em;
+}
+
+.auth-gate__legal {
+  margin: 0;
+  font-size: 0.625rem;
+  line-height: 1.45;
+  color: rgba(123, 132, 152, 0.85);
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
+@media (min-width: 960px) {
+  .auth-gate__content {
+    grid-template-columns: minmax(0, 1.15fr) minmax(22rem, 28rem);
+    align-items: stretch;
+  }
+
+  .auth-gate__visual {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: var(--sg-space-6);
+    padding: var(--sg-space-10) var(--sg-space-8) var(--sg-space-10) var(--sg-space-10);
+    min-height: 100%;
+  }
+
+  .auth-gate__visual-copy {
+    max-width: 28rem;
+  }
+
+  .auth-gate__eyebrow {
+    margin: 0 0 var(--sg-space-3);
+    font-family: var(--sg-font-display);
+    font-size: var(--sg-fs-xs);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sg-accent-primary);
+  }
+
+  .auth-gate__visual-title {
+    margin: 0;
+    font-family: var(--sg-font-display);
+    font-size: clamp(1.85rem, 3.2vw, 2.75rem);
+    font-weight: var(--sg-fw-black);
+    letter-spacing: 0.03em;
+    line-height: var(--sg-lh-tight);
+    color: var(--sg-text-primary);
+    text-shadow: 0 4px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .auth-gate__visual-lead {
+    margin: var(--sg-space-4) 0 0;
+    font-size: var(--sg-fs-md);
+    line-height: var(--sg-lh-normal);
+    color: var(--sg-text-secondary);
+    max-width: 26rem;
+  }
+
+  .auth-gate__platform-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sg-space-4);
+    max-width: 34rem;
+  }
+
+  .auth-gate__platform-card {
+    position: relative;
+    margin: 0;
+    aspect-ratio: 4 / 5;
+    border-radius: var(--sg-radius-xl);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #0b0d16;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+    transform: translateY(0);
+    animation: auth-gate-card-float 7s ease-in-out infinite;
+  }
+
+  .auth-gate__platform-card--roblox {
+    animation-delay: -3.5s;
+    border-color: rgba(107, 203, 138, 0.35);
+  }
+
+  .auth-gate__platform-card--fortnite {
+    border-color: rgba(139, 131, 240, 0.4);
+  }
+
+  .auth-gate__platform-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.06);
+    animation: auth-gate-kenburns 14s ease-in-out infinite alternate;
+  }
+
+  .auth-gate__platform-card--roblox .auth-gate__platform-art {
+    animation-delay: -5s;
+  }
+
+  .auth-gate__platform-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--sg-space-2);
+    padding: var(--sg-space-4);
+    background: linear-gradient(180deg, transparent, rgba(5, 7, 13, 0.92));
+    font-family: var(--sg-font-display);
+    font-size: var(--sg-fs-sm);
+    font-weight: var(--sg-fw-bold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sg-text-primary);
+  }
+
+  .auth-gate__platform-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--sg-radius-sm);
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .auth-gate__shop-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sg-space-2);
+    max-width: 34rem;
+  }
+
+  .auth-gate__shop-thumbs img {
+    width: 3rem;
+    height: 3rem;
+    object-fit: contain;
+    border-radius: var(--sg-radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(5, 7, 13, 0.55);
+    padding: 0.2rem;
+  }
+
+  .auth-gate__layout {
+    margin: 0;
+    max-width: none;
+    width: 100%;
+    justify-content: center;
+    padding: var(--sg-space-8) var(--sg-space-8) var(--sg-space-8) var(--sg-space-6);
+    background: linear-gradient(180deg, rgba(8, 12, 22, 0.55), rgba(8, 12, 22, 0.82));
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(10px);
+  }
+
+  .auth-gate__mobile-platforms {
+    display: none;
+  }
+
+  .auth-gate__brand,
+  .auth-gate__card,
+  .auth-gate__footer {
+    max-width: 24rem;
+    width: 100%;
+    margin-inline: auto;
+  }
+}
+
+@keyframes auth-gate-card-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes auth-gate-kenburns {
+  from {
+    transform: scale(1.04) translate(0, 0);
+  }
+  to {
+    transform: scale(1.12) translate(-2%, -1%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-gate__platform-card,
+  .auth-gate__platform-art {
+    animation: none !important;
+  }
 }
 
 // Legacy auth pages — formulario compacto

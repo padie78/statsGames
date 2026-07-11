@@ -15,7 +15,9 @@ export {
   isApiThumbnailHost,
   isForbiddenMediaSource,
   isOwnAssetUrl,
+  prefersReducedMotion,
   resolveSafeAmbientVideoUrl,
+  shouldDisableAmbientVideo,
   shouldUseStaticMediaMode,
   validateSafeMediaAsset,
 } from './media-policy.util';

@@ -10,12 +10,14 @@ import {
   ViewChild,
   ViewEncapsulation,
   inject,
+  signal,
 } from '@angular/core';
 import type { SelectedGame } from '../../../core/services/auth.service';
 import {
   MediaPlaybackRegistry,
   MediaPolicyService,
-  shouldUseStaticMediaMode,
+  prefersReducedMotion,
+  shouldDisableAmbientVideo,
 } from '../../../core/media';
 
 export type AmbientPanelVariant = 'hero' | 'banner';
@@ -40,27 +42,28 @@ interface AmbientParticle {
       [class.sg-ambient-panel--banner]="variant === 'banner'"
       [class.sg-ambient-panel--roblox]="platform === 'roblox'"
       [class.sg-ambient-panel--fortnite]="platform === 'fortnite'"
-      [class.sg-ambient-panel--static]="staticMode"
+      [class.sg-ambient-panel--static]="reduceMotion()"
       [class.sg-ambient-panel--animating]="animating"
       aria-hidden="true"
     >
-      @if (safeVideoUrl && !staticMode) {
+      @if (safeVideoUrl && !disableVideo()) {
         <video
           #ambientVideo
           class="sg-ambient-panel__video"
+          [attr.src]="safeVideoUrl"
           [poster]="posterUrl || artUrl || undefined"
           muted
           loop
           playsinline
-          preload="metadata"
-        >
-          <source [src]="safeVideoUrl" type="video/webm" />
-        </video>
+          autoplay
+          preload="auto"
+        ></video>
       }
 
       <div class="sg-ambient-panel__canvas">
         <div class="sg-ambient-panel__grid"></div>
         <div class="sg-ambient-panel__storm"></div>
+        <div class="sg-ambient-panel__shimmer" aria-hidden="true"></div>
         @for (particle of particles; track particle.id) {
           <span
             class="sg-ambient-panel__particle"
@@ -101,39 +104,50 @@ export class AmbientPanelComponent implements OnInit, AfterViewInit, OnChanges, 
   animating = false;
   safeVideoUrl: string | null = null;
 
-  readonly staticMode = shouldUseStaticMediaMode();
+  readonly reduceMotion = signal(prefersReducedMotion());
+  readonly disableVideo = signal(shouldDisableAmbientVideo());
+
   readonly instanceId = `ambient-${Math.random().toString(36).slice(2, 10)}`;
 
-  readonly particles: AmbientParticle[] = Array.from({ length: 16 }, (_, index) => ({
+  readonly particles: AmbientParticle[] = Array.from({ length: 20 }, (_, index) => ({
     id: index,
-    left: `${6 + ((index * 19) % 88)}%`,
-    top: `${4 + ((index * 27) % 92)}%`,
-    size: `${3 + (index % 4)}px`,
-    delay: `${(index * 0.31) % 3.6}s`,
-    duration: `${2.8 + (index % 5) * 0.55}s`,
+    left: `${4 + ((index * 17) % 90)}%`,
+    top: `${6 + ((index * 23) % 88)}%`,
+    size: `${8 + (index % 5) * 3}px`,
+    delay: `${(index * 0.22) % 2.8}s`,
+    duration: `${2.2 + (index % 5) * 0.45}s`,
   }));
 
   private visibilityHandler = (): void => this.syncVideoPlayback();
+  private mediaQueryHandler = (): void => this.refreshMediaFlags();
   private animTimer = 0;
+  private playRetryTimer = 0;
   private playbackRegistered = false;
+  private motionQuery?: MediaQueryList;
+  private mobileQuery?: MediaQueryList;
 
   ngOnInit(): void {
     this.safeVideoUrl = this.mediaPolicy.safeAmbientVideoUrl(this.videoUrl);
+    this.bindMediaQueries();
+    this.refreshMediaFlags();
   }
 
   ngAfterViewInit(): void {
-    this.syncVideoPlayback();
+    this.syncVideoPlayback(true);
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.visibilityHandler);
     }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['videoUrl']) {
+    const videoChanged = !!changes['videoUrl'];
+    const platformChanged = !!changes['platform'] && !changes['platform'].firstChange;
+
+    if (videoChanged) {
       this.safeVideoUrl = this.mediaPolicy.safeAmbientVideoUrl(this.videoUrl);
     }
 
-    if (changes['platform'] && !changes['platform'].firstChange) {
+    if (platformChanged) {
       this.animating = true;
       window.clearTimeout(this.animTimer);
       this.animTimer = window.setTimeout(() => {
@@ -141,25 +155,42 @@ export class AmbientPanelComponent implements OnInit, AfterViewInit, OnChanges, 
       }, 520);
     }
 
-    if (changes['videoUrl']) {
-      queueMicrotask(() => this.syncVideoPlayback());
+    if (videoChanged || platformChanged) {
+      queueMicrotask(() => this.syncVideoPlayback(true));
     }
   }
 
   ngOnDestroy(): void {
     window.clearTimeout(this.animTimer);
+    window.clearTimeout(this.playRetryTimer);
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', this.visibilityHandler);
     }
+    this.motionQuery?.removeEventListener('change', this.mediaQueryHandler);
+    this.mobileQuery?.removeEventListener('change', this.mediaQueryHandler);
     this.videoRef?.nativeElement.pause();
     if (this.playbackRegistered) {
       this.playbackRegistry.unregister(this.instanceId);
     }
   }
 
-  private syncVideoPlayback(): void {
+  private bindMediaQueries(): void {
+    if (typeof window === 'undefined') return;
+    this.motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    this.mobileQuery = window.matchMedia(`(max-width: 767px)`);
+    this.motionQuery.addEventListener('change', this.mediaQueryHandler);
+    this.mobileQuery.addEventListener('change', this.mediaQueryHandler);
+  }
+
+  private refreshMediaFlags(): void {
+    this.reduceMotion.set(prefersReducedMotion());
+    this.disableVideo.set(shouldDisableAmbientVideo());
+    queueMicrotask(() => this.syncVideoPlayback(true));
+  }
+
+  private syncVideoPlayback(forceReload = false): void {
     const video = this.videoRef?.nativeElement;
-    if (!video || this.staticMode || !this.safeVideoUrl) return;
+    if (!video || this.disableVideo() || !this.safeVideoUrl) return;
 
     if (document.hidden) {
       video.pause();
@@ -170,7 +201,7 @@ export class AmbientPanelComponent implements OnInit, AfterViewInit, OnChanges, 
       return;
     }
 
-    if (!this.playbackRegistry.canRegister()) {
+    if (!this.playbackRegistry.canRegister() && !this.playbackRegistered) {
       video.pause();
       return;
     }
@@ -184,6 +215,30 @@ export class AmbientPanelComponent implements OnInit, AfterViewInit, OnChanges, 
       return;
     }
 
-    video.play().catch(() => undefined);
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.loop = true;
+
+    if (forceReload || video.getAttribute('src') !== this.safeVideoUrl) {
+      video.setAttribute('src', this.safeVideoUrl);
+      video.load();
+    }
+
+    const tryPlay = (): void => {
+      void video.play().catch(() => {
+        window.clearTimeout(this.playRetryTimer);
+        this.playRetryTimer = window.setTimeout(() => {
+          void video.play().catch(() => undefined);
+        }, 400);
+      });
+    };
+
+    if (video.readyState >= 2) {
+      tryPlay();
+    } else {
+      video.addEventListener('loadeddata', tryPlay, { once: true });
+      tryPlay();
+    }
   }
 }

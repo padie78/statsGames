@@ -9,6 +9,7 @@ import {
   getMatchOutcome,
 } from '../../../utils/match-stats.util';
 import { matchDetailRoute } from '../../../utils/match-analysis.util';
+import { parseMatchSummary } from '../../../utils/match-display.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 import { StatValueComponent } from '../../atoms/stat-value/stat-value.component';
 
@@ -93,8 +94,8 @@ export interface MatchCardStats {
           </div>
         </header>
 
-        @if (summary) {
-          <p class="sg-match-card__summary">{{ summary }}</p>
+        @if (displaySummary) {
+          <p class="sg-match-card__summary">{{ displaySummary }}</p>
         }
 
         <div
@@ -192,10 +193,13 @@ export class MatchStatCardComponent {
     if (this.isVictory) return 'Victoria';
     if (!this.detailed) return `${this.platformLabel} · ${this.matchId}`;
 
-    const summary = this.summary?.trim();
-    if (!summary) return this.platformLabel;
+    return parseMatchSummary(this.platform, this.summary).primaryLabel;
+  }
 
-    const segment = summary.split('·')[0]?.trim();
-    return segment || this.platformLabel;
+  get displaySummary(): string | null {
+    const parsed = parseMatchSummary(this.platform, this.summary);
+    if (parsed.detailLine) return parsed.detailLine;
+    if (!this.detailed && this.summary?.trim()) return this.summary.trim();
+    return null;
   }
 }

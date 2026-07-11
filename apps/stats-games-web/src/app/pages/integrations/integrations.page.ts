@@ -27,13 +27,13 @@ import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui
   ],
   template: `
     <ion-content class="sg-page-content">
-      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
+      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-6">
         <header class="sg-page-header">
           <h1 class="sg-page-header__title">Integraciones</h1>
           <p class="sg-page-header__subtitle">Vinculá tu cuenta de juego y configurá el webhook de telemetría.</p>
         </header>
 
-        <section class="u-surface-card u-p-4">
+        <section class="u-surface-card u-p-5">
           <h2 class="sg-page-header__title u-text-md u-mb-2">Estado de conexión</h2>
           <div class="u-flex u-gap-2 u-flex-wrap">
             <sg-neon-badge [tone]="profile()?.fortniteId ? 'cyan' : 'muted'">
@@ -45,7 +45,7 @@ import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui
           </div>
         </section>
 
-        <section class="u-surface-card u-p-4">
+        <section class="u-surface-card u-p-5">
           <h2 class="sg-page-header__title u-text-md u-mb-2">Webhook URL</h2>
           <p class="u-hint u-mb-2">
             POST con header <code>X-Webhook-Secret</code> y body JSON
@@ -56,7 +56,7 @@ import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui
         </section>
 
         @if (showLinkForm()) {
-          <section class="u-surface-card u-p-4">
+          <section class="u-surface-card u-p-5">
             <h2 class="sg-page-header__title u-text-md u-mb-2">Vincular cuenta</h2>
             <form [formGroup]="linkForm" (ngSubmit)="submitLinkPlatform()" class="u-flex u-flex-col u-gap-4">
               <sg-select

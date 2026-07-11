@@ -11,7 +11,7 @@ export type MatchDateFilter = 'all' | '7d' | '30d';
   encapsulation: ViewEncapsulation.None,
   imports: [SelectComponent],
   template: `
-    <section class="sg-match-filters u-surface-card u-p-4" aria-label="Filtros de partidas">
+    <section class="sg-match-filters u-surface-card u-p-5" aria-label="Filtros de partidas">
       <div class="sg-match-filters__row">
         <div class="sg-match-filters__group">
           <span class="sg-match-filters__label">Plataforma</span>

@@ -27,13 +27,13 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
   ],
   template: `
     <ion-content class="sg-page-content">
-      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
+      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-6">
         <a routerLink="/" class="u-hint">← Volver al inicio</a>
 
         @if (loading()) {
           <p class="u-hint">Cargando perfil…</p>
         } @else if (notFound()) {
-          <section class="u-surface-card u-p-4">
+          <section class="u-surface-card u-p-5">
             <h1 class="u-font-display u-text-lg">Jugador no encontrado</h1>
             <p class="u-hint">No existe un perfil público para "{{ gamerTag() }}".</p>
           </section>

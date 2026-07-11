@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Mapa estilizado de isla Fortnite">
+  <defs>
+    <linearGradient id="ocean" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1428"/>
+      <stop offset="100%" stop-color="#121f38"/>
+    </linearGradient>
+    <linearGradient id="land" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a2844"/>
+      <stop offset="100%" stop-color="#243556"/>
+    </linearGradient>
+    <radialGradient id="zoneGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="100" height="100" fill="url(#ocean)"/>
+
+  <!-- Grid sutil -->
+  <g stroke="#2a3d5c" stroke-width="0.15" opacity="0.35">
+    <path d="M0 20 H100 M0 40 H100 M0 60 H100 M0 80 H100"/>
+    <path d="M20 0 V100 M40 0 V100 M60 0 V100 M80 0 V100"/>
+  </g>
+
+  <!-- Isla estilizada -->
+  <path
+    d="M12 78 C18 62, 28 52, 38 48 C48 44, 58 38, 70 34 C82 30, 88 42, 86 56 C84 70, 72 82, 58 86 C44 90, 28 88, 18 84 Z"
+    fill="url(#land)"
+    stroke="#3d5578"
+    stroke-width="0.6"
+  />
+
+  <!-- Zona central (storm preview) -->
+  <circle cx="55" cy="62" r="22" fill="url(#zoneGlow)"/>
+  <circle cx="55" cy="62" r="14" fill="none" stroke="#22d3ee" stroke-width="0.35" stroke-dasharray="2 1.5" opacity="0.55"/>
+
+  <!-- POIs aproximados -->
+  <g font-family="Inter, sans-serif" font-size="2.8" fill="#8fa3c4">
+    <circle cx="18" cy="72" r="1.2" fill="#f5d075"/>
+    <text x="20.5" y="72.8">Coastal Drop</text>
+
+    <circle cx="28" cy="58" r="1.2" fill="#f5d075"/>
+    <text x="30.5" y="58.8">Harbor Hub</text>
+
+    <circle cx="48" cy="46" r="1.2" fill="#f5d075"/>
+    <text x="50.5" y="46.8">Central Plaza</text>
+
+    <circle cx="62" cy="32" r="1.2" fill="#f5d075"/>
+    <text x="64.5" y="32.8">Highland Ridge</text>
+
+    <circle cx="74" cy="52" r="1.2" fill="#f5d075"/>
+    <text x="76.5" y="52.8">Storm Edge</text>
+
+    <circle cx="55" cy="62" r="1.2" fill="#22d3ee"/>
+    <text x="57.5" y="62.8">Final Zone</text>
+  </g>
+</svg>

@@ -95,6 +95,14 @@ output "webhook_url_pattern" {
   value = module.lambdas.webhook_url_pattern
 }
 
+output "media_proxy_name" {
+  value = module.lambdas.media_proxy_name
+}
+
+output "media_proxy_base_url" {
+  value = module.lambdas.media_proxy_base_url
+}
+
 output "frontend_bucket" {
   value = module.frontend_hosting.bucket_name
 }

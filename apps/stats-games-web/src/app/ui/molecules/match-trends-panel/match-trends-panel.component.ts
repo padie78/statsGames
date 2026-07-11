@@ -19,7 +19,7 @@ import type { TrendChartPoint } from '../trend-chart/trend-chart.component';
   encapsulation: ViewEncapsulation.None,
   imports: [NgxEchartsDirective],
   template: `
-    <section class="sg-match-trends u-surface-card u-p-4" aria-label="Tendencias de partidas">
+    <section class="sg-match-trends u-surface-card u-p-5" aria-label="Tendencias de partidas">
       <header class="sg-match-trends__header">
         <div>
           <h2 class="sg-page-header__title u-text-md">Tendencias del período</h2>

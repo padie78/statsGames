@@ -7,7 +7,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
   encapsulation: ViewEncapsulation.None,
   imports: [NeonBadgeComponent],
   template: `
-    <section class="sg-ai-insight u-surface-card u-surface-card--ai u-p-4">
+    <section class="sg-ai-insight u-surface-card u-surface-card--ai u-p-5">
       <header class="sg-panel-header">
         <h2 class="sg-panel-header__title">AI Coach</h2>
         <sg-neon-badge tone="purple">AI</sg-neon-badge>
@@ -16,7 +16,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
       <p class="sg-ai-insight__headline">{{ headline }}</p>
       <p class="sg-ai-insight__body">{{ body }}</p>
 
-      <button type="button" class="u-btn u-btn--ai u-mt-3" (click)="ctaClick.emit()">
+      <button type="button" class="u-btn u-btn--ai" (click)="ctaClick.emit()">
         {{ ctaLabel }}
       </button>
     </section>

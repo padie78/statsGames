@@ -14,7 +14,6 @@ import {
 } from '../../data/match-mock.data';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
-import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
@@ -25,6 +24,9 @@ import {
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
 import type { CommunityBenchmarks } from '../../data/community-mock.data';
+import { PlayerAvatarService } from '../../services/player-avatar.service';
+import { PlatformMediaService } from '../../services/platform-media.service';
+import { coachTipForPlatform } from '../../data/coach-video-tips.data';
 import {
   AchievementStripComponent,
   AiInsightCardComponent,
@@ -34,11 +36,13 @@ import {
   KpiStripComponent,
   LiveMatchFeedComponent,
   MatchHighlightCardComponent,
+  PlatformCosmeticsRailComponent,
   PlatformSpotlightCardComponent,
   QuickActionsBarComponent,
   WeekComparisonPanelComponent,
   CommunityComparisonPanelComponent,
   LeaderboardMiniComponent,
+  YoutubeTipCardComponent,
   type KpiStripItem,
   type LiveMatchFeedItem,
 } from '../../ui';
@@ -83,6 +87,8 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     WeekComparisonPanelComponent,
     CommunityComparisonPanelComponent,
     LeaderboardMiniComponent,
+    YoutubeTipCardComponent,
+    PlatformCosmeticsRailComponent,
   ],
   template: `
     <ion-content class="sg-page-content">
@@ -95,11 +101,18 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
           <p class="u-error">{{ error() }}</p>
         }
 
+        <sg-dual-platform-strip
+          [activePlatform]="heroPlatform()"
+          [fortniteConnected]="!!profile()?.fortniteId"
+          [robloxConnected]="!!profile()?.robloxId"
+        />
+
         @if (profile()) {
           <sg-dashboard-hero
             [gamerTag]="profile()!.gamerTag"
             [platform]="heroPlatform()"
             [artUrl]="heroArtUrl()"
+            [avatarUrl]="playerAvatar()"
             [fortniteId]="profile()!.fortniteId"
             [robloxId]="profile()!.robloxId"
             [live]="realtime.isLive()"
@@ -110,12 +123,6 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
             [bestPlacement]="bestPlacement()"
           />
         }
-
-        <sg-dual-platform-strip
-          [activePlatform]="heroPlatform()"
-          [fortniteConnected]="!!profile()?.fortniteId"
-          [robloxConnected]="!!profile()?.robloxId"
-        />
 
         <div class="sg-dashboard__bento-top">
           <sg-platform-spotlight-card
@@ -137,7 +144,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
           </header>
 
           <div class="sg-dashboard__section-body">
-            <div class="sg-dashboard__panel u-surface-card u-p-5 sg-dashboard__kpi-panel">
+            <div class="sg-dashboard__panel u-surface-card u-p-6 sg-dashboard__kpi-panel">
               <sg-kpi-strip [platform]="heroPlatform()" [items]="kpiItems()" [embedded]="true" />
             </div>
 
@@ -188,7 +195,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               />
             }
 
-            <div class="sg-dashboard__panel u-surface-card u-p-5">
+            <div class="sg-dashboard__panel u-surface-card u-p-6">
               <sg-live-match-feed
                 title="Partidas recientes"
                 [items]="historyFeedItems()"
@@ -206,6 +213,23 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
             />
 
             <sg-achievement-strip title="Logros de la semana" [items]="achievements()" />
+
+            @if (coachTip(); as tip) {
+              <sg-youtube-tip-card
+                [videoId]="tip.videoId"
+                [title]="tip.title"
+                [subtitle]="tip.subtitle"
+                [creatorName]="tip.creatorName"
+                badgeLabel="Oficial"
+              />
+            }
+
+            @if (heroPlatform() === 'fortnite') {
+              <sg-platform-cosmetics-rail
+                [items]="fortniteCosmetics()"
+                [loading]="mediaLoading()"
+              />
+            }
 
             <sg-ai-insight-card
               [headline]="aiHeadline()"
@@ -225,6 +249,8 @@ export class DashboardPageComponent implements OnInit {
   private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
   private readonly playerService = inject(PlayerService);
+  private readonly avatarService = inject(PlayerAvatarService);
+  private readonly platformMedia = inject(PlatformMediaService);
   private readonly statsService = inject(StatsService);
   private readonly router = inject(Router);
 
@@ -245,7 +271,15 @@ export class DashboardPageComponent implements OnInit {
     return g === 'roblox' ? 'roblox' : 'fortnite';
   });
 
-  readonly heroArtUrl = computed(() => gamePlatformMeta(this.heroPlatform()).artUrl);
+  readonly heroArtUrl = computed(() => this.platformMedia.resolveHeroArt(this.heroPlatform()));
+
+  readonly playerAvatar = computed(() => this.avatarService.url());
+
+  readonly coachTip = computed(() => coachTipForPlatform(this.heroPlatform()));
+
+  readonly fortniteCosmetics = computed(() => this.platformMedia.fortniteFeatured());
+
+  readonly mediaLoading = computed(() => this.platformMedia.loading());
 
   readonly weeklyKd = computed(() => {
     const w = this.weekly();
@@ -540,6 +574,11 @@ export class DashboardPageComponent implements OnInit {
         return;
       }
       this.profile.set(profile);
+      void this.avatarService.resolve({
+        avatarUrl: profile.avatarUrl,
+        robloxId: profile.robloxId,
+        gamerTag: profile.gamerTag,
+      });
 
       const platform =
         (this.gameContext.activeGame() as 'fortnite' | 'roblox' | null) ??
@@ -548,6 +587,7 @@ export class DashboardPageComponent implements OnInit {
 
       const periodId = currentWeeklyPeriodIdForStats();
       const activePlatform = platform ?? 'fortnite';
+      void this.platformMedia.hydrateForPlatform(activePlatform);
 
       const [matches, weeklyRows, previousWeeklyRows, daily, community, leaderboard] =
         await Promise.all([

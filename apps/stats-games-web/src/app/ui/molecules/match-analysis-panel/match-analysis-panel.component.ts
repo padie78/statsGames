@@ -2,9 +2,7 @@ import {
   Component,
   EventEmitter,
   Input,
-  OnChanges,
   Output,
-  SimpleChanges,
   ViewEncapsulation,
 } from '@angular/core';
 import { NgxEchartsDirective } from 'ngx-echarts';
@@ -70,6 +68,10 @@ import { StatValueComponent } from '../../atoms/stat-value/stat-value.component'
         <h3 class="sg-match-analysis__section-title">Análisis detallado</h3>
         @for (paragraph of report.narrative; track paragraph) {
           <p class="sg-match-analysis__paragraph">{{ paragraph }}</p>
+        } @empty {
+          <p class="sg-match-analysis__paragraph u-hint u-m-0">
+            Sin narrativa disponible para esta partida todavía.
+          </p>
         }
       </section>
 
@@ -82,9 +84,11 @@ import { StatValueComponent } from '../../atoms/stat-value/stat-value.component'
             <div
               class="sg-trend-chart__canvas sg-trend-chart__canvas--radar"
               echarts
-              [options]="radarOptions"
+              [options]="radarChartOptions"
               [autoResize]="true"
             ></div>
+          } @else {
+            <p class="sg-trend-chart__empty">Sin datos de perfil.</p>
           }
         </section>
 
@@ -93,7 +97,12 @@ import { StatValueComponent } from '../../atoms/stat-value/stat-value.component'
             <h3 class="sg-trend-chart__title">Kills · partidas recientes</h3>
           </header>
           @if (report.recentKillsTrend.length) {
-            <div class="sg-trend-chart__canvas" echarts [options]="killsTrendOptions" [autoResize]="true"></div>
+            <div
+              class="sg-trend-chart__canvas"
+              echarts
+              [options]="killsTrendChartOptions"
+              [autoResize]="true"
+            ></div>
           } @else {
             <p class="sg-trend-chart__empty">Sin historial reciente.</p>
           }
@@ -104,16 +113,19 @@ import { StatValueComponent } from '../../atoms/stat-value/stat-value.component'
             <header class="sg-trend-chart__header">
               <h3 class="sg-trend-chart__title">Esta partida vs tu promedio reciente</h3>
             </header>
-            <div class="sg-trend-chart__canvas" echarts [options]="comparisonOptions" [autoResize]="true"></div>
+            <div
+              class="sg-trend-chart__canvas"
+              echarts
+              [options]="comparisonChartOptions"
+              [autoResize]="true"
+            ></div>
           </section>
         }
       </div>
 
       <div class="sg-match-analysis__pros-cons">
         <section class="sg-match-analysis__pros u-surface-card u-p-5">
-          <h3 class="sg-match-analysis__section-title sg-match-analysis__section-title--pro">
-            Pros
-          </h3>
+          <h3 class="sg-match-analysis__section-title sg-match-analysis__section-title--pro">Pros</h3>
           <ul class="sg-match-analysis__list sg-match-analysis__list--pro">
             @for (item of report.pros; track item) {
               <li>{{ item }}</li>
@@ -122,9 +134,7 @@ import { StatValueComponent } from '../../atoms/stat-value/stat-value.component'
         </section>
 
         <section class="sg-match-analysis__cons u-surface-card u-p-5">
-          <h3 class="sg-match-analysis__section-title sg-match-analysis__section-title--con">
-            Contras
-          </h3>
+          <h3 class="sg-match-analysis__section-title sg-match-analysis__section-title--con">Contras</h3>
           <ul class="sg-match-analysis__list sg-match-analysis__list--con">
             @for (item of report.cons; track item) {
               <li>{{ item }}</li>
@@ -154,32 +164,31 @@ import { StatValueComponent } from '../../atoms/stat-value/stat-value.component'
     </div>
   `,
 })
-export class MatchAnalysisPanelComponent implements OnChanges {
+export class MatchAnalysisPanelComponent {
   @Input({ required: true }) report!: MatchAnalysisReport;
   @Input() ctaLabel = 'Ver todas las partidas';
   @Output() readonly ctaClick = new EventEmitter<void>();
 
-  radarOptions: EChartsOption = {};
-  killsTrendOptions: EChartsOption = {};
-  comparisonOptions: EChartsOption = {};
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['report']) {
-      this.refreshCharts();
-    }
-  }
-
-  private refreshCharts(): void {
-    this.radarOptions = buildMatchRadarOptions(
+  get radarChartOptions(): EChartsOption {
+    if (!this.report?.radarAxes?.length) return {};
+    return buildMatchRadarOptions(
       this.report.radarAxes.map((axis) => ({ name: axis.name, value: axis.value })),
       'Esta partida',
     );
-    this.killsTrendOptions = buildTrendChartOptions(this.report.recentKillsTrend, {
+  }
+
+  get killsTrendChartOptions(): EChartsOption {
+    if (!this.report?.recentKillsTrend?.length) return {};
+    return buildTrendChartOptions(this.report.recentKillsTrend, {
       variant: 'bar',
       color: '#f5d075',
       yAxisName: 'Kills',
     });
-    this.comparisonOptions = buildMatchComparisonChartOptions(
+  }
+
+  get comparisonChartOptions(): EChartsOption {
+    if (!this.report?.comparisonRows?.length) return {};
+    return buildMatchComparisonChartOptions(
       this.report.comparisonRows.map((row) => ({
         label: row.label,
         matchValue: row.matchValue,

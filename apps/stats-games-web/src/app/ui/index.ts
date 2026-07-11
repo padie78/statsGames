@@ -47,9 +47,12 @@ export { MatchFiltersToolbarComponent,
   type MatchDateFilter,
   type MatchPlatformFilter,
 } from './molecules/match-filters-toolbar/match-filters-toolbar.component';
+export { YoutubeTipCardComponent } from './molecules/youtube-tip-card/youtube-tip-card.component';
 export { MatchAnalysisPanelComponent } from './molecules/match-analysis-panel/match-analysis-panel.component';
+export { MatchMapPanelComponent } from './molecules/match-map-panel/match-map-panel.component';
 export { MatchHistoryListComponent } from './organisms/match-history-list/match-history-list.component';
 export { DualPlatformStripComponent } from './molecules/dual-platform-strip/dual-platform-strip.component';
+export { PlatformCosmeticsRailComponent } from './molecules/platform-cosmetics-rail/platform-cosmetics-rail.component';
 export { DashboardHeroComponent } from './organisms/dashboard-hero/dashboard-hero.component';
 export { AppSubnavComponent } from './organisms/app-subnav/app-subnav.component';
 export { AppTopbarComponent } from './organisms/app-topbar/app-topbar.component';

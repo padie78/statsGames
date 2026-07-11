@@ -17,7 +17,7 @@ export interface QuickActionItem {
   encapsulation: ViewEncapsulation.None,
   imports: [RouterLink, NeonBadgeComponent],
   template: `
-    <section class="sg-quick-actions u-surface-card u-p-4" aria-label="Acciones rápidas">
+    <section class="sg-quick-actions u-surface-card u-p-5" aria-label="Acciones rápidas">
       <header class="sg-panel-header">
         <h2 class="sg-panel-header__title">Acceso rápido</h2>
       </header>

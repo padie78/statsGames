@@ -44,7 +44,7 @@ const GAMER_TAG_PATTERN = /^[a-zA-Z0-9_-]{3,32}$/;
   ],
   template: `
     <ion-content class="sg-page-content">
-      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4 u-py-4">
+      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-6 u-py-4">
         <header class="sg-page-header">
           <h1 class="sg-page-header__title">Configuración</h1>
           <p class="sg-page-header__subtitle">
@@ -56,7 +56,7 @@ const GAMER_TAG_PATTERN = /^[a-zA-Z0-9_-]{3,32}$/;
           <p class="u-error">{{ loadError() }}</p>
         }
 
-        <form class="u-flex u-flex-col u-gap-4" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+        <form class="u-flex u-flex-col u-gap-5" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
           <section class="u-surface-card u-p-5">
             <div class="sg-settings-section__head">
               <sg-neon-badge tone="lime">Mi perfil</sg-neon-badge>

@@ -30,7 +30,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
   ],
   template: `
     <ion-content class="sg-page-content">
-      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-4">
+      <div class="page-shell page-shell--fluid u-flex u-flex-col u-gap-6">
         <sg-platform-page-banner
           [platform]="activePlatform()"
           title="Stats avanzadas"
@@ -42,7 +42,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
         }
 
         @if (showEmptyHint()) {
-          <section class="u-surface-card u-p-4">
+          <section class="u-surface-card u-p-5">
             <p class="u-hint u-m-0">
               Sin estadísticas todavía. Cargá mock data con tu User ID (Config):
               <code class="sg-code-block u-mt-2">npm run seed:mock -- --user-id TU_USER_ID</code>
@@ -51,7 +51,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
         }
 
         @if (weekly()) {
-          <section class="u-surface-card u-p-4">
+          <section class="u-surface-card u-p-5">
             <h2 class="sg-page-header__title u-text-md u-mb-3">
               Esta semana · {{ platformMeta().shortLabel }}
             </h2>

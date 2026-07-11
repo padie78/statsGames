@@ -1,5 +1,6 @@
 import type { TrendChartPoint } from '../core/charts/chart.types';
 import type { MatchUpdateView } from '../services/match.service';
+import { isRobloxPlatform, matchSessionContext, parseMatchSummary } from './match-display.util';
 import {
   aggregateMatchStats,
   computeKdRatio,
@@ -82,11 +83,35 @@ export function buildMatchAnalysisReport(input: BuildMatchAnalysisInput): MatchA
   let headline = 'Partida competitiva con margen claro de mejora';
   let summary = `${outcome.label} · ${kills} kills · K/D ${kdLabel}${placement != null ? ` · #${placement}` : ''}.`;
 
-  if (placement === 1) {
+  const sessionContext = matchSessionContext(match.platform, match.summary);
+  const roblox = isRobloxPlatform(match.platform);
+
+  if (roblox) {
+    applyRobloxVerdict({
+      placement,
+      kills,
+      deaths,
+      assists,
+      kd,
+      kdLabel,
+      avgKills,
+      sessionContext,
+      pros,
+      cons,
+      narrative,
+      actionPlan,
+      setVerdict: (v) => {
+        verdict = v;
+      },
+      setHeadline: (h) => {
+        headline = h;
+      },
+    });
+  } else if (placement === 1) {
     verdict = 'victory';
     headline = 'Victoria dominante — cerraste cuando importaba';
     narrative.push(
-      `Ganaste la partida (${match.summary || 'modo ranked'}) con un cierre en placement #1. Eso indica que tus decisiones de rotación y pelea en endgame estuvieron alineadas con el objetivo principal: sobrevivir y quedar último en pie.`,
+      `Ganaste la partida ${sessionContext} con un cierre en placement #1. Eso indica que tus decisiones de rotación y pelea en endgame estuvieron alineadas con el objetivo principal: sobrevivir y quedar último en pie.`,
       `Con ${kills} eliminaciones y K/D ${kdLabel}, ${kd >= 1.5 ? 'convertiste la ventaja mecánica en control de la partida' : 'priorizaste posición sobre frageo agresivo, lo cual es válido en cierres tight'}. ${assists >= 2 ? `También aportaste ${assists} asistencias, señal de juego de equipo.` : 'El próximo paso es mantener este criterio en partidas más exigentes.'}`,
     );
     pros.push('Placement #1: ejecutaste el win condition sin regalar la partida.');
@@ -140,7 +165,7 @@ export function buildMatchAnalysisReport(input: BuildMatchAnalysisInput): MatchA
     actionPlan.push('Drop más conservador hasta recuperar confianza.');
   }
 
-  if (kd >= 2 && placement != null && placement > 3) {
+  if (!roblox && kd >= 2 && placement != null && placement > 3) {
     pros.push('Mecánica sólida en duelos — el cuello de botella es conversión a placement.');
     cons.push('Post-kill: rotá antes de lootear. El placement te está costando más que el aim.');
   }
@@ -170,23 +195,30 @@ export function buildMatchAnalysisReport(input: BuildMatchAnalysisInput): MatchA
   }
 
   if (pros.length === 0) pros.push('Completaste la partida — cada match suma data al coach.');
-  if (cons.length === 0) cons.push('Mantené consistencia en rotaciones y selección de fights.');
+  if (cons.length === 0) {
+    cons.push(
+      roblox
+        ? 'Mantené consistencia en timing y selección de peleas dentro de la experiencia.'
+        : 'Mantené consistencia en rotaciones y selección de fights.',
+    );
+  }
   if (actionPlan.length < 2) {
-    actionPlan.push('Revisá el replay mental de la última zona.');
-    actionPlan.push('Definí 1 objetivo concreto antes de la próxima cola.');
+    actionPlan.push(
+      roblox ? 'Repasá qué funcionó al final de la sesión.' : 'Revisá el replay mental de la última zona.',
+    );
+    actionPlan.push(
+      roblox
+        ? 'Definí 1 objetivo concreto antes de la próxima cola en la misma experiencia.'
+        : 'Definí 1 objetivo concreto antes de la próxima cola.',
+    );
   }
 
   const performanceScore = computePerformanceScore({ placement, kd, kills, deaths, verdict });
   const gradeLabel = scoreToGrade(performanceScore);
 
-  const focusNext =
-    verdict === 'victory'
-      ? 'Objetivo: repetir el mismo criterio de cierre en 2 ranked seguidas.'
-      : verdict === 'podium'
-        ? 'Objetivo: convertir el próximo podio en victoria con rotación anticipada.'
-        : verdict === 'solid'
-          ? 'Objetivo: top 5 en la próxima partida priorizando posición.'
-          : 'Objetivo: top 15 con supervivencia — olvidate del frageo por ahora.';
+  const focusNext = roblox
+    ? buildRobloxFocusNext(verdict)
+    : buildFortniteFocusNext(verdict);
 
   return {
     headline,
@@ -308,7 +340,7 @@ function buildComparisonRows(input: {
   avgPlacement: number;
   recentCount: number;
 }): MatchAnalysisComparisonRow[] {
-  if (input.recentCount < 2) return [];
+  if (input.recentCount < 1) return [];
 
   const rows: MatchAnalysisComparisonRow[] = [
     {
@@ -388,5 +420,137 @@ function buildRecentKillsTrend(
 }
 
 export function formatMatchDetailMeta(match: MatchUpdateView): string {
-  return `${formatMatchRelativeTime(match.updatedAt)} · ${match.matchId}`;
+  const parsed = parseMatchSummary(match.platform, match.summary);
+  const context =
+    isRobloxPlatform(match.platform) && parsed.experienceName
+      ? `${parsed.experienceName} · `
+      : '';
+  return `${context}${formatMatchRelativeTime(match.updatedAt)} · ${match.matchId}`;
+}
+
+function buildFortniteFocusNext(verdict: MatchAnalysisReport['verdict']): string {
+  if (verdict === 'victory') {
+    return 'Objetivo: repetir el mismo criterio de cierre en 2 ranked seguidas.';
+  }
+  if (verdict === 'podium') {
+    return 'Objetivo: convertir el próximo podio en victoria con rotación anticipada.';
+  }
+  if (verdict === 'solid') {
+    return 'Objetivo: top 5 en la próxima partida priorizando posición.';
+  }
+  return 'Objetivo: top 15 con supervivencia — olvidate del frageo por ahora.';
+}
+
+function buildRobloxFocusNext(verdict: MatchAnalysisReport['verdict']): string {
+  if (verdict === 'victory') {
+    return 'Objetivo: repetir el mismo ritmo en la próxima sesión de esta experiencia.';
+  }
+  if (verdict === 'podium') {
+    return 'Objetivo: cerrar la próxima sesión en #1 con mejor timing en rondas finales.';
+  }
+  if (verdict === 'solid') {
+    return 'Objetivo: mejorar placement/K-D en la misma experiencia antes de saltar a otra.';
+  }
+  return 'Objetivo: sesión corta enfocada en supervivencia y menos riesgos innecesarios.';
+}
+
+interface RobloxVerdictInput {
+  placement: number | null;
+  kills: number;
+  deaths: number;
+  assists: number;
+  kd: number;
+  kdLabel: string;
+  avgKills: number;
+  sessionContext: string;
+  pros: string[];
+  cons: string[];
+  narrative: string[];
+  actionPlan: string[];
+  setVerdict: (verdict: MatchAnalysisReport['verdict']) => void;
+  setHeadline: (headline: string) => void;
+}
+
+function applyRobloxVerdict(input: RobloxVerdictInput): void {
+  const {
+    placement,
+    kills,
+    deaths,
+    assists,
+    kd,
+    kdLabel,
+    avgKills,
+    sessionContext,
+    pros,
+    cons,
+    narrative,
+    actionPlan,
+    setVerdict,
+    setHeadline,
+  } = input;
+
+  if (placement === 1) {
+    setVerdict('victory');
+    setHeadline('Victoria en la experiencia — cerraste la sesión arriba');
+    narrative.push(
+      `Ganaste la sesión ${sessionContext} con placement #1. En Roblox cada experiencia tiene reglas distintas; este resultado confirma que leíste bien el objetivo de esta en particular.`,
+      `Con ${kills} eliminaciones y K/D ${kdLabel}, ${kd >= 1.5 ? 'tu impacto en combate fue decisivo' : 'priorizaste el win condition de la experiencia sobre stats secundarias'}. ${assists >= 2 ? `${assists} asistencias suman valor en modos de equipo.` : 'La clave es repetir el mismo criterio en la próxima sesión.'}`,
+    );
+    pros.push('Placement #1: cumpliste el objetivo principal de la experiencia.');
+    if (kd >= 1.2) pros.push(`K/D ${kdLabel} — dominaste los duelos clave.`);
+    if (assists >= 2) pros.push(`${assists} asistencias: buen aporte en fights compartidos.`);
+    if (deaths <= 1) pros.push('Pocas muertes — buena gestión de respawns/vidas.');
+    cons.push('Anotá qué estrategia usaste para replicarla en la misma experiencia.');
+    actionPlan.push('Jugá otra sesión en la misma experiencia antes de cambiar de juego.');
+    actionPlan.push('Identificá el momento exacto en que cerraste la victoria.');
+    return;
+  }
+
+  if (placement != null && placement <= 3) {
+    setVerdict('podium');
+    setHeadline('Podio en la experiencia — a un paso del #1');
+    narrative.push(
+      `Quedaste #${placement} ${sessionContext}. Estás en la franja alta del lobby de esa experiencia, lo que indica que entendés su loop aunque te faltó cerrar la sesión.`,
+      `Registraste ${kills} kills con K/D ${kdLabel}. ${kills >= avgKills ? 'Tu output ofensivo superó tu media reciente en Roblox.' : 'El frageo fue moderado; quizá priorizaste objetivos de la experiencia sobre eliminaciones.'} La diferencia entre podio y victoria suele estar en el timing de la ronda final o en un duelo forzado sin ventaja.`,
+    );
+    pros.push(`Top ${placement} en esta experiencia — rendimiento alto para el lobby.`);
+    if (kills >= 4) pros.push('Buen volumen de eliminaciones en la sesión.');
+    if (kd >= 1) pros.push(`K/D positivo (${kdLabel}) bajo presión.`);
+    cons.push('Revisá la fase final: ¿entraste sin recursos o sin posición?');
+    if (deaths >= 2) cons.push(`${deaths} muertes — cada respawn te restó tempo en el cierre.`);
+    actionPlan.push('En la próxima sesión, conservá recursos para la ronda final.');
+    actionPlan.push('Evitá pelear de frente cuando podés reagrupar o flanquear.');
+    return;
+  }
+
+  if (placement != null && placement <= 10) {
+    setVerdict('solid');
+    setHeadline('Sesión sólida — margen para escalar en la experiencia');
+    narrative.push(
+      `Terminaste #${placement} ${sessionContext} con ${kills} kills y K/D ${kdLabel}. Rendís en la mitad superior del lobby de esa experiencia, señal de que el loop básico te queda claro.`,
+      `${kd >= 1.2 ? 'Tu mecánica en duelos es un activo.' : 'Conviene elegir mejor cuándo pelear según las reglas de esta experiencia.'} Para subir a podio, enfocate en llegar a las fases finales con recursos y evitar desgaste innecesario al inicio.`,
+    );
+    if (kills >= 3) pros.push('Generás presión ofensiva cuando te buscás pelea.');
+    if (placement <= 7) pros.push('Top 7: estás cerca del podio en esta experiencia.');
+    cons.push('Reducí riesgos tempranos que no aportan al objetivo de la experiencia.');
+    if (deaths >= 2) cons.push('Demasiadas muertes antes del cierre — jugá más conservador.');
+    actionPlan.push('Próximas 2 sesiones: priorizá placement sobre kills.');
+    actionPlan.push('Antes de cada fight: ¿suma al objetivo de la experiencia?');
+    return;
+  }
+
+  setVerdict('rough');
+  setHeadline('Sesión difícil — reset y foco en lo básico de la experiencia');
+  narrative.push(
+    placement != null
+      ? `El placement #${placement} ${sessionContext} indica que la sesión se complicó antes del cierre. Con ${kills} kills y K/D ${kdLabel}, ${kills <= 1 ? 'hubo poco impacto ofensivo' : 'hubo frags pero no se tradujeron en posición final'}.`
+      : `Sin placement registrado ${sessionContext}, pero el K/D ${kdLabel} y ${kills} kills muestran una sesión donde costó mantener ritmo.`,
+    `En Roblox conviene dominar una experiencia a la vez: aprendé su loop, evitá pelear sin ventaja y buscá consistencia antes de saltar a otro juego dentro de la plataforma.`,
+  );
+  if (kills >= 2) pros.push('Sumaste eliminaciones pese a un lobby exigente.');
+  cons.push('Demasiado desgaste temprano — repasá las reglas/objetivos de la experiencia.');
+  if (deaths >= 3) cons.push(`${deaths} muertes restaron tempo y recursos.`);
+  if (kills <= 1) cons.push('Impacto ofensivo bajo — practicá combate en esta experiencia.');
+  actionPlan.push('Próximas sesiones: objetivo conservador, sin forzar plays.');
+  actionPlan.push('Quedate en la misma experiencia hasta estabilizar resultados.');
 }

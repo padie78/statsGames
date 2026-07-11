@@ -14,7 +14,7 @@ export interface WeeklyOverviewMetric {
   encapsulation: ViewEncapsulation.None,
   imports: [NeonBadgeComponent],
   template: `
-    <section class="sg-weekly-overview u-surface-card u-p-4">
+    <section class="sg-weekly-overview u-surface-card u-p-5">
       <header class="sg-panel-header">
         <div>
           <h2 class="sg-panel-header__title">Resumen semanal</h2>

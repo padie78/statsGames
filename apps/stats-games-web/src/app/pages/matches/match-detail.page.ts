@@ -4,18 +4,25 @@ import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { resolveMatchHistory } from '../../data/match-mock.data';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
-import { MatchAnalysisPanelComponent, MatchStatCardComponent } from '../../ui';
+import { MatchAnalysisPanelComponent, MatchMapPanelComponent, MatchStatCardComponent } from '../../ui';
 import {
   buildMatchAnalysisReport,
   formatMatchDetailMeta,
 } from '../../utils/match-analysis.util';
+import { resolveMatchMapTelemetry } from '../../utils/match-map-telemetry.mock';
 import { toMatchCardStats } from '../../utils/match-stats.util';
 
 @Component({
   standalone: true,
   selector: 'app-match-detail-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [IonContent, RouterLink, MatchStatCardComponent, MatchAnalysisPanelComponent],
+  imports: [
+    IonContent,
+    RouterLink,
+    MatchStatCardComponent,
+    MatchMapPanelComponent,
+    MatchAnalysisPanelComponent,
+  ],
   template: `
     <ion-content class="sg-page-content">
       <div class="page-shell page-shell--fluid sg-match-detail u-flex u-flex-col u-gap-5">
@@ -49,6 +56,10 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
             [stats]="cardStats()"
             [detailed]="true"
           />
+
+          @if (mapTelemetry(); as map) {
+            <sg-match-map-panel [telemetry]="map" />
+          }
 
           <sg-match-analysis-panel [report]="report()" (ctaClick)="goToMatches()" />
 
@@ -88,6 +99,11 @@ export class MatchDetailPageComponent implements OnInit {
       match: current,
       recentMatches: this.recentMatches(),
     });
+  });
+
+  readonly mapTelemetry = computed(() => {
+    const current = this.match();
+    return current ? resolveMatchMapTelemetry(current) : null;
   });
 
   ngOnInit(): void {
