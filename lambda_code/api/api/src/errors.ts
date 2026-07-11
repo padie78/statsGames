@@ -16,10 +16,14 @@ export class AppSyncTypedError extends Error {
 
 export function rethrowAsTyped(err: unknown): never {
   if (err instanceof PlayerNotFoundError) {
-    throw new AppSyncTypedError('PlayerNotFound', err.message);
+    const typed = new AppSyncTypedError('PlayerNotFound', err.message);
+    typed.name = 'PlayerNotFound';
+    throw typed;
   }
   if (err instanceof ZodError) {
-    throw new AppSyncTypedError('ValidationError', err.message);
+    const typed = new AppSyncTypedError('ValidationError', err.message);
+    typed.name = 'ValidationError';
+    throw typed;
   }
   throw err;
 }

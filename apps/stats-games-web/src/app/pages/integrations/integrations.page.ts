@@ -12,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
 import { MatchNotificationsStore } from '../../stores/match-notifications.store';
+import { extractGraphqlErrorMessage, mapLinkPlatformError } from '../../utils/graphql-error.util';
 import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui';
 
 @Component({
@@ -244,14 +245,19 @@ export class IntegrationsPageComponent implements OnInit {
 
     try {
       const { platform, externalId } = this.linkForm.getRawValue();
+      const trimmedId = externalId.trim();
+
+      await this.ensurePlayerProfile(userId, platform);
+
       const updated = await firstValueFrom(
         this.playerService.linkPlatformAccount({
           userId,
           platform,
-          externalId: externalId.trim(),
+          externalId: trimmedId,
         }),
       );
       this.profile.set(updated);
+      this.loadError.set(null);
       this.linkSuccess.set(
         platform === 'roblox'
           ? `Roblox vinculado: ${updated.robloxId}`
@@ -259,10 +265,36 @@ export class IntegrationsPageComponent implements OnInit {
       );
       this.prefillExternalId(platform);
     } catch (err) {
-      this.linkError.set(err instanceof Error ? err.message : 'No se pudo vincular la cuenta');
+      this.linkError.set(mapLinkPlatformError(err));
     } finally {
       this.linking.set(false);
     }
+  }
+
+  /** Si no hay perfil en Dynamo, lo crea antes de vincular (evita PlayerNotFound). */
+  private async ensurePlayerProfile(
+    userId: string,
+    platform: 'fortnite' | 'roblox',
+  ): Promise<void> {
+    if (this.profile()) return;
+
+    const existing = await this.playerService.getPlayerProfileOrNull(userId);
+    if (existing) {
+      this.profile.set(existing);
+      return;
+    }
+
+    const emailPrefix = (this.auth.email() ?? 'player').split('@')[0] ?? 'player';
+    const gamerTag = emailPrefix.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 32) || 'Player';
+
+    const created = await firstValueFrom(
+      this.playerService.upsertPlayerProfile({
+        userId,
+        gamerTag,
+        primaryPlatform: platform,
+      }),
+    );
+    this.profile.set(created);
   }
 
   demoNotification(): void {
@@ -302,9 +334,7 @@ export class IntegrationsPageComponent implements OnInit {
         this.prefillExternalId(platform);
       }
     } catch (err) {
-      this.loadError.set(
-        err instanceof Error ? err.message : 'Error cargando el perfil',
-      );
+      this.loadError.set(extractGraphqlErrorMessage(err, 'Error cargando el perfil'));
     } finally {
       this.loading.set(false);
     }

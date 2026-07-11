@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { generateClient } from 'aws-amplify/api';
 import { Observable, firstValueFrom, from, map } from 'rxjs';
+import { authenticatedAppsyncOptions } from '../core/auth/appsync-auth.util';
 import { assertGraphqlData } from '../utils/graphql-error.util';
 
 export interface PlayerProfileView {
@@ -84,6 +85,9 @@ const UPSERT_PLAYER_PROFILE = /* GraphQL */ `
       fortniteId
       robloxId
       avatarUrl
+      createdAtIso
+      updatedAtIso
+      versionId
     }
   }
 `;
@@ -97,6 +101,9 @@ const LINK_PLATFORM_ACCOUNT = /* GraphQL */ `
       fortniteId
       robloxId
       avatarUrl
+      createdAtIso
+      updatedAtIso
+      versionId
     }
   }
 `;
@@ -153,10 +160,14 @@ export class PlayerService {
 
   upsertPlayerProfile(input: UpsertPlayerProfileInput): Observable<PlayerProfileView> {
     return from(
-      this.client.graphql({
-        query: UPSERT_PLAYER_PROFILE,
-        variables: { input },
-      }),
+      (async () => {
+        const authOptions = await authenticatedAppsyncOptions().catch(() => ({}));
+        return this.client.graphql({
+          query: UPSERT_PLAYER_PROFILE,
+          variables: { input },
+          ...authOptions,
+        });
+      })(),
     ).pipe(
       map((resp) =>
         assertGraphqlData<UpsertPlayerProfileResp>(resp as { data?: UpsertPlayerProfileResp })
@@ -167,10 +178,14 @@ export class PlayerService {
 
   linkPlatformAccount(input: LinkPlatformAccountInput): Observable<PlayerProfileView> {
     return from(
-      this.client.graphql({
-        query: LINK_PLATFORM_ACCOUNT,
-        variables: { input },
-      }),
+      (async () => {
+        const authOptions = await authenticatedAppsyncOptions().catch(() => ({}));
+        return this.client.graphql({
+          query: LINK_PLATFORM_ACCOUNT,
+          variables: { input },
+          ...authOptions,
+        });
+      })(),
     ).pipe(
       map((resp) =>
         assertGraphqlData<LinkPlatformAccountResp>(resp as { data?: LinkPlatformAccountResp })
