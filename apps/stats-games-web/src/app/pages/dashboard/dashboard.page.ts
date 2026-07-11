@@ -1,11 +1,11 @@
 import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { DASHBOARD_QUICK_ACTIONS, type AchievementItem } from '../../data/dashboard-mock.data';
 import {
   MOCK_COMMUNITY_BENCHMARKS,
-  mockLeaderboardForPlatform,
+  buildCommunityRankNeighborhood,
 } from '../../data/community-mock.data';
 import type { LeaderboardEntry } from '../../data/dashboard-mock.data';
 import {
@@ -45,11 +45,20 @@ import {
   RobloxExperiencesRailComponent,
   WeekComparisonPanelComponent,
   CommunityComparisonPanelComponent,
-  LeaderboardMiniComponent,
+  CommunityRankTableComponent,
+  TrendChartComponent,
+  StatsRadarChartComponent,
+  PercentileGaugesComponent,
   YoutubeTipCardComponent,
   type KpiStripItem,
   type LiveMatchFeedItem,
+  type TrendChartPoint,
 } from '../../ui';
+import {
+  buildDailyTrendFromMatches,
+  buildKdCumulativeTrend,
+  buildPlacementTrend,
+} from '../../core/charts/stats-chart.util';
 import {
   aggregateMatchStats,
   buildWeekComparison,
@@ -78,6 +87,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     IonContent,
     IonRefresher,
     IonRefresherContent,
+    RouterLink,
     DashboardHeroComponent,
     DualPlatformStripComponent,
     PlatformSpotlightCardComponent,
@@ -90,7 +100,10 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     AiInsightCardComponent,
     WeekComparisonPanelComponent,
     CommunityComparisonPanelComponent,
-    LeaderboardMiniComponent,
+    CommunityRankTableComponent,
+    TrendChartComponent,
+    StatsRadarChartComponent,
+    PercentileGaugesComponent,
     YoutubeTipCardComponent,
     PlatformCosmeticsRailComponent,
     OfficialNewsRailComponent,
@@ -102,10 +115,41 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
         <ion-refresher-content />
       </ion-refresher>
 
-      <div class="sg-dashboard">
+      <div
+        class="sg-dashboard"
+        [class.sg-dashboard--loading]="loading()"
+      >
         @if (error()) {
           <p class="u-error">{{ error() }}</p>
         }
+
+        <header class="sg-dashboard__masthead">
+          <div class="sg-dashboard__masthead-copy">
+            <p class="sg-dashboard__masthead-eyebrow">Dashboard</p>
+            <h1 class="sg-dashboard__masthead-title">Tu rendimiento, claro y al día</h1>
+            <p class="sg-dashboard__masthead-desc">
+              Mirá cómo venís esta semana, comparate con la comunidad y saltá a partidas o coach cuando lo necesites.
+            </p>
+            @if (lastUpdatedLabel()) {
+              <p class="sg-dashboard__updated u-m-0">Actualizado {{ lastUpdatedLabel() }}</p>
+            }
+          </div>
+        </header>
+
+        <nav class="sg-dashboard__flow" aria-label="Secciones del dashboard">
+          <a class="sg-dashboard__flow-link" href="#dash-section-week">
+            <span>1</span> Semana
+          </a>
+          <a class="sg-dashboard__flow-link" href="#dash-section-community">
+            <span>2</span> Comunidad
+          </a>
+          <a class="sg-dashboard__flow-link" href="#dash-section-activity">
+            <span>3</span> Partidas
+          </a>
+          <a class="sg-dashboard__flow-link" href="#dash-section-more">
+            <span>4</span> Coach
+          </a>
+        </nav>
 
         <sg-dual-platform-strip
           [activePlatform]="heroPlatform()"
@@ -127,133 +171,259 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
             [winRate]="weekSummary().winRate"
             [kd]="weeklyKd()"
             [bestPlacement]="bestPlacement()"
+            [primaryCtaLabel]="heroPrimaryCta().label"
+            [primaryCtaRoute]="heroPrimaryCta().route"
+            [secondaryCtaLabel]="heroSecondaryCta().label"
+            [secondaryCtaRoute]="heroSecondaryCta().route"
           />
         }
 
-        <div class="sg-dashboard__bento-top">
-          <sg-platform-spotlight-card
-            [platform]="heroPlatform()"
-            [winsWeek]="weekSummary().winCount"
-            [winRate]="weekSummary().winRate"
-            [totalKills]="weekly()?.totalKills ?? 0"
-          />
-
-          <sg-quick-actions-bar [actions]="quickActions" />
-        </div>
-
-        <section class="sg-dashboard__section" aria-labelledby="dash-section-week">
+        <section class="sg-dashboard__section" aria-labelledby="dash-section-start">
           <header class="sg-dashboard__section-header">
-            <h2 id="dash-section-week" class="sg-dashboard__section-title">Tu semana</h2>
-            <p class="sg-dashboard__section-desc">
-              Métricas de los últimos 7 días y cómo venís vs la semana anterior.
-            </p>
+            <p class="sg-dashboard__section-index" aria-hidden="true">01</p>
+            <div class="sg-dashboard__section-heading">
+              <h2 id="dash-section-start" class="sg-dashboard__section-title">Empezá acá</h2>
+              <p class="sg-dashboard__section-desc">
+                Atajos a lo que más usás. El spotlight resume el estado de tu plataforma activa.
+              </p>
+            </div>
           </header>
 
-          <div class="sg-dashboard__section-body">
-            <div class="sg-dashboard__panel u-surface-card u-p-6 sg-dashboard__kpi-panel">
-              <sg-kpi-strip [platform]="heroPlatform()" [items]="kpiItems()" [embedded]="true" />
-            </div>
+          <div class="sg-dashboard__bento-top">
+            <sg-platform-spotlight-card
+              [platform]="heroPlatform()"
+              [winsWeek]="weekSummary().winCount"
+              [winRate]="weekSummary().winRate"
+              [totalKills]="weekKills()"
+            />
 
-            <sg-week-comparison-panel [items]="weekComparison()" />
+            <sg-quick-actions-bar [actions]="quickActions" />
           </div>
         </section>
 
-        <section class="sg-dashboard__section" aria-labelledby="dash-section-community">
+        <section id="dash-section-week" class="sg-dashboard__section" aria-labelledby="dash-section-week-title">
           <header class="sg-dashboard__section-header">
-            <h2 id="dash-section-community" class="sg-dashboard__section-title">Vs comunidad</h2>
-            <p class="sg-dashboard__section-desc">
-              Percentiles y ranking vs jugadores activos de tu plataforma esta semana.
-            </p>
+            <p class="sg-dashboard__section-index" aria-hidden="true">02</p>
+            <div class="sg-dashboard__section-heading">
+              <h2 id="dash-section-week-title" class="sg-dashboard__section-title">Tu semana</h2>
+              <p class="sg-dashboard__section-desc">
+                Números de los últimos 7 días, tendencias visuales, el cambio vs la semana anterior y un tip de AI Coach.
+              </p>
+            </div>
           </header>
 
-          <div class="sg-dashboard__community-row">
+          <div class="sg-dashboard__week-layout">
+            <div class="sg-dashboard__section-body">
+              <div class="sg-dashboard__panel u-surface-card u-p-6 sg-dashboard__kpi-panel">
+                <sg-kpi-strip [platform]="heroPlatform()" [items]="kpiItems()" [embedded]="true" />
+              </div>
+
+              <sg-week-comparison-panel [items]="weekComparison()" />
+
+              <div class="sg-dashboard__charts">
+                <sg-trend-chart
+                  title="Kills por día"
+                  unit="kills"
+                  variant="area"
+                  color="#b8ff3c"
+                  areaColor="rgba(184, 255, 60, 0.22)"
+                  [points]="killsTrend()"
+                />
+                <sg-trend-chart
+                  title="Partidas por día"
+                  unit="matches"
+                  variant="bar"
+                  color="#3de0f5"
+                  areaColor="rgba(61, 224, 245, 0.28)"
+                  [points]="matchesTrend()"
+                />
+                <sg-trend-chart
+                  title="K/D acumulado"
+                  unit="ratio"
+                  variant="line"
+                  color="#f5d075"
+                  areaColor="rgba(245, 208, 117, 0.2)"
+                  [points]="kdTrend()"
+                />
+                <sg-trend-chart
+                  title="Placement medio"
+                  unit="puesto"
+                  variant="area"
+                  color="#ff4d9a"
+                  areaColor="rgba(255, 77, 154, 0.18)"
+                  [points]="placementTrend()"
+                />
+                <div class="sg-dashboard__charts-span">
+                  <sg-stats-radar-chart
+                    title="Perfil de la semana"
+                    subtitle="Actividad, kills, K/D, placement y consistencia normalizados."
+                    [weekly]="weekly()"
+                    [dailyTrend]="chartDailyTrend()"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <aside class="sg-dashboard__week-aside">
+              <sg-ai-insight-card
+                [headline]="aiHeadline()"
+                [body]="aiBody()"
+                (ctaClick)="onAiCta()"
+              />
+            </aside>
+          </div>
+        </section>
+
+        <section id="dash-section-community" class="sg-dashboard__section" aria-labelledby="dash-section-community-title">
+          <header class="sg-dashboard__section-header">
+            <p class="sg-dashboard__section-index" aria-hidden="true">03</p>
+            <div class="sg-dashboard__section-heading">
+              <h2 id="dash-section-community-title" class="sg-dashboard__section-title">Vs comunidad</h2>
+              <p class="sg-dashboard__section-desc">
+                Tu puesto en el ranking semanal, rodeado de jugadores cercanos, con KD, WR, kills y score.
+              </p>
+            </div>
+          </header>
+
+          <div class="sg-dashboard__community-stack">
+            <sg-community-rank-table
+              [rows]="communityRank().rows"
+              [yourRank]="communityRank().yourRank"
+              [totalPlayers]="communityRank().totalPlayers"
+              [sampleLabel]="communitySampleLabel()"
+              [subtitle]="communityRankSubtitle()"
+            />
+
             <sg-community-comparison-panel
+              title="Tus percentiles"
+              subtitle="Comparación clara vs el promedio: Top %, cuántos jugadores superás y dónde está la media."
               [items]="communityComparison()"
               [sampleLabel]="communitySampleLabel()"
               [disclaimer]="communityDisclaimer()"
             />
-            <sg-leaderboard-mini
-              title="Leaderboard semanal"
-              [subtitle]="leaderboardSubtitle()"
-              [entries]="leaderboardEntries()"
-              [highlightGamerTag]="profile()?.gamerTag ?? ''"
+
+            <sg-percentile-gauges
+              title="Percentiles de un vistazo"
+              subtitle="Gauges de cómo te ubicás vs la comunidad en cada KPI."
+              [items]="communityComparison()"
             />
           </div>
         </section>
 
-        <section class="sg-dashboard__section" aria-labelledby="dash-section-activity">
+        <section id="dash-section-activity" class="sg-dashboard__section" aria-labelledby="dash-section-activity-title">
           <header class="sg-dashboard__section-header">
-            <h2 id="dash-section-activity" class="sg-dashboard__section-title">Actividad reciente</h2>
-            <p class="sg-dashboard__section-desc">
-              Tu mejor partida y el historial de la semana.
-            </p>
+            <p class="sg-dashboard__section-index" aria-hidden="true">04</p>
+            <div class="sg-dashboard__section-heading">
+              <h2 id="dash-section-activity-title" class="sg-dashboard__section-title">Tus partidas</h2>
+              <p class="sg-dashboard__section-desc">
+                Destacada de la semana e historial reciente. Abrí una partida para ver el mapa.
+              </p>
+            </div>
           </header>
 
           <div class="sg-dashboard__grid">
-          <div class="sg-dashboard__main">
-            @if (highlightMatch(); as match) {
-              <sg-match-highlight-card
-                [matchId]="match.matchId"
-                [platform]="match.platform"
-                [summary]="match.summary"
-                [updatedAt]="match.updatedAt"
-                [stats]="match.stats"
-              />
-            }
+            <div class="sg-dashboard__main">
+              @if (highlightMatch(); as match) {
+                <sg-match-highlight-card
+                  [matchId]="match.matchId"
+                  [platform]="match.platform"
+                  [summary]="match.summary"
+                  [updatedAt]="match.updatedAt"
+                  [stats]="match.stats"
+                />
+              } @else {
+                <article class="sg-dashboard__empty-card u-surface-card u-p-5">
+                  <h3 class="sg-dashboard__empty-title">Sin partida destacada</h3>
+                  <p class="sg-dashboard__empty-copy u-m-0">
+                    Cuando juagues esta semana, acá vas a ver tu mejor resultado.
+                  </p>
+                  <div class="sg-dashboard__empty-actions">
+                    <a routerLink="/tabs/matches" class="u-btn u-btn--ghost">Ver partidas</a>
+                    <a routerLink="/tabs/integrations" class="u-btn u-btn--primary">Conectar cuenta</a>
+                  </div>
+                </article>
+              }
 
-            <div class="sg-dashboard__panel u-surface-card u-p-6">
-              <sg-live-match-feed
-                title="Partidas recientes"
-                [items]="historyFeedItems()"
-                [showLiveIndicator]="false"
-                emptyMessage="Sin partidas. Conectá tu cuenta o cargá mock data."
-              />
+              <div class="sg-dashboard__panel u-surface-card u-p-6">
+                <div class="sg-dashboard__panel-head">
+                  <h3 class="sg-dashboard__panel-title">Historial de la semana</h3>
+                  <a routerLink="/tabs/matches" class="sg-dashboard__panel-link">Ver todo</a>
+                </div>
+                <sg-live-match-feed
+                  title=""
+                  [items]="historyFeedItems()"
+                  [showLiveIndicator]="false"
+                  emptyMessage="Sin partidas esta semana. Conectá tu cuenta en Integraciones para trackear."
+                />
+              </div>
+            </div>
+
+            <aside class="sg-dashboard__rail" aria-label="Estado de cuenta y logros">
+              <div class="sg-dashboard__rail-group">
+                <h3 class="sg-dashboard__rail-label">Cuenta</h3>
+                <sg-integration-status-card
+                  [fortniteConnected]="!!profile()?.fortniteId"
+                  [robloxConnected]="!!profile()?.robloxId"
+                  [liveActive]="realtime.isLive()"
+                />
+              </div>
+
+              <div class="sg-dashboard__rail-group">
+                <h3 class="sg-dashboard__rail-label">Logros</h3>
+                <sg-achievement-strip title="Esta semana" [items]="achievements()" />
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="dash-section-more" class="sg-dashboard__section" aria-labelledby="dash-section-more-title">
+          <header class="sg-dashboard__section-header">
+            <p class="sg-dashboard__section-index" aria-hidden="true">05</p>
+            <div class="sg-dashboard__section-heading">
+              <h2 id="dash-section-more-title" class="sg-dashboard__section-title">Mejorá y descubrí</h2>
+              <p class="sg-dashboard__section-desc">
+                Tips oficiales y contenido de la plataforma activa.
+              </p>
+            </div>
+          </header>
+
+          <div class="sg-dashboard__discover">
+            <div class="sg-dashboard__discover-main">
+              @for (tip of coachTips(); track tip.videoId) {
+                <sg-youtube-tip-card
+                  [videoId]="tip.videoId"
+                  [title]="tip.title"
+                  [subtitle]="tip.subtitle"
+                  [creatorName]="tip.creatorName"
+                  badgeLabel="Oficial"
+                />
+              }
+
+              <details class="sg-dashboard__details" open>
+                <summary class="sg-dashboard__details-summary">
+                  {{ heroPlatform() === 'fortnite' ? 'Cosmetics y noticias Fortnite' : 'Experiencias Roblox' }}
+                </summary>
+                <div class="sg-dashboard__details-body sg-dashboard__details-body--stack">
+                  @if (heroPlatform() === 'fortnite') {
+                    <sg-platform-cosmetics-rail
+                      [items]="fortniteCosmetics()"
+                      [loading]="mediaLoading()"
+                    />
+                    <sg-official-news-rail
+                      [items]="fortniteNews()"
+                      [bannerUrl]="fortniteNewsBanner()"
+                      [loading]="officialMediaLoading()"
+                    />
+                  } @else {
+                    <sg-roblox-experiences-rail
+                      [items]="robloxExperiences()"
+                      [loading]="robloxExperiencesLoading()"
+                    />
+                  }
+                </div>
+              </details>
             </div>
           </div>
-
-          <aside class="sg-dashboard__rail">
-            <sg-integration-status-card
-              [fortniteConnected]="!!profile()?.fortniteId"
-              [robloxConnected]="!!profile()?.robloxId"
-              [liveActive]="realtime.isLive()"
-            />
-
-            <sg-achievement-strip title="Logros de la semana" [items]="achievements()" />
-
-            @for (tip of coachTips(); track tip.videoId) {
-              <sg-youtube-tip-card
-                [videoId]="tip.videoId"
-                [title]="tip.title"
-                [subtitle]="tip.subtitle"
-                [creatorName]="tip.creatorName"
-                badgeLabel="Oficial"
-              />
-            }
-
-            @if (heroPlatform() === 'fortnite') {
-              <sg-platform-cosmetics-rail
-                [items]="fortniteCosmetics()"
-                [loading]="mediaLoading()"
-              />
-              <sg-official-news-rail
-                [items]="fortniteNews()"
-                [bannerUrl]="fortniteNewsBanner()"
-                [loading]="officialMediaLoading()"
-              />
-            } @else {
-              <sg-roblox-experiences-rail
-                [items]="robloxExperiences()"
-                [loading]="robloxExperiencesLoading()"
-              />
-            }
-
-            <sg-ai-insight-card
-              [headline]="aiHeadline()"
-              [body]="aiBody()"
-              (ctaClick)="onAiCta()"
-            />
-          </aside>
-        </div>
         </section>
       </div>
     </ion-content>
@@ -280,6 +450,8 @@ export class DashboardPageComponent implements OnInit {
   readonly communityBenchmarksApi = signal<CommunityBenchmarks | null>(null);
   readonly leaderboardApi = signal<LeaderboardEntry[] | null>(null);
   readonly communityUsesMock = signal(true);
+  readonly loading = signal(false);
+  readonly lastUpdatedAt = signal<Date | null>(null);
   readonly error = signal<string | null>(null);
 
   readonly quickActions = DASHBOARD_QUICK_ACTIONS;
@@ -349,6 +521,41 @@ export class DashboardPageComponent implements OnInit {
     }),
   );
 
+  readonly chartDailyTrend = computed(() => {
+    const api = this.dailyTrend();
+    const hasSignal = api.some((day) => day.matchCount > 0 || day.totalKills > 0);
+    if (hasSignal) return api;
+    const userId = this.auth.userId() ?? this.profile()?.userId ?? 'mock-user-demo';
+    return buildDailyTrendFromMatches(
+      this.weekMatches(),
+      userId,
+      this.heroPlatform(),
+      7,
+    );
+  });
+
+  readonly killsTrend = computed<TrendChartPoint[]>(() =>
+    this.chartDailyTrend().map((day) => ({
+      label: day.periodId.slice(5),
+      value: day.totalKills,
+    })),
+  );
+
+  readonly matchesTrend = computed<TrendChartPoint[]>(() =>
+    this.chartDailyTrend().map((day) => ({
+      label: day.periodId.slice(5),
+      value: day.matchCount,
+    })),
+  );
+
+  readonly kdTrend = computed<TrendChartPoint[]>(() =>
+    buildKdCumulativeTrend(this.chartDailyTrend()),
+  );
+
+  readonly placementTrend = computed<TrendChartPoint[]>(() =>
+    buildPlacementTrend(this.chartDailyTrend()),
+  );
+
   readonly communityComparison = computed(() => {
     const platform = this.heroPlatform();
     const benchmarks =
@@ -387,32 +594,78 @@ export class DashboardPageComponent implements OnInit {
       : 'Percentiles calculados vs jugadores activos de tu plataforma esta semana.',
   );
 
-  readonly leaderboardEntries = computed(
-    () => this.leaderboardApi() ?? mockLeaderboardForPlatform(this.heroPlatform()),
-  );
+  readonly communityRank = computed(() => {
+    const platform = this.heroPlatform();
+    const summary = this.weekSummary();
+    const weekly = this.weekly();
+    const kd = parsePlayerKdForCommunity(this.weeklyKd()) ?? 1.0;
+    const winRate = parsePlayerWinRateForCommunity(summary.winRate) ?? 25;
+    const kills = weekly?.totalKills || summary.totalKills || 0;
+    const matches = weekly?.matchCount || summary.matchCount || 0;
 
-  readonly leaderboardSubtitle = computed(() => {
+    return buildCommunityRankNeighborhood({
+      platform,
+      gamerTag: this.profile()?.gamerTag ?? 'Vos',
+      kd,
+      winRate,
+      kills,
+      matches,
+      radius: 3,
+    });
+  });
+
+  readonly communityRankSubtitle = computed(() => {
     const label = this.heroPlatform() === 'roblox' ? 'Roblox' : 'Fortnite';
+    const you = this.communityRank().yourRank;
     return this.communityUsesMock()
-      ? `Top semanal · ${label} (preview)`
-      : `Top semanal · ${label}`;
+      ? `${label} · puesto #${you} (preview mock)`
+      : `${label} · tu puesto #${you} esta semana`;
   });
 
   readonly bestPlacement = computed(() => {
-    const placements = this.effectiveRecentMatches()
+    const placements = this.weekMatches()
       .map((m) => m.stats?.placement)
       .filter((p): p is number => p != null && p > 0);
-    if (!placements.length) return 99;
+    if (!placements.length) return null;
     return Math.min(...placements);
   });
 
+  readonly accountsConnected = computed(() => {
+    const p = this.profile();
+    return !!(p?.fortniteId || p?.robloxId);
+  });
+
+  readonly heroPrimaryCta = computed(() =>
+    this.accountsConnected()
+      ? { label: 'Ver analytics', route: '/tabs/analytics' }
+      : { label: 'Conectar cuenta', route: '/tabs/integrations' },
+  );
+
+  readonly heroSecondaryCta = computed(() =>
+    this.accountsConnected()
+      ? { label: 'Gestionar conexiones', route: '/tabs/integrations' }
+      : { label: 'Stats avanzadas', route: '/tabs/analytics' },
+  );
+
+  readonly lastUpdatedLabel = computed(() => {
+    const stamp = this.lastUpdatedAt();
+    if (!stamp) return '';
+    return stamp.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  });
+
+  readonly weekKills = computed(() => this.weekly()?.totalKills ?? this.weekSummary().totalKills);
+
+  readonly weekMatchCount = computed(
+    () => this.weekly()?.matchCount ?? this.weekSummary().matchCount,
+  );
+
   readonly playerLevel = computed(() => {
-    const kills = this.weekly()?.totalKills ?? 0;
+    const kills = this.weekKills();
     return Math.max(1, Math.min(99, Math.floor(kills / 3) + 12));
   });
 
   readonly highlightMatch = computed(() => {
-    const matches = this.effectiveRecentMatches();
+    const matches = this.weekMatches();
     if (!matches.length) return null;
 
     const ranked = [...matches].sort((a, b) => {
@@ -433,7 +686,6 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly kpiItems = computed<KpiStripItem[]>(() => {
-    const w = this.weekly();
     const summary = this.weekSummary();
     const comparison = this.weekComparison();
     const winsDelta = comparison.find((item) => item.label === 'Victorias');
@@ -461,7 +713,7 @@ export class DashboardPageComponent implements OnInit {
       },
       {
         label: 'Kills',
-        value: w?.totalKills ?? 0,
+        value: this.weekKills(),
         accent: 'lime',
         icon: 'kills',
         delta: shortComparisonNote(killsDelta?.note),
@@ -469,7 +721,7 @@ export class DashboardPageComponent implements OnInit {
       },
       {
         label: 'Partidas',
-        value: w?.matchCount ?? 0,
+        value: this.weekMatchCount(),
         icon: 'matches',
         delta: shortComparisonNote(matchesDelta?.note),
         deltaTrend: matchesDelta?.trend,
@@ -486,14 +738,13 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly historyFeedItems = computed<LiveMatchFeedItem[]>(() =>
-    this.effectiveRecentMatches().slice(0, 8).map((m) => this.toFeedItem(m)),
+    this.weekMatches().slice(0, 8).map((m) => this.toFeedItem(m)),
   );
 
   readonly achievements = computed<AchievementItem[]>(() => {
-    const w = this.weekly();
-    const matches = this.effectiveRecentMatches();
+    const matches = this.weekMatches();
     const winStreak = computeWinStreak(matches);
-    const playStreak = computePlayStreakFromDailyTrend(this.dailyTrend());
+    const playStreak = computePlayStreakFromDailyTrend(this.chartDailyTrend());
     const bestKills = computeBestKills(matches);
     const summary = this.weekSummary();
 
@@ -502,7 +753,7 @@ export class DashboardPageComponent implements OnInit {
         id: 'wins',
         title: 'Victorias',
         subtitle: `${summary.winCount} esta semana`,
-        icon: '🏆',
+        icon: 'W',
         tone: 'purple',
       },
       {
@@ -514,21 +765,21 @@ export class DashboardPageComponent implements OnInit {
             : playStreak > 0
               ? `${playStreak} día${playStreak === 1 ? '' : 's'} jugando`
               : 'Jugá una partida para empezar',
-        icon: '🔥',
+        icon: 'S',
         tone: 'lime',
       },
       {
         id: 'clutch',
         title: 'Record kills',
         subtitle: bestKills > 0 ? `${bestKills} en una partida` : 'Sin datos todavía',
-        icon: '🎯',
+        icon: 'K',
         tone: 'cyan',
       },
       {
         id: 'grind',
         title: 'Actividad',
-        subtitle: `${w?.matchCount ?? 0} partidas esta semana`,
-        icon: '⚔',
+        subtitle: `${this.weekMatchCount()} partidas esta semana`,
+        icon: 'P',
         tone: 'pink',
       },
     ];
@@ -611,6 +862,7 @@ export class DashboardPageComponent implements OnInit {
     const userId = this.auth.userId();
     if (!userId) return;
 
+    this.loading.set(true);
     this.error.set(null);
     try {
       const profile = await this.playerService.getPlayerProfileOrNull(userId);
@@ -666,6 +918,7 @@ export class DashboardPageComponent implements OnInit {
       this.weekly.set(weeklyRows[0] ?? null);
       this.previousWeekly.set(previousWeeklyRows[0] ?? null);
       this.dailyTrend.set(daily);
+      this.lastUpdatedAt.set(new Date());
 
       if (community && community.sampleSize > 0) {
         this.communityBenchmarksApi.set(mapCommunityBenchmarksFromApi({
@@ -701,6 +954,8 @@ export class DashboardPageComponent implements OnInit {
       }
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err, 'Error cargando dashboard'));
+    } finally {
+      this.loading.set(false);
     }
   }
 

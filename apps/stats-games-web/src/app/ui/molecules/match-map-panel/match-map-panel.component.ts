@@ -43,7 +43,7 @@ const EVENT_META: Record<
         <div>
           <h3 class="sg-match-map__title">Mapa de la partida</h3>
           <p class="sg-match-map__subtitle u-m-0">
-            Click en un nodo para ver qué pasó · {{ telemetry.seasonLabel }}
+            Reproducí o mové el timeline · cada etapa se describe abajo · {{ telemetry.seasonLabel }}
           </p>
         </div>
         @if (telemetry.isPreview) {
@@ -68,8 +68,18 @@ const EVENT_META: Record<
             />
             <svg class="sg-match-map__overlay" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
               <polyline
+                class="sg-match-map__path sg-match-map__path--outline"
+                [attr.points]="pathPoints()"
+                fill="none"
+              />
+              <polyline
                 class="sg-match-map__path"
                 [attr.points]="pathPoints()"
+                fill="none"
+              />
+              <polyline
+                class="sg-match-map__path sg-match-map__path--progress-outline"
+                [attr.points]="progressPathPoints()"
                 fill="none"
               />
               <polyline
@@ -102,15 +112,19 @@ const EVENT_META: Record<
             </svg>
           </div>
 
-          @if (selectedEvent(); as event) {
-            <article class="sg-match-map__node-summary u-surface-card u-p-4">
+          @if (currentStage(); as event) {
+            <article class="sg-match-map__node-summary u-surface-card u-p-4" aria-live="polite">
               <header class="sg-match-map__node-summary-header">
                 <div>
                   <p class="sg-match-map__node-summary-time u-m-0">
-                    {{ formatMapTime(event.t) }}
+                    {{ stagePhase(event.t) }}
+                    · {{ formatMapTime(event.t) }}
                     @if (event.poi) {
                       <span>· {{ event.poi }}</span>
                     }
+                    <span class="sg-match-map__node-summary-step">
+                      · Etapa {{ stageIndex(event) }} / {{ telemetry.events.length }}
+                    </span>
                   </p>
                   <h4 class="sg-match-map__node-summary-title">
                     {{ event.label ?? eventLabel(event.type) }}
@@ -127,18 +141,14 @@ const EVENT_META: Record<
                 {{ event.detail ?? defaultDetail(event) }}
               </p>
               <div class="sg-match-map__node-summary-actions">
-                <button type="button" class="u-btn u-btn--ghost" (click)="seekTo(event.t)">
-                  Ir al momento
+                <button type="button" class="u-btn u-btn--ghost" (click)="seekToPrevStage()">
+                  Etapa anterior
                 </button>
-                <button type="button" class="u-btn u-btn--ghost" (click)="clearSelection()">
-                  Cerrar
+                <button type="button" class="u-btn u-btn--ghost" (click)="seekToNextStage()">
+                  Siguiente etapa
                 </button>
               </div>
             </article>
-          } @else {
-            <p class="sg-match-map__node-hint u-hint u-m-0">
-              Tocá un nodo del mapa (o un evento de la lista) para ver el resumen de ese punto.
-            </p>
           }
         </div>
 
@@ -195,6 +205,9 @@ const EVENT_META: Record<
                       @if (event.poi) {
                         <span class="sg-match-map__event-poi">{{ event.poi }}</span>
                       }
+                      <span class="sg-match-map__event-detail">
+                        {{ event.detail ?? defaultDetail(event) }}
+                      </span>
                     </span>
                     <sg-neon-badge [tone]="eventTone(event.type)" class="sg-match-map__event-badge">
                       {{ eventLabel(event.type) }}
@@ -240,6 +253,61 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
 
   sortedEvents(): MatchMapEvent[] {
     return [...this.telemetry.events].sort((a, b) => a.t - b.t);
+  }
+
+  /** Etapa activa según el tiempo del timeline (o el nodo seleccionado). */
+  currentStage(): MatchMapEvent | null {
+    const events = this.sortedEvents();
+    if (events.length === 0) return null;
+
+    const selected = this.selectedEvent();
+    if (selected) return selected;
+
+    const t = this.currentTime();
+    let current = events[0];
+    for (const event of events) {
+      if (event.t <= t) current = event;
+      else break;
+    }
+    return current;
+  }
+
+  stageIndex(event: MatchMapEvent): number {
+    const idx = this.sortedEvents().findIndex(
+      (item) => item.t === event.t && item.type === event.type && item.poi === event.poi,
+    );
+    return idx >= 0 ? idx + 1 : 1;
+  }
+
+  stagePhase(t: number): string {
+    const duration = Math.max(this.telemetry.durationSec, 1);
+    const ratio = t / duration;
+    if (ratio < 0.22) return 'Early game';
+    if (ratio < 0.55) return 'Mid game';
+    if (ratio < 0.78) return 'Late game';
+    return 'Endgame';
+  }
+
+  seekToPrevStage(): void {
+    const events = this.sortedEvents();
+    const current = this.currentStage();
+    if (!current || events.length === 0) return;
+    const idx = events.findIndex(
+      (item) => item.t === current.t && item.type === current.type && item.poi === current.poi,
+    );
+    const prev = events[Math.max(0, idx - 1)];
+    if (prev) this.selectEvent(prev);
+  }
+
+  seekToNextStage(): void {
+    const events = this.sortedEvents();
+    const current = this.currentStage();
+    if (!current || events.length === 0) return;
+    const idx = events.findIndex(
+      (item) => item.t === current.t && item.type === current.type && item.poi === current.poi,
+    );
+    const next = events[Math.min(events.length - 1, idx + 1)];
+    if (next) this.selectEvent(next);
   }
 
   eventKey(event: MatchMapEvent): string {
@@ -291,10 +359,6 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
     this.seekTo(event.t);
   }
 
-  clearSelection(): void {
-    this.selectedEvent.set(null);
-  }
-
   defaultDetail(event: MatchMapEvent): string {
     const place = event.poi ? ` en ${event.poi}` : '';
     return `${eventLabelFallback(event.type)}${place} a los ${formatMapTime(event.t)}.`;
@@ -302,6 +366,7 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
 
   onTimelineInput(event: Event): void {
     const value = Number((event.target as HTMLInputElement).value);
+    this.selectedEvent.set(null);
     this.currentTime.set(value);
   }
 
@@ -319,6 +384,7 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
       return;
     }
 
+    this.selectedEvent.set(null);
     this.playing.set(true);
     this.playbackTimer = setInterval(() => {
       const next = this.currentTime() + 2;

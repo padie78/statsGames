@@ -5,7 +5,6 @@ import { IonContent, IonInput } from '@ionic/angular/standalone';
 import { AuthPendingConfirmationError, isAlreadyAuthenticatedError, mapAuthErrorMessage } from '../../core/auth/auth.errors';
 import { AuthService, type SocialProvider } from '../../core/services/auth.service';
 import { FortniteCosmeticsService, type FortniteCosmeticThumb } from '../../services/fortnite-cosmetics.service';
-import { RobloxExperiencesService } from '../../services/roblox-experiences.service';
 
 type AuthMode = 'signin' | 'signup' | 'confirm';
 
@@ -26,28 +25,33 @@ function passwordMatchValidator(control: AbstractControl) {
       <div class="auth-gate__shell">
         <div class="auth-gate__content">
           <aside class="auth-gate__visual" aria-hidden="true">
-            <div class="auth-gate__visual-bg"></div>
-
-            <div class="auth-gate__stage">
-              <p class="auth-gate__watermark">STATS</p>
-              <span class="auth-gate__slash"></span>
-
-              @for (char of stageCharacters(); track char.id; let i = $index) {
-                <img
-                  class="auth-gate__hero-char"
-                  [attr.data-layer]="i + 1"
-                  [class.auth-gate__hero-char--rbx]="char.platform === 'roblox'"
-                  [src]="char.imageUrl"
-                  alt=""
-                  loading="eager"
+            <svg class="auth-gate__svg-filters" width="0" height="0" aria-hidden="true" focusable="false">
+              <filter id="auth-fn-sharpen" color-interpolation-filters="sRGB">
+                <feConvolveMatrix
+                  order="3"
+                  kernelMatrix="0 -0.4 0 -0.4 2.6 -0.4 0 -0.4 0"
+                  preserveAlpha="true"
                 />
-              }
-            </div>
-
-            <div class="auth-gate__visual-mark">
-              <span class="auth-gate__visual-logo">SG</span>
-              <span class="auth-gate__visual-name">StatsGames</span>
-            </div>
+              </filter>
+            </svg>
+            <section class="auth-gate__zone auth-gate__zone--fn">
+              <div class="auth-gate__zone-bg"></div>
+              <div class="auth-gate__zone-cast">
+                @for (fn of fortniteCast(); track fn.id; let i = $index) {
+                  <img
+                    class="auth-gate__fn-figure"
+                    [attr.data-slot]="i + 1"
+                    [src]="fn.imageUrl"
+                    [alt]="fn.name"
+                    width="1024"
+                    height="1024"
+                    loading="eager"
+                    decoding="sync"
+                    [attr.fetchpriority]="i === 0 ? 'high' : 'low'"
+                  />
+                }
+              </div>
+            </section>
           </aside>
 
           <div class="auth-gate__layout">
@@ -59,11 +63,7 @@ function passwordMatchValidator(control: AbstractControl) {
 
           <div class="auth-gate__mobile-platforms" aria-hidden="true">
             @for (char of stageCharacters().slice(0, 2); track char.id) {
-              <div
-                class="auth-gate__mobile-chip"
-                [class.auth-gate__mobile-chip--fortnite]="char.platform === 'fortnite'"
-                [class.auth-gate__mobile-chip--roblox]="char.platform === 'roblox'"
-              >
+              <div class="auth-gate__mobile-chip auth-gate__mobile-chip--fortnite">
                 <img [src]="char.imageUrl" [alt]="" width="40" height="40" />
                 <span>{{ char.name }}</span>
               </div>
@@ -252,33 +252,22 @@ export class AuthEntryPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly fortniteCosmetics = inject(FortniteCosmeticsService);
-  private readonly robloxExperiences = inject(RobloxExperiencesService);
 
   readonly fortniteOutfits = signal<FortniteCosmeticThumb[]>([]);
-  readonly robloxAvatars = signal<
-    Array<{ userId: number; name: string; imageUrl: string }>
-  >([]);
 
-  /** Collage full-bleed estilo Mobalytics — sin cards. */
-  readonly stageCharacters = computed(() => {
-    const fn = this.fortniteOutfits().map((item) => ({
-      id: `fn-${item.id}`,
-      name: item.name,
-      imageUrl: item.iconUrl,
-      platform: 'fortnite' as const,
-    }));
-    const rbx = this.robloxAvatars().map((item) => ({
-      id: `rbx-${item.userId}`,
-      name: item.name,
-      imageUrl: item.imageUrl,
-      platform: 'roblox' as const,
-    }));
+  readonly fortniteCast = computed(() =>
+    this.fortniteOutfits()
+      .slice(0, 1)
+      .map((item) => ({
+        id: `fn-${item.id}`,
+        name: item.name,
+        imageUrl: item.iconUrl,
+        platform: 'fortnite' as const,
+      })),
+  );
 
-    const layered = [fn[1], rbx[0], fn[0], rbx[1], fn[2]].filter(
-      (item): item is NonNullable<typeof item> => !!item,
-    );
-    return layered.slice(0, 4);
-  });
+  /** Chips mobile: preview Fortnite. */
+  readonly stageCharacters = computed(() => this.fortniteCast().slice(0, 1));
 
   readonly mode = signal<AuthMode>('signin');
   readonly registeredEmail = signal('');
@@ -342,23 +331,8 @@ export class AuthEntryPageComponent implements OnInit {
   }
 
   private async loadOfficialCharacters(): Promise<void> {
-    // Cargas independientes: Roblox thumbs a menudo cuelga por CORS y no debe bloquear FN.
-    void this.fortniteCosmetics.loadFeatured(10).then((shopItems) => {
-      const outfits = shopItems.filter((item) => item.type === 'outfit');
-      const withFeaturedArt = outfits.filter((item) => /\/featured\./i.test(item.iconUrl));
-      const hero = withFeaturedArt[0] ?? outfits[0] ?? shopItems[0];
-      if (!hero) {
-        this.fortniteOutfits.set([]);
-        return;
-      }
-      const rest = [...withFeaturedArt, ...outfits]
-        .filter((item) => item.id !== hero.id)
-        .filter((item, index, arr) => arr.findIndex((x) => x.id === item.id) === index);
-      this.fortniteOutfits.set([hero, ...rest].slice(0, 4));
-    });
-
-    void this.robloxExperiences.loadShowcaseAvatars(4).then((avatars) => {
-      this.robloxAvatars.set(avatars);
+    void this.fortniteCosmetics.loadLoginStageOutfits(1).then((outfits) => {
+      this.fortniteOutfits.set(outfits.slice(0, 1));
     });
   }
 

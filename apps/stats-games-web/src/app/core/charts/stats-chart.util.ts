@@ -1,9 +1,86 @@
+import type { MatchUpdateView } from '../../services/match.service';
 import type { PlayerStatsRollupView } from '../../services/stats.service';
 import type { TrendChartPoint } from './chart.types';
 
 export interface StatsRadarAxis {
   name: string;
   value: number;
+}
+
+/** Builds a 7-day rollup from match history when the stats API trend is empty. */
+export function buildDailyTrendFromMatches(
+  matches: MatchUpdateView[],
+  userId: string,
+  platform: string,
+  days = 7,
+): PlayerStatsRollupView[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const buckets = new Map<string, PlayerStatsRollupView>();
+  const placementSums = new Map<string, { sum: number; count: number }>();
+
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    const day = new Date(today);
+    day.setDate(today.getDate() - offset);
+    const periodId = toPeriodId(day);
+    buckets.set(periodId, emptyDailyRollup(userId, platform, periodId));
+    placementSums.set(periodId, { sum: 0, count: 0 });
+  }
+
+  for (const match of matches) {
+    const stamp = new Date(match.updatedAt);
+    if (Number.isNaN(stamp.getTime())) continue;
+    stamp.setHours(0, 0, 0, 0);
+    const periodId = toPeriodId(stamp);
+    const bucket = buckets.get(periodId);
+    if (!bucket) continue;
+
+    bucket.matchCount += 1;
+    bucket.totalKills += match.stats?.kills ?? 0;
+    bucket.totalDeaths += match.stats?.deaths ?? 0;
+    const placement = match.stats?.placement;
+    if (placement != null && placement > 0) {
+      const place = placementSums.get(periodId)!;
+      place.sum += placement;
+      place.count += 1;
+    }
+    if (!bucket.lastUpdatedIso || match.updatedAt > bucket.lastUpdatedIso) {
+      bucket.lastUpdatedIso = match.updatedAt;
+    }
+  }
+
+  for (const [periodId, bucket] of buckets) {
+    const place = placementSums.get(periodId);
+    bucket.avgPlacement = place && place.count > 0 ? place.sum / place.count : 0;
+  }
+
+  return [...buckets.values()];
+}
+
+function toPeriodId(day: Date): string {
+  const y = day.getFullYear();
+  const m = String(day.getMonth() + 1).padStart(2, '0');
+  const d = String(day.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function emptyDailyRollup(
+  userId: string,
+  platform: string,
+  periodId: string,
+): PlayerStatsRollupView {
+  return {
+    userId,
+    platform,
+    granularity: 'DAILY',
+    periodId,
+    matchCount: 0,
+    totalKills: 0,
+    totalDeaths: 0,
+    avgPlacement: 0,
+    lastUpdatedIso: '',
+  };
 }
 
 export function buildKdCumulativeTrend(

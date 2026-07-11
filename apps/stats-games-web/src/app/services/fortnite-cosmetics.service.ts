@@ -114,6 +114,33 @@ export class FortniteCosmeticsService {
     }
   }
 
+  /**
+   * Skin icónica de Fortnite para el collage de login (1 personaje).
+   * Solo arte `featured` full-body del CDN — Raven (antes slot derecho).
+   */
+  async loadLoginStageOutfits(limit = 1): Promise<FortniteCosmeticThumb[]> {
+    const iconicIds = [
+      'CID_102_Athena_Commando_M_Raven', // Raven — único en login
+      'CID_028_Athena_Commando_F', // Renegade Raider (fallback)
+      'CID_479_Athena_Commando_F_Davinci', // Glow
+      'CID_175_Athena_Commando_M_Celestial', // Galaxy
+    ];
+
+    const filled: FortniteCosmeticThumb[] = [];
+    const seen = new Set<string>();
+
+    for (const id of iconicIds) {
+      if (filled.length >= limit) break;
+      if (seen.has(id.toLowerCase())) continue;
+      const resolved = await this.resolveById(id);
+      if (!resolved?.iconUrl || !/\/featured\./i.test(resolved.iconUrl)) continue;
+      seen.add(resolved.id.toLowerCase());
+      filled.push(resolved);
+    }
+
+    return filled;
+  }
+
   private proxyBase(): string {
     return (environment.mediaProxyBaseUrl ?? '').replace(/\/+$/, '');
   }

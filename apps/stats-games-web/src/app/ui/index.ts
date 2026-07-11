@@ -12,6 +12,15 @@ export {
 } from './molecules/trend-chart/trend-chart.component';
 export { MatchTrendsPanelComponent } from './molecules/match-trends-panel/match-trends-panel.component';
 export { StatsRadarChartComponent } from './molecules/stats-radar-chart/stats-radar-chart.component';
+export { PercentileGaugesComponent } from './molecules/percentile-gauges/percentile-gauges.component';
+export {
+  StatsComparisonChartComponent,
+  type StatsComparisonRow,
+} from './molecules/stats-comparison-chart/stats-comparison-chart.component';
+export {
+  DailyStatsTableComponent,
+  type DailyStatsTableRow,
+} from './molecules/daily-stats-table/daily-stats-table.component';
 export { ShareLinkButtonComponent } from './molecules/share-link-button/share-link-button.component';
 export { LiveTickerComponent } from './molecules/live-ticker/live-ticker.component';
 export { KpiStripComponent, type KpiStripItem, type KpiMetricIcon } from './molecules/kpi-strip/kpi-strip.component';
@@ -42,6 +51,7 @@ export {
 export { QuickActionsBarComponent, type QuickActionItem } from './molecules/quick-actions-bar/quick-actions-bar.component';
 export { MatchHighlightCardComponent } from './molecules/match-highlight-card/match-highlight-card.component';
 export { CommunityComparisonPanelComponent } from './molecules/community-comparison-panel/community-comparison-panel.component';
+export { CommunityRankTableComponent } from './molecules/community-rank-table/community-rank-table.component';
 export { WeekComparisonPanelComponent } from './molecules/week-comparison-panel/week-comparison-panel.component';
 export { MatchFiltersToolbarComponent,
   type MatchDateFilter,

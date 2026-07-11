@@ -24,14 +24,16 @@ export interface LiveMatchFeedItem {
   imports: [NeonBadgeComponent, MatchStatCardComponent],
   template: `
     <section class="sg-live-feed" aria-live="polite">
-      <header class="sg-live-feed__header">
-        <h2 class="sg-live-feed__title">{{ title }}</h2>
-        @if (showLiveIndicator) {
-          <sg-neon-badge tone="cyan" [pulse]="true" label="Live data stream">
-            En vivo
-          </sg-neon-badge>
-        }
-      </header>
+      @if (title) {
+        <header class="sg-live-feed__header">
+          <h2 class="sg-live-feed__title">{{ title }}</h2>
+          @if (showLiveIndicator) {
+            <sg-neon-badge tone="cyan" [pulse]="true" label="Live data stream">
+              En vivo
+            </sg-neon-badge>
+          }
+        </header>
+      }
 
       @if (items.length === 0) {
         <div class="sg-live-feed__empty">{{ emptyMessage }}</div>

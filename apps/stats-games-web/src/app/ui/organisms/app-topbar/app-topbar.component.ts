@@ -34,7 +34,10 @@ import { GamePlatformSwitcherComponent } from '../../molecules/game-platform-swi
         <div class="sg-topbar__left">
           <a routerLink="/" class="sg-topbar__brand" aria-label="StatsGames home">
             <span class="sg-topbar__logo">SG</span>
-            <span class="sg-topbar__brand-name">StatsGames</span>
+            <span class="sg-topbar__brand-copy">
+              <span class="sg-topbar__brand-name">StatsGames</span>
+              <span class="sg-topbar__brand-tag">Analytics</span>
+            </span>
           </a>
 
           <sg-game-platform-switcher class="sg-topbar__platform-switch" />

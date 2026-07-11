@@ -7,6 +7,7 @@ export interface QuickActionItem {
   label: string;
   route: string;
   icon: string;
+  hint?: string;
   tone?: 'lime' | 'purple' | 'cyan' | 'pink';
   badge?: string;
 }
@@ -17,25 +18,45 @@ export interface QuickActionItem {
   encapsulation: ViewEncapsulation.None,
   imports: [RouterLink, NeonBadgeComponent],
   template: `
-    <section class="sg-quick-actions u-surface-card u-p-5" aria-label="Acciones rápidas">
-      <header class="sg-panel-header">
-        <h2 class="sg-panel-header__title">Acceso rápido</h2>
+    <section class="sg-quick-actions u-surface-card u-p-5" aria-label="Acceso rápido">
+      <header class="sg-quick-actions__header">
+        <div>
+          <p class="sg-quick-actions__eyebrow">Navegación</p>
+          <h2 class="sg-quick-actions__title">Acceso rápido</h2>
+        </div>
+        <p class="sg-quick-actions__lede">Atajos a stats, partidas y coach</p>
       </header>
 
-      <div class="sg-quick-actions__grid">
+      <nav class="sg-quick-actions__grid" aria-label="Atajos del dashboard">
         @for (action of actions; track action.id) {
-          <a [routerLink]="action.route" class="sg-quick-actions__item">
+          <a
+            [routerLink]="action.route"
+            class="sg-quick-actions__item"
+            [attr.data-tone]="action.tone ?? 'cyan'"
+          >
             <span
               class="sg-quick-actions__icon"
-              [class]="action.tone ? 'sg-quick-actions__icon--' + action.tone : ''"
+              [attr.data-tone]="action.tone ?? 'cyan'"
+              aria-hidden="true"
             >{{ action.icon }}</span>
-            <span class="sg-quick-actions__label">{{ action.label }}</span>
+
+            <span class="sg-quick-actions__copy">
+              <span class="sg-quick-actions__label">{{ action.label }}</span>
+              @if (action.hint) {
+                <span class="sg-quick-actions__hint">{{ action.hint }}</span>
+              }
+            </span>
+
             @if (action.badge) {
-              <sg-neon-badge [tone]="action.tone ?? 'muted'" class="sg-quick-actions__badge">{{ action.badge }}</sg-neon-badge>
+              <sg-neon-badge [tone]="action.tone ?? 'muted'" class="sg-quick-actions__badge">
+                {{ action.badge }}
+              </sg-neon-badge>
             }
+
+            <span class="sg-quick-actions__chevron" aria-hidden="true">→</span>
           </a>
         }
-      </div>
+      </nav>
     </section>
   `,
 })

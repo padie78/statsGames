@@ -21,28 +21,28 @@
 
 // —— Topbar & subnav ——
 .sg-topbar__logo {
-  box-shadow: var(--sg-glow-lime);
+  box-shadow: 0 0 0 1px rgba(184, 255, 60, 0.22), var(--sg-glow-lime);
   color: var(--sg-text-inverse);
-  font-weight: var(--sg-fw-bold);
+  font-weight: var(--sg-fw-black);
 }
 
 .sg-topbar__brand-name {
   font-family: var(--sg-font-display);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
   font-weight: var(--sg-fw-bold);
 }
 
 .sg-topbar__avatar {
   border: 1px solid rgba(var(--sg-accent-primary-rgb), 0.35);
-  background: rgba(var(--sg-accent-primary-rgb), 0.08);
-  box-shadow: 0 0 12px rgba(var(--sg-accent-primary-rgb), 0.15);
+  background: rgba(var(--sg-accent-primary-rgb), 0.1);
+  box-shadow: 0 0 14px rgba(var(--sg-accent-primary-rgb), 0.16);
   color: var(--sg-accent-primary);
-  font-weight: var(--sg-fw-semibold);
+  font-weight: var(--sg-fw-bold);
 }
 
 .sg-subnav__link {
   letter-spacing: 0.01em;
-  font-weight: var(--sg-fw-medium);
+  font-weight: var(--sg-fw-semibold);
   font-size: var(--sg-fs-sm);
 }
 
@@ -52,12 +52,12 @@
 .sg-subnav__link--active.sg-subnav__link--cyan {
   color: var(--sg-neon-lime);
   border-bottom-color: var(--sg-neon-lime);
-  text-shadow: 0 0 18px rgba(var(--sg-neon-lime-rgb), 0.35);
+  text-shadow: none;
 }
 
 .sg-subnav__link:hover {
   color: var(--sg-text-primary);
-  border-bottom-color: rgba(var(--sg-accent-primary-rgb), 0.35);
+  border-bottom-color: rgba(var(--sg-accent-primary-rgb), 0.28);
 }
 
 // —— Stats & KPIs ——
@@ -91,13 +91,13 @@
 }
 
 .sg-kpi-strip--roblox .sg-kpi-strip__platform {
-  border-color: rgba(107, 203, 138, 0.4);
-  box-shadow: 0 0 18px rgba(107, 203, 138, 0.18);
+  border-color: rgba(var(--sg-platform-rbx-rgb), 0.42);
+  box-shadow: 0 0 16px rgba(var(--sg-platform-rbx-rgb), 0.16);
 }
 
 .sg-kpi-strip--fortnite .sg-kpi-strip__platform {
-  border-color: rgba(139, 131, 240, 0.45);
-  box-shadow: 0 0 18px rgba(139, 131, 240, 0.2);
+  border-color: rgba(var(--sg-platform-fn-rgb), 0.45);
+  box-shadow: 0 0 16px rgba(var(--sg-platform-fn-rgb), 0.16);
 }
 
 .sg-kpi-strip__platform-label {
@@ -178,11 +178,11 @@
 
 // —— Platform / bento panels ——
 .sg-platform-spotlight--roblox {
-  border-color: rgba(107, 203, 138, 0.35);
+  border-color: rgba(var(--sg-platform-rbx-rgb), 0.38);
 }
 
 .sg-platform-spotlight--fortnite {
-  border-color: rgba(139, 131, 240, 0.4);
+  border-color: rgba(var(--sg-platform-fn-rgb), 0.4);
 }
 
 .sg-platform-spotlight__title {
@@ -236,16 +236,6 @@
   font-family: var(--sg-font-display);
   letter-spacing: 0.02em;
   font-weight: var(--sg-fw-bold);
-}
-
-.sg-quick-actions__item:hover {
-  border-color: rgba(var(--sg-accent-primary-rgb), 0.4);
-  background: rgba(var(--sg-accent-primary-rgb), 0.06);
-  box-shadow: 0 0 20px rgba(var(--sg-accent-primary-rgb), 0.12);
-}
-
-.sg-quick-actions__label {
-  font-weight: var(--sg-fw-semibold);
 }
 
 // —— Platform banner ——

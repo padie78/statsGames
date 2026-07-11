@@ -94,20 +94,22 @@ export class MatchTrendsPanelComponent implements OnChanges {
   ngOnChanges(_changes: SimpleChanges): void {
     this.killsOptions = buildTrendChartOptions(this.killsTrend, {
       variant: 'area',
-      color: '#22d3ee',
-      areaColor: 'rgba(34, 211, 238, 0.18)',
+      color: '#b8ff3c',
+      areaColor: 'rgba(184, 255, 60, 0.22)',
       yAxisName: 'kills',
     });
 
     this.matchesOptions = buildTrendChartOptions(this.matchesTrend, {
       variant: 'bar',
-      color: '#22d3ee',
+      color: '#3de0f5',
+      areaColor: 'rgba(61, 224, 245, 0.28)',
       yAxisName: 'matches',
     });
 
     this.placementOptions = buildTrendChartOptions(this.placementTrend, {
       variant: 'line',
-      color: '#22d3ee',
+      color: '#ff4d9a',
+      areaColor: 'rgba(255, 77, 154, 0.18)',
       yAxisName: 'place',
     });
 

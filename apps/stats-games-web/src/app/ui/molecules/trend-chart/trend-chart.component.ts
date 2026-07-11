@@ -48,8 +48,8 @@ export class TrendChartComponent implements OnInit, OnChanges {
   @Input() unit = '';
   @Input() points: TrendChartPoint[] = [];
   @Input() variant: TrendChartVariant = 'bar';
-  @Input() color = '#22d3ee';
-  @Input() areaColor = 'rgba(117, 105, 240, 0.22)';
+  @Input() color = '#3de0f5';
+  @Input() areaColor = 'rgba(61, 224, 245, 0.2)';
 
   chartOptions: EChartsOption = {};
 

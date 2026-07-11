@@ -106,7 +106,7 @@
 
 .u-surface-card {
   background: var(--sg-gradient-panel);
-  border: 1px solid var(--sg-border-strong);
+  border: 1px solid var(--sg-border-subtle);
   border-radius: var(--sg-radius-lg);
   box-shadow: var(--sg-glow-card);
   position: relative;
@@ -117,25 +117,33 @@
   content: '';
   position: absolute;
   inset: 0 0 auto 0;
-  height: 2px;
+  height: 1px;
   background: linear-gradient(
     90deg,
-    transparent,
-    rgba(var(--sg-accent-primary-rgb), 0.55),
-    rgba(var(--sg-neon-cyan-rgb), 0.35),
-    transparent
+    transparent 4%,
+    rgba(var(--sg-accent-primary-rgb), 0.35),
+    rgba(var(--sg-neon-cyan-rgb), 0.22),
+    transparent 96%
   );
   pointer-events: none;
 }
 
 .u-surface-card--ai {
-  border-color: var(--sg-border-purple);
-  box-shadow: var(--sg-glow-card), var(--sg-glow-purple);
+  border-color: rgba(var(--sg-neon-cyan-rgb), 0.28);
+  box-shadow: var(--sg-glow-card), 0 0 24px rgba(var(--sg-neon-cyan-rgb), 0.12);
 }
 
 .u-surface-card--streak {
-  border-color: var(--sg-border-pink);
-  box-shadow: var(--sg-glow-card), var(--sg-glow-pink);
+  border-color: var(--sg-border-gold);
+  box-shadow: var(--sg-glow-card), 0 0 20px rgba(var(--sg-neon-gold-rgb), 0.12);
+}
+
+.u-surface-card--quiet {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.u-surface-card--quiet::before {
+  opacity: 0.45;
 }
 
 .u-rounded-sm { border-radius: var(--sg-radius-sm); }
@@ -149,18 +157,20 @@
   align-items: center;
   justify-content: center;
   gap: var(--sg-space-2);
-  min-height: 2.75rem;
-  padding: 0.8rem 1.35rem;
+  min-height: 2.65rem;
+  padding: 0.72rem 1.25rem;
   border: none;
   border-radius: var(--sg-radius-md);
-  font-family: var(--sg-font-display);
+  font-family: var(--sg-font-body);
   font-size: var(--sg-fs-sm);
   font-weight: var(--sg-fw-bold);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
   transition: transform var(--sg-duration-fast) var(--sg-ease-out),
-    box-shadow var(--sg-duration-base) var(--sg-ease-out);
+    box-shadow var(--sg-duration-base) var(--sg-ease-out),
+    background var(--sg-duration-fast) var(--sg-ease-out),
+    border-color var(--sg-duration-fast) var(--sg-ease-out);
 }
 
 .u-btn:disabled {

@@ -41,7 +41,7 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     officialTrailerVideoId: '_EPelwsaF9E',
     officialTrailerTitle: 'Roblox 2021 Cinematic (oficial)',
     accent: 'lime',
-    shellGlow: 'rgba(139, 131, 240, 0.08)',
+    shellGlow: 'rgba(107, 203, 138, 0.12)',
   },
   fortnite: {
     id: 'fortnite',
@@ -57,7 +57,7 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     officialTrailerVideoId: 'V5L24DFTFUo',
     officialTrailerTitle: 'Chapter 7 Season 3 · Official Cinematic',
     accent: 'purple',
-    shellGlow: 'rgba(139, 131, 240, 0.1)',
+    shellGlow: 'rgba(139, 131, 240, 0.14)',
   },
 };
 

@@ -65,7 +65,7 @@ import { ShareLinkButtonComponent } from '../../molecules/share-link-button/shar
 
           <div class="sg-dashboard-hero__info u-min-w-0">
             <p class="sg-dashboard-hero__eyebrow">{{ platformLabel }} · stats</p>
-            <h1 class="sg-dashboard-hero__name">{{ gamerTag }}</h1>
+            <p class="sg-dashboard-hero__name">{{ gamerTag }}</p>
             <p class="sg-dashboard-hero__tagline">{{ platformTagline }}</p>
             <div class="sg-dashboard-hero__badges">
               <sg-neon-badge [tone]="platformTone">{{ platform }}</sg-neon-badge>
@@ -85,21 +85,21 @@ import { ShareLinkButtonComponent } from '../../molecules/share-link-button/shar
           </div>
         </div>
 
-        <div class="sg-dashboard-hero__cta-block">
-          <a
-            routerLink="/tabs/integrations"
-            class="sg-dashboard-hero__cta u-btn u-btn--primary"
-            (click)="connectClick.emit()"
-          >
-            Conectar cuenta
-          </a>
-          <div class="sg-dashboard-hero__cta-secondary">
-            <a routerLink="/tabs/analytics" class="sg-dashboard-hero__link">Stats avanzadas</a>
-            @if (gamerTag) {
-              <sg-share-link-button [gamerTag]="gamerTag" />
-            }
+          <div class="sg-dashboard-hero__cta-block">
+            <a
+              [routerLink]="primaryCtaRoute"
+              class="sg-dashboard-hero__cta u-btn u-btn--primary"
+              (click)="connectClick.emit()"
+            >
+              {{ primaryCtaLabel }}
+            </a>
+            <div class="sg-dashboard-hero__cta-secondary">
+              <a [routerLink]="secondaryCtaRoute" class="sg-dashboard-hero__link">{{ secondaryCtaLabel }}</a>
+              @if (gamerTag) {
+                <sg-share-link-button [gamerTag]="gamerTag" />
+              }
+            </div>
           </div>
-        </div>
       </div>
 
       <div class="sg-dashboard-hero__footer sg-dashboard-hero__footer--animated">
@@ -148,7 +148,11 @@ export class DashboardHeroComponent implements OnChanges {
   @Input() winsWeek = 0;
   @Input() winRate = '—';
   @Input() kd = '—';
-  @Input() bestPlacement = 99;
+  @Input() bestPlacement: number | null = null;
+  @Input() primaryCtaLabel = 'Conectar cuenta';
+  @Input() primaryCtaRoute = '/tabs/integrations';
+  @Input() secondaryCtaLabel = 'Stats avanzadas';
+  @Input() secondaryCtaRoute = '/tabs/analytics';
 
   @Output() readonly connectClick = new EventEmitter<void>();
 
@@ -180,7 +184,7 @@ export class DashboardHeroComponent implements OnChanges {
   }
 
   get bestPlacementLabel(): string {
-    return `#${this.bestPlacement}`;
+    return this.bestPlacement != null && this.bestPlacement > 0 ? `#${this.bestPlacement}` : '—';
   }
 
   get initials(): string {

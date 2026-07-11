@@ -58,8 +58,37 @@ export const MOCK_TICKER: LiveTickerItem[] = [
 ];
 
 export const DASHBOARD_QUICK_ACTIONS = [
-  { id: 'analytics', label: 'Stats avanzadas', route: '/tabs/analytics', icon: '📊', tone: 'cyan' as const },
-  { id: 'matches', label: 'Partidas', route: '/tabs/matches', icon: '⚔', tone: 'lime' as const },
-  { id: 'integrations', label: 'Integrar', route: '/tabs/integrations', icon: '🔗', tone: 'purple' as const },
-  { id: 'ai', label: 'AI Coach', route: '/tabs/ai-coach', icon: '🧠', tone: 'pink' as const, badge: 'NEW' },
+  {
+    id: 'analytics',
+    label: 'Stats avanzadas',
+    hint: 'KD, win rate y tendencias',
+    route: '/tabs/analytics',
+    icon: 'Σ',
+    tone: 'cyan' as const,
+  },
+  {
+    id: 'matches',
+    label: 'Partidas',
+    hint: 'Historial y replay de mapa',
+    route: '/tabs/matches',
+    icon: '⚔',
+    tone: 'lime' as const,
+  },
+  {
+    id: 'integrations',
+    label: 'Integrar',
+    hint: 'Companion y cuentas',
+    route: '/tabs/integrations',
+    icon: '⟳',
+    tone: 'purple' as const,
+  },
+  {
+    id: 'ai',
+    label: 'AI Coach',
+    hint: 'Tips según tu telemetría',
+    route: '/tabs/ai-coach',
+    icon: 'AI',
+    tone: 'pink' as const,
+    badge: 'NEW',
+  },
 ];

@@ -5,20 +5,18 @@
 @mixin sg-ambient-layers {
   background-color: var(--sg-bg-ambient-base);
   background-image:
-    radial-gradient(ellipse 130% 90% at 50% 50%, transparent 32%, rgba(6, 8, 15, 0.72) 100%),
-    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(56, 140, 255, 0.22), transparent 58%),
-    radial-gradient(ellipse 50% 45% at 105% 18%, rgba(184, 255, 60, 0.14), transparent 55%),
-    radial-gradient(ellipse 48% 42% at -6% 68%, rgba(34, 211, 238, 0.16), transparent 52%),
-    radial-gradient(ellipse 55% 40% at 88% 88%, rgba(168, 85, 247, 0.12), transparent 55%),
-    radial-gradient(ellipse 75% 45% at 50% 110%, rgba(36, 60, 140, 0.28), transparent 58%),
-    radial-gradient(ellipse 70% 50% at 50% 35%, rgba(22, 34, 68, 0.35), transparent 70%),
+    radial-gradient(ellipse 130% 90% at 50% 50%, transparent 34%, rgba(5, 7, 13, 0.76) 100%),
+    radial-gradient(ellipse 95% 55% at 50% -14%, rgba(56, 140, 255, 0.18), transparent 58%),
+    radial-gradient(ellipse 48% 42% at 108% 16%, rgba(184, 255, 60, 0.11), transparent 55%),
+    radial-gradient(ellipse 46% 40% at -8% 70%, rgba(61, 224, 245, 0.14), transparent 52%),
+    radial-gradient(ellipse 70% 42% at 50% 112%, rgba(28, 48, 110, 0.26), transparent 58%),
+    radial-gradient(ellipse 68% 48% at 50% 34%, rgba(18, 30, 58, 0.32), transparent 70%),
     var(--sg-bg-stars),
     var(--sg-bg-stars-dense),
     var(--sg-bg-noise),
-    linear-gradient(180deg, #0b1326 0%, #101c36 38%, #0c1428 72%, #080e1a 100%);
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, no-repeat;
+    linear-gradient(180deg, #0a1222 0%, #0e1830 40%, #0b1426 72%, #070c18 100%);
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, no-repeat;
   background-size:
-    100% 100%,
     100% 100%,
     100% 100%,
     100% 100%,
@@ -30,7 +28,6 @@
     256px 256px,
     100% 100%;
   background-position:
-    center,
     center,
     center,
     center,
