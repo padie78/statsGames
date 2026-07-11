@@ -29,3 +29,16 @@ variable "webhook_secret" {
   default     = ""
   description = "Secreto compartido para validar webhooks de Fortnite/Roblox."
 }
+
+variable "fortnite_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "API key de fortnite-api.com para el poller de stats (Route B)."
+}
+
+variable "fortnite_poll_schedule" {
+  type        = string
+  default     = "rate(3 minutes)"
+  description = "Schedule EventBridge del poller Fortnite."
+}

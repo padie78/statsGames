@@ -3,6 +3,7 @@ environment              = "dev"
 appsync_graphql_api_name = "api"
 aws_region               = "eu-central-1"
 # webhook_secret = "..."  # opcional; validar header X-Webhook-Secret
+# fortnite_api_key = "..."  # fortnite-api.com — habilita poller Route B cada 3 min
 
 tags = {
   CostCenter = "gaming-analytics"

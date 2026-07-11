@@ -13,13 +13,23 @@ import { AuthService } from '../../core/services/auth.service';
 import { AppChromeScrollService } from '../../core/chrome/app-chrome-scroll.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
-import { AppSubnavComponent, AppTopbarComponent } from '../../ui';
+import { MatchNotificationsStore } from '../../stores/match-notifications.store';
+import {
+  AppSubnavComponent,
+  AppTopbarComponent,
+  MatchNotificationToastComponent,
+} from '../../ui';
 
 @Component({
   standalone: true,
   selector: 'app-shell-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [RouterOutlet, AppTopbarComponent, AppSubnavComponent],
+  imports: [
+    RouterOutlet,
+    AppTopbarComponent,
+    AppSubnavComponent,
+    MatchNotificationToastComponent,
+  ],
   template: `
     <div
       class="sg-app-shell sg-app-shell--dual-topbar"
@@ -34,6 +44,7 @@ import { AppSubnavComponent, AppTopbarComponent } from '../../ui';
       <main class="sg-app-shell__content">
         <router-outlet />
       </main>
+      <sg-match-notification-toast />
     </div>
   `,
 })
@@ -42,6 +53,7 @@ export class ShellPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly realtime = inject(AppSyncRealtimeService);
+  private readonly notifications = inject(MatchNotificationsStore);
   readonly chromeScroll = inject(AppChromeScrollService);
 
   readonly activeGame = computed(() => this.auth.selectedGame());
@@ -68,6 +80,7 @@ export class ShellPageComponent implements OnInit {
   }
 
   async logout(): Promise<void> {
+    this.notifications.reset();
     this.realtime.reset();
     await this.auth.logout();
     await this.router.navigateByUrl('/login');

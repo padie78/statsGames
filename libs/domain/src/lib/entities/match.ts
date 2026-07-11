@@ -66,10 +66,22 @@ export class Match {
   }
 
   summary(): string {
-    const statKeys = Object.keys(this.props.stats.toRecord());
-    if (statKeys.length === 0) {
-      return `${this.props.platform} match ${this.props.matchId} recorded`;
-    }
+    const record = this.props.stats.toRecord();
+    const custom = typeof record['summary'] === 'string' ? record['summary'].trim() : '';
+    if (custom) return custom;
+
+    const mode = typeof record['mode'] === 'string' ? record['mode'].trim() : '';
+    const map = typeof record['map'] === 'string' ? record['map'].trim() : '';
+    const kills = Number(record['kills'] ?? record['eliminations'] ?? NaN);
+    const placement = Number(record['placement'] ?? record['rank'] ?? NaN);
+
+    const bits: string[] = [this.props.platform === 'fortnite' ? 'Fortnite' : 'Roblox'];
+    if (mode) bits.push(mode);
+    if (map) bits.push(map);
+    if (Number.isFinite(placement) && placement > 0) bits.push(`Top ${Math.trunc(placement)}`);
+    if (Number.isFinite(kills) && kills >= 0) bits.push(`${Math.trunc(kills)} kills`);
+
+    if (bits.length > 1) return bits.join(' · ');
     return `${this.props.platform} match ${this.props.matchId} processed`;
   }
 }

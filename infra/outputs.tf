@@ -79,6 +79,10 @@ output "game_ingestion_name" {
   value = module.lambdas.game_ingestion_name
 }
 
+output "fortnite_stats_poller_name" {
+  value = module.lambdas.fortnite_stats_poller_name
+}
+
 output "game_processor_name" {
   value = module.lambdas.game_processor_name
 }

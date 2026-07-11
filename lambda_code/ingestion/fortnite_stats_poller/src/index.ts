@@ -1,0 +1,256 @@
+import type { Handler } from 'aws-lambda';
+import { GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoKeys, type GamePlatform } from '@stats-games/common';
+import {
+  ConsoleLogger,
+  SqsGameIngestionQueuePublisherAdapter,
+  getDocumentClient,
+} from '@stats-games/infrastructure';
+
+interface LinkedFortniteAccount {
+  platformUserId: string;
+  userId: string;
+}
+
+interface CareerSnapshot {
+  matches: number;
+  kills: number;
+  deaths: number;
+  wins: number;
+  score: number;
+  lastModifiedIso?: string;
+}
+
+interface FortniteApiStatsResponse {
+  status?: number;
+  data?: {
+    account?: { id?: string; name?: string };
+    battlePass?: { level?: number };
+    stats?: {
+      all?: {
+        overall?: {
+          matches?: number;
+          kills?: number;
+          deaths?: number;
+          wins?: number;
+          score?: number;
+          lastModified?: number;
+        };
+      };
+    };
+  };
+}
+
+const PLATFORM: GamePlatform = 'fortnite';
+const logger = new ConsoleLogger({ source: 'fortnite_stats_poller' });
+
+/**
+ * Route B: detecta partidas nuevas por diff de stats de carrera (fortnite-api.com)
+ * y encola el mismo mensaje que game_ingestion → game_processor.
+ *
+ * Epic no expone webhooks de match-end; este patrón (igual que trackers públicos)
+ * es la integración práctica sin partnership.
+ */
+export const handler: Handler = async () => {
+  const apiKey = process.env['FORTNITE_API_KEY']?.trim();
+  if (!apiKey) {
+    logger.warn('FORTNITE_API_KEY vacío — poller no-op');
+    return { ok: false, reason: 'missing_api_key', enqueued: 0 };
+  }
+
+  const accounts = await listLinkedFortniteAccounts();
+  if (accounts.length === 0) {
+    logger.info('Sin cuentas Fortnite vinculadas para poll');
+    return { ok: true, enqueued: 0, accounts: 0 };
+  }
+
+  const publisher = new SqsGameIngestionQueuePublisherAdapter();
+  let enqueued = 0;
+
+  for (const account of accounts) {
+    try {
+      const current = await fetchCareerSnapshot(account.platformUserId, apiKey);
+      if (!current) continue;
+
+      const previous = await loadSnapshot(account.platformUserId);
+      await saveSnapshot(account.platformUserId, current);
+
+      if (!previous) {
+        logger.info('Snapshot inicial guardado', { platformUserId: account.platformUserId });
+        continue;
+      }
+
+      const deltaMatches = current.matches - previous.matches;
+      if (deltaMatches <= 0) continue;
+
+      const kills = Math.max(0, current.kills - previous.kills);
+      const deaths = Math.max(0, current.deaths - previous.deaths);
+      const wins = Math.max(0, current.wins - previous.wins);
+      const occurredAtIso = current.lastModifiedIso ?? new Date().toISOString();
+      const matchId = `fn-poll-${account.platformUserId}-${Date.parse(occurredAtIso) || Date.now()}-${current.matches}`;
+
+      await publisher.enqueue({
+        userId: account.userId,
+        matchId,
+        platform: PLATFORM,
+        stats: {
+          kills: Math.round(kills / deltaMatches),
+          deaths: Math.round(deaths / deltaMatches),
+          ...(wins > 0 ? { placement: 1 } : {}),
+          matchesInferred: deltaMatches,
+          source: 'fortnite_stats_poller',
+          mode: 'Battle Royale',
+          summary:
+            wins > 0
+              ? `Fortnite · Victoria detectada (+${deltaMatches} partida${deltaMatches > 1 ? 's' : ''})`
+              : `Fortnite · +${deltaMatches} partida${deltaMatches > 1 ? 's' : ''} (diff stats)`,
+        },
+        occurredAtIso,
+        correlationId: `poller-${matchId}`,
+      });
+
+      enqueued += 1;
+      logger.info('Partida inferida encolada', {
+        userId: account.userId,
+        matchId,
+        deltaMatches,
+      });
+    } catch (error) {
+      logger.error('Error polleando cuenta Fortnite', {
+        platformUserId: account.platformUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return { ok: true, accounts: accounts.length, enqueued };
+};
+
+async function listLinkedFortniteAccounts(): Promise<LinkedFortniteAccount[]> {
+  const tableName = requireEnv('TABLE_NAME');
+  const client = getDocumentClient();
+  const accounts: LinkedFortniteAccount[] = [];
+  let exclusiveStartKey: Record<string, unknown> | undefined;
+
+  do {
+    const page = await client.send(
+      new ScanCommand({
+        TableName: tableName,
+        FilterExpression: 'begins_with(PK, :pk) AND SK = :sk',
+        ExpressionAttributeValues: {
+          ':pk': 'PLATFORM_ACCOUNT#fortnite#',
+          ':sk': DynamoKeys.platformAccountSk(),
+        },
+        ExclusiveStartKey: exclusiveStartKey,
+        ProjectionExpression: 'PK, userId',
+      }),
+    );
+
+    for (const item of page.Items ?? []) {
+      const pk = String(item['PK'] ?? '');
+      const userId = item['userId'] ? String(item['userId']) : '';
+      const platformUserId = pk.replace('PLATFORM_ACCOUNT#fortnite#', '');
+      if (platformUserId && userId) {
+        accounts.push({ platformUserId, userId });
+      }
+    }
+
+    exclusiveStartKey = page.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (exclusiveStartKey);
+
+  return accounts;
+}
+
+async function fetchCareerSnapshot(
+  epicAccountIdOrName: string,
+  apiKey: string,
+): Promise<CareerSnapshot | null> {
+  const looksLikeId = /^[0-9a-f]{32}$/i.test(epicAccountIdOrName);
+  const url = looksLikeId
+    ? `https://fortnite-api.com/v2/stats/br/v2/${encodeURIComponent(epicAccountIdOrName)}`
+    : `https://fortnite-api.com/v2/stats/br/v2?name=${encodeURIComponent(epicAccountIdOrName)}`;
+
+  const response = await fetch(url, {
+    headers: { Authorization: apiKey },
+  });
+
+  if (response.status === 404) {
+    logger.warn('Cuenta Fortnite no encontrada en fortnite-api', { epicAccountIdOrName });
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`fortnite-api ${response.status}: ${await response.text()}`);
+  }
+
+  const body = (await response.json()) as FortniteApiStatsResponse;
+  const overall = body.data?.stats?.all?.overall;
+  if (!overall) return null;
+
+  return {
+    matches: Number(overall.matches ?? 0),
+    kills: Number(overall.kills ?? 0),
+    deaths: Number(overall.deaths ?? 0),
+    wins: Number(overall.wins ?? 0),
+    score: Number(overall.score ?? 0),
+    lastModifiedIso: overall.lastModified
+      ? new Date(overall.lastModified * 1000).toISOString()
+      : undefined,
+  };
+}
+
+async function loadSnapshot(platformUserId: string): Promise<CareerSnapshot | null> {
+  const tableName = requireEnv('TABLE_NAME');
+  const client = getDocumentClient();
+  const result = await client.send(
+    new GetCommand({
+      TableName: tableName,
+      Key: {
+        PK: DynamoKeys.statsSnapshotPk(PLATFORM, platformUserId),
+        SK: DynamoKeys.statsSnapshotSk(),
+      },
+    }),
+  );
+
+  if (!result.Item) return null;
+  return {
+    matches: Number(result.Item['matches'] ?? 0),
+    kills: Number(result.Item['kills'] ?? 0),
+    deaths: Number(result.Item['deaths'] ?? 0),
+    wins: Number(result.Item['wins'] ?? 0),
+    score: Number(result.Item['score'] ?? 0),
+    lastModifiedIso: result.Item['lastModifiedIso']
+      ? String(result.Item['lastModifiedIso'])
+      : undefined,
+  };
+}
+
+async function saveSnapshot(platformUserId: string, snapshot: CareerSnapshot): Promise<void> {
+  const tableName = requireEnv('TABLE_NAME');
+  const client = getDocumentClient();
+  await client.send(
+    new PutCommand({
+      TableName: tableName,
+      Item: {
+        PK: DynamoKeys.statsSnapshotPk(PLATFORM, platformUserId),
+        SK: DynamoKeys.statsSnapshotSk(),
+        entityType: 'STATS_SNAPSHOT',
+        platform: PLATFORM,
+        platformUserId,
+        matches: snapshot.matches,
+        kills: snapshot.kills,
+        deaths: snapshot.deaths,
+        wins: snapshot.wins,
+        score: snapshot.score,
+        lastModifiedIso: snapshot.lastModifiedIso ?? null,
+        updatedAtIso: new Date().toISOString(),
+      },
+    }),
+  );
+}
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} no configurado`);
+  return value;
+}

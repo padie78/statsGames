@@ -28,6 +28,13 @@ variable "webhook_secret" {
   description = "Secreto compartido para validar webhooks de Fortnite/Roblox."
 }
 
+variable "fortnite_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "API key de fortnite-api.com (poller Fortnite Route B)."
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags adicionales propagados a todos los recursos."

@@ -57,6 +57,15 @@ export const DynamoKeys = {
     return KeyPrefix.Link;
   },
 
+  /** Snapshot de stats de carrera para detectar partidas nuevas (poller Fortnite). */
+  statsSnapshotPk(platform: GamePlatform, externalId: string): string {
+    return `STATS_SNAPSHOT#${platform}#${externalId}`;
+  },
+
+  statsSnapshotSk(): string {
+    return 'LATEST';
+  },
+
   gamerTagPk(normalizedTag: string): string {
     return `${KeyPrefix.GamerTag}${normalizedTag}`;
   },

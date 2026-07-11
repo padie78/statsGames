@@ -9,7 +9,8 @@
     "build:web": "nx build stats-games-web",
     "start:web": "nx serve stats-games-web",
     "sync:env": "bash scripts/sync-local-env.sh",
-    "seed:mock": "node scripts/seed-mock-data.mjs"
+    "seed:mock": "node scripts/seed-mock-data.mjs",
+    "send:match": "node integrations/producers/send-match.mjs"
   },
   "workspaces": [
     "lambda_code/ingestion/*",

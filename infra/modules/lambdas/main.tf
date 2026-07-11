@@ -67,7 +67,7 @@ resource "aws_apigatewayv2_api" "webhooks" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_headers = ["content-type"]
+    allow_headers = ["content-type", "x-webhook-secret"]
     allow_methods = ["GET", "POST", "OPTIONS"]
     allow_origins = ["*"]
     max_age       = 3600
@@ -193,4 +193,48 @@ resource "aws_lambda_event_source_mapping" "game_processor" {
   batch_size                         = 5
   maximum_batching_window_in_seconds = 5
   function_response_types            = ["ReportBatchItemFailures"]
+}
+
+# ─────────── Fortnite Route B: poll stats → SQS (sin webhook de Epic) ───────────
+
+resource "aws_lambda_function" "fortnite_stats_poller" {
+  function_name    = "${var.name_prefix}-fortnite-stats-poller"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = 120
+  memory_size      = 512
+  architectures    = ["arm64"]
+
+  environment {
+    variables = {
+      TABLE_NAME               = var.table_name
+      GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+      FORTNITE_API_KEY         = var.fortnite_api_key
+      LOG_LEVEL                = "INFO"
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "fortnite_stats_poller" {
+  name                = "${var.name_prefix}-fortnite-stats-poller"
+  description         = "Poll Fortnite career stats to infer new matches"
+  schedule_expression = var.fortnite_poll_schedule
+  state               = var.fortnite_api_key != "" ? "ENABLED" : "DISABLED"
+}
+
+resource "aws_cloudwatch_event_target" "fortnite_stats_poller" {
+  rule      = aws_cloudwatch_event_rule.fortnite_stats_poller.name
+  target_id = "fortnite-stats-poller"
+  arn       = aws_lambda_function.fortnite_stats_poller.arn
+}
+
+resource "aws_lambda_permission" "fortnite_stats_poller_events" {
+  statement_id  = "AllowEventBridgeInvokeFortniteStatsPoller"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.fortnite_stats_poller.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.fortnite_stats_poller.arn
 }

@@ -28,11 +28,16 @@ export class EnqueueGameEventUseCase {
     const payload: GameWebhookPayloadDto = GameWebhookPayloadSchema.parse(input.payload);
     const userId = await this.resolveUserId(platform.value, payload);
 
+    const stats: Record<string, unknown> = { ...(payload.stats ?? {}) };
+    if (payload.summary) stats['summary'] = payload.summary;
+    if (payload.mode) stats['mode'] = payload.mode;
+    if (payload.map) stats['map'] = payload.map;
+
     const message = {
       userId,
       matchId: payload.matchId,
       platform: platform.value,
-      stats: payload.stats ?? {},
+      stats,
       occurredAtIso: payload.occurredAt ?? new Date().toISOString(),
       correlationId: input.correlationId,
     };

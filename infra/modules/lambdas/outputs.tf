@@ -38,3 +38,7 @@ output "media_proxy_base_url" {
   description = "Base HTTP API para GET /media/fortnite/* (mismo execute-api que webhooks)."
   value       = aws_apigatewayv2_api.webhooks.api_endpoint
 }
+
+output "fortnite_stats_poller_name" {
+  value = aws_lambda_function.fortnite_stats_poller.function_name
+}

@@ -17,6 +17,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { PlayerService, type PlayerSearchHitView } from '../../../services/player.service';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 import { GamePlatformSwitcherComponent } from '../../molecules/game-platform-switcher/game-platform-switcher.component';
+import { NotificationsBellComponent } from '../../molecules/notifications-bell/notifications-bell.component';
 
 @Component({
   standalone: true,
@@ -27,6 +28,7 @@ import { GamePlatformSwitcherComponent } from '../../molecules/game-platform-swi
     RouterLinkActive,
     NeonBadgeComponent,
     GamePlatformSwitcherComponent,
+    NotificationsBellComponent,
   ],
   template: `
     <header class="sg-topbar sg-topbar--global">
@@ -80,6 +82,7 @@ import { GamePlatformSwitcherComponent } from '../../molecules/game-platform-swi
         </div>
 
         <div class="sg-topbar__right">
+          <sg-notifications-bell />
           @if (live) {
             <sg-neon-badge tone="cyan" [pulse]="true" class="sg-topbar__live-badge">Live</sg-neon-badge>
           }

@@ -3,8 +3,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { resolveMatchHistory } from '../../data/match-mock.data';
+import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { FortniteOfficialMediaService } from '../../services/fortnite-official-media.service';
+import { MatchNotificationsStore } from '../../stores/match-notifications.store';
 import { MatchAnalysisPanelComponent, MatchMapPanelComponent, MatchStatCardComponent } from '../../ui';
 import {
   buildMatchAnalysisReport,
@@ -48,7 +50,16 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
             <p class="u-error u-m-0">{{ error() }}</p>
             <a routerLink="/tabs/matches" class="u-btn u-btn--ghost u-mt-3">Volver al historial</a>
           </section>
-        } @else if (match()) {
+        }         @else if (match()) {
+          @if (aiPending()) {
+            <section class="u-surface-card u-p-5 sg-match-detail__ai-pending">
+              <p class="sg-match-detail__ai-pending-title u-m-0">La IA todavía está analizando</p>
+              <p class="u-hint u-m-0">
+                Ya podés ver las stats básicas. El reporte completo se habilita cuando la notificación pase a “IA lista”.
+              </p>
+            </section>
+          }
+
           <sg-match-stat-card
             [matchId]="match()!.matchId"
             [platform]="match()!.platform"
@@ -62,7 +73,9 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
             <sg-match-map-panel [telemetry]="map" />
           }
 
-          <sg-match-analysis-panel [report]="report()" (ctaClick)="goToMatches()" />
+          @if (!aiPending()) {
+            <sg-match-analysis-panel [report]="report()" (ctaClick)="goToMatches()" />
+          }
 
           <p class="sg-match-detail__meta u-hint u-m-0">{{ formatMeta() }}</p>
         }
@@ -76,6 +89,8 @@ export class MatchDetailPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly matchService = inject(MatchService);
   private readonly fortniteOfficial = inject(FortniteOfficialMediaService);
+  private readonly realtime = inject(AppSyncRealtimeService);
+  private readonly notifications = inject(MatchNotificationsStore);
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -83,6 +98,12 @@ export class MatchDetailPageComponent implements OnInit {
   readonly recentMatches = signal<MatchUpdateView[]>([]);
 
   readonly cardStats = computed(() => toMatchCardStats(this.match()?.stats));
+
+  readonly aiPending = computed(() => {
+    const current = this.match();
+    if (!current) return false;
+    return this.notifications.getByMatchId(current.matchId)?.aiStatus === 'pending';
+  });
 
   readonly report = computed(() => {
     const current = this.match();
@@ -151,10 +172,15 @@ export class MatchDetailPageComponent implements OnInit {
       const resolved = resolveMatchHistory(rows, userId, null);
       this.recentMatches.set(resolved);
 
+      const fromLive =
+        this.realtime.liveMatches().find((m) => m.matchId === matchId) ??
+        this.notifications.getByMatchId(matchId)?.match ??
+        null;
+
       const found =
         resolved.find((m) => m.matchId === matchId) ??
         rows.find((m) => m.matchId === matchId) ??
-        null;
+        fromLive;
 
       if (!found) {
         this.error.set('No encontramos esta partida en tu historial.');

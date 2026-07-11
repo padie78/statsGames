@@ -38,6 +38,7 @@ module "lambdas" {
   game_ingestion_queue_arn = module.queues.game_ingestion_queue_arn
   game_ingestion_dlq_arn   = module.queues.dlq_arns["game_ingestion"]
   webhook_secret           = var.webhook_secret
+  fortnite_api_key         = var.fortnite_api_key
 }
 
 module "api" {

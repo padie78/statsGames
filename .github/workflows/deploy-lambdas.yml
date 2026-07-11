@@ -54,6 +54,9 @@ jobs:
           - path: api/media_proxy
             artifact: media_proxy
             tf_output: media_proxy_name
+          - path: ingestion/fortnite_stats_poller
+            artifact: fortnite_stats_poller
+            tf_output: fortnite_stats_poller_name
 
     steps:
       - name: Checkout
@@ -109,6 +112,9 @@ jobs:
           - path: api/media_proxy
             artifact: media_proxy
             tf_output: media_proxy_name
+          - path: ingestion/fortnite_stats_poller
+            artifact: fortnite_stats_poller
+            tf_output: fortnite_stats_poller_name
 
     steps:
       - name: Checkout

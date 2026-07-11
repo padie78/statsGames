@@ -21,6 +21,8 @@ export {
   DailyStatsTableComponent,
   type DailyStatsTableRow,
 } from './molecules/daily-stats-table/daily-stats-table.component';
+export { NotificationsBellComponent } from './molecules/notifications-bell/notifications-bell.component';
+export { MatchNotificationToastComponent } from './molecules/match-notification-toast/match-notification-toast.component';
 export { ShareLinkButtonComponent } from './molecules/share-link-button/share-link-button.component';
 export { LiveTickerComponent } from './molecules/live-ticker/live-ticker.component';
 export { KpiStripComponent, type KpiStripItem, type KpiMetricIcon } from './molecules/kpi-strip/kpi-strip.component';
