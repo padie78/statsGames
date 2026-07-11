@@ -2,14 +2,20 @@
 /**
  * Envía un match-end a StatsGames (game_ingestion webhook).
  *
+ * Lee automáticamente `.env` en la raíz del monorepo.
+ *
  * Uso:
- *   SG_WEBHOOK_URL=... SG_WEBHOOK_SECRET=... SG_PLATFORM_USER_ID=... \
- *     node integrations/producers/send-match.mjs --platform fortnite --kills 8 --deaths 2 --placement 3
+ *   npm run send:match -- --platform roblox --kills 8 --deaths 2 --placement 3
  *
  * También acepta --user-id (Cognito sub) en lugar de platform user id.
  */
 
 import { parseArgs } from 'node:util';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+loadDotEnv(resolve(dirname(fileURLToPath(import.meta.url)), '../../.env'));
 
 const { values } = parseArgs({
   options: {
@@ -34,10 +40,12 @@ const platform = values.platform === 'roblox' ? 'roblox' : 'fortnite';
 const baseUrl =
   values.url ||
   process.env.SG_WEBHOOK_URL ||
-  process.env.SG_WEBHOOK_URL_PATTERN?.replace('{platform}', platform);
+  process.env.SG_WEBHOOK_URL_PATTERN;
 
 if (!baseUrl) {
-  console.error('Falta --url o SG_WEBHOOK_URL (…/webhooks/fortnite|roblox)');
+  console.error(
+    'Falta SG_WEBHOOK_URL. Creá un `.env` en la raíz (ver `.env.example`) o pasá --url.',
+  );
   process.exit(1);
 }
 
@@ -53,7 +61,9 @@ const platformUserId =
   values['platform-user-id'] || process.env.SG_PLATFORM_USER_ID;
 
 if (!userId && !platformUserId) {
-  console.error('Pasá --user-id o --platform-user-id (cuenta vinculada).');
+  console.error(
+    'Falta SG_PLATFORM_USER_ID (o --platform-user-id / --user-id). Ponelo en `.env`.',
+  );
   process.exit(1);
 }
 
@@ -78,6 +88,8 @@ const body = {
   },
 };
 
+console.log(`→ POST ${webhookUrl} (platformUserId=${platformUserId ?? userId})`);
+
 const response = await fetch(webhookUrl, {
   method: 'POST',
   headers: {
@@ -90,3 +102,25 @@ const response = await fetch(webhookUrl, {
 const text = await response.text();
 console.log(response.status, text);
 if (!response.ok) process.exit(1);
+
+function loadDotEnv(filePath) {
+  if (!existsSync(filePath)) return;
+  const raw = readFileSync(filePath, 'utf8');
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}

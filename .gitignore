@@ -31,6 +31,11 @@ infra/**/.artifacts/
 *.tfvars
 !*.tfvars.example
 
+# Local env (secrets / webhook defaults)
+.env
+.env.local
+.env.*.local
+
 # IDE / OS
 .idea/
 .vscode/

@@ -36,6 +36,7 @@ COGNITO_POOL="$(echo "${OUTPUTS}" | jq -r '.cognito_user_pool_id.value // empty'
 COGNITO_CLIENT="$(echo "${OUTPUTS}" | jq -r '.cognito_web_client_id.value // empty')"
 COGNITO_DOMAIN="$(echo "${OUTPUTS}" | jq -r '.cognito_domain.value // empty')"
 WEBHOOK_PATTERN="$(echo "${OUTPUTS}" | jq -r '.webhook_url_pattern.value // empty')"
+MEDIA_PROXY_BASE="$(echo "${OUTPUTS}" | jq -r '.media_proxy_base_url.value // empty')"
 
 if [ -z "${APPSYNC_ENDPOINT}" ] || [ -z "${APPSYNC_API_KEY}" ] || [ -z "${COGNITO_POOL}" ] || [ -z "${COGNITO_CLIENT}" ]; then
   echo "Error: faltan outputs requeridos (appsync_endpoint, appsync_api_key, cognito_user_pool_id, cognito_web_client_id)." >&2
@@ -58,6 +59,7 @@ export const environment = {
     oauthRedirectSignOut: 'http://localhost:4200/login',
   },
   webhookUrlPattern: '${WEBHOOK_PATTERN}',
+  mediaProxyBaseUrl: '${MEDIA_PROXY_BASE}',
 };
 EOF
 

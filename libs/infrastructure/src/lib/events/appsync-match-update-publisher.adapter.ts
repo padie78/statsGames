@@ -47,6 +47,15 @@ export class AppSyncMatchUpdatePublisherAdapter implements IMatchEventNotifier {
 
   async publishMatchUpdate(match: Match): Promise<void> {
     if (!this.endpoint || !this.apiKey) {
+      console.warn(
+        JSON.stringify({
+          level: 'WARN',
+          message:
+            'AppSync publish omitido: APPSYNC_ENDPOINT / APPSYNC_API_KEY no configurados (placeholders). La partida se guardó pero no hay realtime.',
+          matchId: match.matchId,
+          userId: match.userId,
+        }),
+      );
       return;
     }
 
