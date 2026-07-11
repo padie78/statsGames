@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { generateClient } from 'aws-amplify/api';
 import { Observable, firstValueFrom, from, map } from 'rxjs';
 import { authenticatedAppsyncOptions } from '../core/auth/appsync-auth.util';
+import type { BackendPlatform } from '../core/game/selected-game';
 
 export interface MatchStatsView {
   kills?: number | null;
@@ -64,7 +65,7 @@ export class MatchService {
 
   listPlayerMatches(
     userId: string,
-    options?: { platform?: 'fortnite' | 'roblox'; limit?: number },
+    options?: { platform?: BackendPlatform; limit?: number },
   ): Observable<MatchUpdateView[]> {
     return from(
       this.client.graphql({
@@ -80,7 +81,7 @@ export class MatchService {
 
   async listPlayerMatchesOnce(
     userId: string,
-    options?: { platform?: 'fortnite' | 'roblox'; limit?: number },
+    options?: { platform?: BackendPlatform; limit?: number },
   ): Promise<MatchUpdateView[]> {
     return firstValueFrom(this.listPlayerMatches(userId, options));
   }

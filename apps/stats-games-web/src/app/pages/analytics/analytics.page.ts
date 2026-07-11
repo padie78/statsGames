@@ -13,6 +13,11 @@ import {
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
+import {
+  matchBackendPlatform,
+  selectedGameFromBackend,
+  type SelectedGame,
+} from '../../core/game/selected-game';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { PlayerService } from '../../services/player.service';
 import {
@@ -289,9 +294,7 @@ export class AnalyticsPageComponent implements OnInit {
   readonly communityUsesMock = signal(true);
   readonly error = signal<string | null>(null);
 
-  readonly activePlatform = computed(
-    (): 'fortnite' | 'roblox' => this.gameContext.activeGame() ?? 'fortnite',
-  );
+  readonly activePlatform = computed((): SelectedGame => this.gameContext.activeGame() ?? 'fortnite');
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.activePlatform()));
 
@@ -442,7 +445,7 @@ export class AnalyticsPageComponent implements OnInit {
     const platform = this.activePlatform();
     const benchmarks =
       this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform];
-    const label = platform === 'roblox' ? 'Roblox' : 'Fortnite';
+    const label = gamePlatformMeta(platform).label;
     return `${label} · ${formatCommunitySampleSize(benchmarks.sampleSize)} jugadores`;
   });
 
@@ -473,7 +476,7 @@ export class AnalyticsPageComponent implements OnInit {
   });
 
   readonly communityRankSubtitle = computed(() => {
-    const label = this.activePlatform() === 'roblox' ? 'Roblox' : 'Fortnite';
+    const label = gamePlatformMeta(this.activePlatform()).label;
     const you = this.communityRank().yourRank;
     return this.communityUsesMock()
       ? `${label} · puesto #${you} (preview mock)`
@@ -566,7 +569,8 @@ export class AnalyticsPageComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const platform = this.activePlatform();
+      const uiGame = this.activePlatform();
+      const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
 
       const [profile, matches, weeklyRows, previousWeeklyRows, daily, community, leaderboard] =
@@ -585,12 +589,12 @@ export class AnalyticsPageComponent implements OnInit {
             ),
           ),
           firstValueFrom(this.statsService.listPlayerDailyTrend(userId, platform, 7)),
-          firstValueFrom(this.statsService.getCommunityBenchmarks(platform, periodId)).catch(
-            () => null,
-          ),
-          firstValueFrom(this.statsService.listWeeklyLeaderboard(platform, periodId, 5)).catch(
-            () => null,
-          ),
+          firstValueFrom(
+            this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
+          ).catch(() => null),
+          firstValueFrom(
+            this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 5),
+          ).catch(() => null),
         ]);
 
       this.gamerTag.set(profile?.gamerTag ?? '');
@@ -602,7 +606,7 @@ export class AnalyticsPageComponent implements OnInit {
       if (community && community.sampleSize > 0) {
         this.communityBenchmarksApi.set(
           mapCommunityBenchmarksFromApi({
-            platform,
+            platform: selectedGameFromBackend(community.platform, uiGame),
             sampleSize: community.sampleSize,
             avgWinRate: community.avgWinRate,
             avgKd: community.avgKd,
@@ -624,7 +628,7 @@ export class AnalyticsPageComponent implements OnInit {
           leaderboard.map((entry) => ({
             rank: entry.rank,
             gamerTag: entry.gamerTag,
-            platform: entry.platform as 'fortnite' | 'roblox',
+            platform: selectedGameFromBackend(entry.platform, uiGame),
             score: entry.score,
             delta: entry.delta,
             trend: (entry.trend as 'up' | 'down' | 'flat') ?? 'flat',

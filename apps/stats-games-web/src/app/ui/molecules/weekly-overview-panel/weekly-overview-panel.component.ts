@@ -1,4 +1,10 @@
 import { Component, Input, ViewEncapsulation } from '@angular/core';
+import { gamePlatformMeta } from '../../../core/game/game-platform.config';
+import {
+  isRobloxExperienceGame,
+  selectedGameFromBackend,
+  type SelectedGame,
+} from '../../../core/game/selected-game';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 export interface WeeklyOverviewMetric {
@@ -20,7 +26,7 @@ export interface WeeklyOverviewMetric {
           <h2 class="sg-panel-header__title">Resumen semanal</h2>
           <p class="sg-weekly-overview__period">{{ periodLabel }}</p>
         </div>
-        <sg-neon-badge [tone]="platform === 'roblox' ? 'lime' : 'purple'">
+        <sg-neon-badge [tone]="badgeTone">
           {{ platformLabel }}
         </sg-neon-badge>
       </header>
@@ -51,13 +57,20 @@ export interface WeeklyOverviewMetric {
   `,
 })
 export class WeeklyOverviewPanelComponent {
-  @Input() platform: 'fortnite' | 'roblox' = 'fortnite';
+  @Input() platform: SelectedGame = 'fortnite';
   @Input() periodLabel = 'Esta semana';
   @Input() headlineValue: string | number = '—';
   @Input() headlineLabel = 'Partidas jugadas';
   @Input() metrics: WeeklyOverviewMetric[] = [];
 
   get platformLabel(): string {
-    return this.platform === 'roblox' ? 'Roblox' : 'Fortnite';
+    return gamePlatformMeta(selectedGameFromBackend(this.platform)).label;
+  }
+
+  get badgeTone(): 'lime' | 'purple' | 'cyan' {
+    const g = selectedGameFromBackend(this.platform);
+    if (isRobloxExperienceGame(g)) return 'lime';
+    if (g === 'valorant') return 'purple';
+    return 'cyan';
   }
 }

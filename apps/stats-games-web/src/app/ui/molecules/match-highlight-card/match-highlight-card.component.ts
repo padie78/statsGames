@@ -16,7 +16,7 @@ import type { MatchCardStats } from '../match-stat-card/match-stat-card.componen
     <section
       class="sg-match-highlight"
       [class.sg-match-highlight--victory]="isVictory"
-      [class.sg-match-highlight--roblox]="platformKey === 'roblox'"
+      [attr.data-game]="platformKey"
       [class.sg-match-highlight--fortnite]="platformKey === 'fortnite'"
     >
       <img
@@ -34,7 +34,7 @@ import type { MatchCardStats } from '../match-stat-card/match-stat-card.componen
           } @else {
             <sg-neon-badge tone="lime">Destacada</sg-neon-badge>
           }
-          <sg-neon-badge [tone]="platformKey === 'roblox' ? 'purple' : 'cyan'">
+          <sg-neon-badge [tone]="platformTone">
             {{ platformLabel }}
           </sg-neon-badge>
         </header>
@@ -104,13 +104,31 @@ export class MatchHighlightCardComponent {
 
   get platformKey(): SelectedGame | null {
     const p = this.platform?.toLowerCase();
-    if (p === 'roblox' || p === 'fortnite') return p;
+    if (!p) return null;
+    if (
+      p === 'fortnite' ||
+      p === 'valorant' ||
+      p === 'rocket_league' ||
+      p === 'blox_fruits' ||
+      p === 'adopt_me' ||
+      p === 'brookhaven'
+    ) {
+      return p;
+    }
+    if (p === 'roblox') return 'blox_fruits';
     return null;
   }
 
   get platformLabel(): string {
     if (this.platformKey) return gamePlatformMeta(this.platformKey).label;
     return this.platform;
+  }
+
+  get platformTone(): 'cyan' | 'purple' | 'lime' {
+    const g = this.platformKey;
+    if (g === 'valorant' || g === 'adopt_me') return 'purple';
+    if (g === 'blox_fruits' || g === 'brookhaven') return 'lime';
+    return 'cyan';
   }
 
   get artUrl(): string {

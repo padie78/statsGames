@@ -11,6 +11,8 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { AuthService, type SelectedGame } from '../../core/services/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
+import { GAME_PLATFORM_LIST } from '../../core/game/game-platform.config';
+import { backendPlatformForGame, normalizeSelectedGame } from '../../core/game/selected-game';
 import {
   UserPreferencesService,
   type StatsDisplayMode,
@@ -85,18 +87,15 @@ const GAMER_TAG_PATTERN = /^[a-zA-Z0-9_-]{3,32}$/;
               </p>
             }
 
-            <p class="sg-settings-section__label u-mt-4 u-mb-2">Plataforma principal</p>
-            <div class="sg-game-picker">
-              <sg-game-selection-card
-                game="fortnite"
-                [selected]="profileForm.controls.primaryPlatform.value === 'fortnite'"
-                (select)="pickPlatform($event)"
-              />
-              <sg-game-selection-card
-                game="roblox"
-                [selected]="profileForm.controls.primaryPlatform.value === 'roblox'"
-                (select)="pickPlatform($event)"
-              />
+            <p class="sg-settings-section__label u-mt-4 u-mb-2">Juego principal</p>
+            <div class="sg-game-picker sg-game-picker--grid">
+              @for (platform of gamePlatforms; track platform.id) {
+                <sg-game-selection-card
+                  [game]="platform.id"
+                  [selected]="profileForm.controls.primaryPlatform.value === platform.id"
+                  (select)="pickPlatform($event)"
+                />
+              }
             </div>
 
             @if (profile()?.gamerTag) {
@@ -172,7 +171,7 @@ const GAMER_TAG_PATTERN = /^[a-zA-Z0-9_-]{3,32}$/;
               (click)="setStatsMode('simple')"
             >
               <span class="sg-settings-mode__title">Simple</span>
-              <span class="sg-settings-mode__desc">Dashboard y partidas — sin stats avanzadas</span>
+              <span class="sg-settings-mode__desc">Vista compacta en dashboard y partidas</span>
             </button>
             <button
               type="button"
@@ -181,7 +180,7 @@ const GAMER_TAG_PATTERN = /^[a-zA-Z0-9_-]{3,32}$/;
               (click)="setStatsMode('advanced')"
             >
               <span class="sg-settings-mode__title">Avanzado</span>
-              <span class="sg-settings-mode__desc">Incluye gráficos y AI Coach en el menú</span>
+              <span class="sg-settings-mode__desc">Más detalle en Estadísticas y AI Coach</span>
             </button>
           </div>
         </section>
@@ -257,6 +256,7 @@ export class SettingsPageComponent {
   readonly advancedOpen = signal(false);
   readonly urlCopied = signal(false);
   readonly userIdCopied = signal(false);
+  readonly gamePlatforms = GAME_PLATFORM_LIST;
 
   readonly profileForm = this.fb.nonNullable.group({
     gamerTag: ['', [Validators.required, Validators.pattern(GAMER_TAG_PATTERN)]],
@@ -324,9 +324,11 @@ export class SettingsPageComponent {
         this.player.upsertPlayerProfile({
           userId,
           gamerTag: normalizedTag,
-          primaryPlatform,
+          primaryPlatform: backendPlatformForGame(primaryPlatform),
           fortniteId: current?.fortniteId ?? undefined,
           robloxId: current?.robloxId ?? undefined,
+          valorantId: current?.valorantId ?? undefined,
+          rocketLeagueId: current?.rocketLeagueId ?? undefined,
           avatarUrl: current?.avatarUrl ?? undefined,
         }),
       );
@@ -334,7 +336,10 @@ export class SettingsPageComponent {
       this.profile.set(updated);
       this.profileForm.patchValue({
         gamerTag: updated.gamerTag,
-        primaryPlatform: updated.primaryPlatform as SelectedGame,
+        primaryPlatform:
+          normalizeSelectedGame(updated.primaryPlatform) ??
+          this.auth.selectedGame() ??
+          primaryPlatform,
       });
       this.profileForm.markAsPristine();
       this.profileSuccess.set('Perfil actualizado.');

@@ -8,7 +8,7 @@ export class ListPlayerStatsRollupsUseCase {
     userId: string;
     granularity: StatsGranularity;
     periodId: string;
-    platform?: 'fortnite' | 'roblox';
+    platform?: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
     limit?: number;
   }) {
     if (!input.userId?.trim()) throw new Error('userId requerido.');

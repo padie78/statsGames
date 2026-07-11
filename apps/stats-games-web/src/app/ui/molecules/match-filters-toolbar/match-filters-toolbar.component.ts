@@ -1,8 +1,10 @@
 import { Component, EventEmitter, Input, Output, ViewEncapsulation } from '@angular/core';
+import { GAME_PLATFORM_LIST } from '../../../core/game/game-platform.config';
+import type { SelectedGame } from '../../../core/game/selected-game';
 import { SelectComponent, type SelectOption } from '../../atoms/select/select.component';
 import type { MatchSortKey } from '../../../utils/match-stats.util';
 
-export type MatchPlatformFilter = 'all' | 'fortnite' | 'roblox';
+export type MatchPlatformFilter = 'all' | SelectedGame;
 export type MatchDateFilter = 'all' | '7d' | '30d';
 
 @Component({
@@ -14,15 +16,14 @@ export type MatchDateFilter = 'all' | '7d' | '30d';
     <section class="sg-match-filters u-surface-card u-p-5" aria-label="Filtros de partidas">
       <div class="sg-match-filters__row">
         <div class="sg-match-filters__group">
-          <span class="sg-match-filters__label">Plataforma</span>
-          <div class="sg-match-filters__chips" role="group" aria-label="Plataforma">
+          <span class="sg-match-filters__label">Juego</span>
+          <div class="sg-match-filters__chips" role="group" aria-label="Juego">
             @for (option of platformOptions; track option.value) {
               <button
                 type="button"
                 class="sg-match-filters__chip"
                 [class.sg-match-filters__chip--active]="platform === option.value"
-                [class.sg-match-filters__chip--fortnite]="option.value === 'fortnite'"
-                [class.sg-match-filters__chip--roblox]="option.value === 'roblox'"
+                [attr.data-game]="option.value === 'all' ? null : option.value"
                 (click)="platformChange.emit(option.value)"
               >
                 {{ option.label }}
@@ -78,10 +79,9 @@ export class MatchFiltersToolbarComponent {
   @Output() dateRangeChange = new EventEmitter<MatchDateFilter>();
   @Output() sortChange = new EventEmitter<MatchSortKey>();
 
-  readonly platformOptions = [
-    { value: 'all' as const, label: 'Todas' },
-    { value: 'fortnite' as const, label: 'Fortnite' },
-    { value: 'roblox' as const, label: 'Roblox' },
+  readonly platformOptions: { value: MatchPlatformFilter; label: string }[] = [
+    { value: 'all', label: 'Todas' },
+    ...GAME_PLATFORM_LIST.map((g) => ({ value: g.id as MatchPlatformFilter, label: g.shortLabel })),
   ];
 
   readonly dateOptions = [

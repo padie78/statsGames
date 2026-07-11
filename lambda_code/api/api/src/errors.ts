@@ -36,10 +36,17 @@ export function asStatsGranularity(value: string): StatsGranularity {
   throw new AppSyncTypedError('ValidationError', `granularity inválida: ${value}`);
 }
 
-export function asPlatform(value?: string | null): 'fortnite' | 'roblox' | undefined {
+export function asPlatform(
+  value?: string | null,
+): 'fortnite' | 'roblox' | 'valorant' | 'rocket_league' | undefined {
   if (!value) return undefined;
   const normalized = value.toLowerCase();
-  if (normalized === 'fortnite' || normalized === 'roblox') {
+  if (
+    normalized === 'fortnite' ||
+    normalized === 'roblox' ||
+    normalized === 'valorant' ||
+    normalized === 'rocket_league'
+  ) {
     return normalized;
   }
   throw new AppSyncTypedError('ValidationError', `platform inválida: ${value}`);

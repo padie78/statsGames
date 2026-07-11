@@ -20,13 +20,13 @@
 }
 
 // —— Topbar & subnav ——
-.sg-topbar__logo {
+.sg-games-bar__logo {
   box-shadow: 0 0 0 1px rgba(184, 255, 60, 0.22), var(--sg-glow-lime);
   color: var(--sg-text-inverse);
   font-weight: var(--sg-fw-black);
 }
 
-.sg-topbar__brand-name {
+.sg-games-bar__brand-name {
   font-family: var(--sg-font-display);
   letter-spacing: 0.1em;
   font-weight: var(--sg-fw-bold);
@@ -46,13 +46,9 @@
   font-size: var(--sg-fs-sm);
 }
 
-.sg-subnav__link--active,
-.sg-subnav__link--active.sg-subnav__link--lime,
-.sg-subnav__link--active.sg-subnav__link--purple,
-.sg-subnav__link--active.sg-subnav__link--cyan {
-  color: var(--sg-neon-lime);
+.sg-game-nav__tab--active {
+  color: var(--sg-text-primary);
   border-bottom-color: var(--sg-neon-lime);
-  text-shadow: none;
 }
 
 .sg-subnav__link:hover {

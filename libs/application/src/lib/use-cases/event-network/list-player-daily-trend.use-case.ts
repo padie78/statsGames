@@ -7,7 +7,7 @@ export class ListPlayerDailyTrendUseCase {
 
   async execute(input: {
     userId: string;
-    platform?: 'fortnite' | 'roblox';
+    platform?: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
     days?: number;
   }): Promise<MatchStatsRollupDto[]> {
     if (!input.userId?.trim()) throw new Error('userId requerido.');

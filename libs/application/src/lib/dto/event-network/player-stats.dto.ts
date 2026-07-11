@@ -22,7 +22,7 @@ export interface MatchStatsKpisDto {
 
 export interface MatchStatsRollupDto {
   userId: string;
-  platform: 'fortnite' | 'roblox';
+  platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
   granularity: StatsGranularity;
   periodId: string;
   kpis: MatchStatsKpisDto;

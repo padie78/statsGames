@@ -14,6 +14,13 @@ import {
 } from '../../data/match-mock.data';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
+import { gamePlatformMeta } from '../../core/game/game-platform.config';
+import {
+  isRobloxExperienceGame,
+  matchBackendPlatform,
+  selectedGameFromBackend,
+  type SelectedGame,
+} from '../../core/game/selected-game';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
@@ -33,7 +40,6 @@ import {
   AchievementStripComponent,
   AiInsightCardComponent,
   DashboardHeroComponent,
-  DualPlatformStripComponent,
   IntegrationStatusCardComponent,
   KpiStripComponent,
   LiveMatchFeedComponent,
@@ -50,6 +56,7 @@ import {
   StatsRadarChartComponent,
   PercentileGaugesComponent,
   YoutubeTipCardComponent,
+  PlayerSearchHeroComponent,
   type KpiStripItem,
   type LiveMatchFeedItem,
   type TrendChartPoint,
@@ -89,7 +96,6 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     IonRefresherContent,
     RouterLink,
     DashboardHeroComponent,
-    DualPlatformStripComponent,
     PlatformSpotlightCardComponent,
     QuickActionsBarComponent,
     MatchHighlightCardComponent,
@@ -108,6 +114,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     PlatformCosmeticsRailComponent,
     OfficialNewsRailComponent,
     RobloxExperiencesRailComponent,
+    PlayerSearchHeroComponent,
   ],
   template: `
     <ion-content class="sg-page-content">
@@ -122,6 +129,8 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
         @if (error()) {
           <p class="u-error">{{ error() }}</p>
         }
+
+        <sg-player-search-hero />
 
         <header class="sg-dashboard__masthead">
           <div class="sg-dashboard__masthead-copy">
@@ -150,12 +159,6 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
             <span>4</span> Coach
           </a>
         </nav>
-
-        <sg-dual-platform-strip
-          [activePlatform]="heroPlatform()"
-          [fortniteConnected]="!!profile()?.fortniteId"
-          [robloxConnected]="!!profile()?.robloxId"
-        />
 
         @if (profile()) {
           <sg-dashboard-hero
@@ -362,6 +365,8 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               <div class="sg-dashboard__rail-group">
                 <h3 class="sg-dashboard__rail-label">Cuenta</h3>
                 <sg-integration-status-card
+                  [valorantConnected]="!!profile()?.valorantId"
+                  [rocketLeagueConnected]="!!profile()?.rocketLeagueId"
                   [fortniteConnected]="!!profile()?.fortniteId"
                   [robloxConnected]="!!profile()?.robloxId"
                   [liveActive]="realtime.isLive()"
@@ -401,7 +406,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
               <details class="sg-dashboard__details" open>
                 <summary class="sg-dashboard__details-summary">
-                  {{ heroPlatform() === 'fortnite' ? 'Cosmetics y noticias Fortnite' : 'Experiencias Roblox' }}
+                  {{ heroPlatform() === 'fortnite' ? 'Cosmetics y noticias Fortnite' : 'Experiencia activa' }}
                 </summary>
                 <div class="sg-dashboard__details-body sg-dashboard__details-body--stack">
                   @if (heroPlatform() === 'fortnite') {
@@ -456,9 +461,15 @@ export class DashboardPageComponent implements OnInit {
 
   readonly quickActions = DASHBOARD_QUICK_ACTIONS;
 
-  readonly heroPlatform = computed((): 'fortnite' | 'roblox' => {
-    const g = this.gameContext.activeGame() ?? this.profile()?.primaryPlatform?.toLowerCase();
-    return g === 'roblox' ? 'roblox' : 'fortnite';
+  readonly heroPlatform = computed(() => {
+    const g = this.gameContext.activeGame();
+    if (g) return g;
+    const primary = this.profile()?.primaryPlatform?.toLowerCase();
+    if (primary === 'roblox') return 'blox_fruits' as const;
+    if (primary === 'valorant' || primary === 'rocket_league' || primary === 'fortnite') {
+      return primary;
+    }
+    return 'fortnite' as const;
   });
 
   readonly heroArtUrl = computed(() => this.platformMedia.resolveHeroArt(this.heroPlatform()));
@@ -584,7 +595,7 @@ export class DashboardPageComponent implements OnInit {
     const platform = this.heroPlatform();
     const benchmarks =
       this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform];
-    const label = platform === 'roblox' ? 'Roblox' : 'Fortnite';
+    const label = gamePlatformMeta(platform).label;
     return `${label} · ${formatCommunitySampleSize(benchmarks.sampleSize)} jugadores`;
   });
 
@@ -615,7 +626,7 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly communityRankSubtitle = computed(() => {
-    const label = this.heroPlatform() === 'roblox' ? 'Roblox' : 'Fortnite';
+    const label = gamePlatformMeta(this.heroPlatform()).label;
     const you = this.communityRank().yourRank;
     return this.communityUsesMock()
       ? `${label} · puesto #${you} (preview mock)`
@@ -632,7 +643,7 @@ export class DashboardPageComponent implements OnInit {
 
   readonly accountsConnected = computed(() => {
     const p = this.profile();
-    return !!(p?.fortniteId || p?.robloxId);
+    return !!(p?.fortniteId || p?.robloxId || p?.valorantId || p?.rocketLeagueId);
   });
 
   readonly heroPrimaryCta = computed(() =>
@@ -877,13 +888,14 @@ export class DashboardPageComponent implements OnInit {
         gamerTag: profile.gamerTag,
       });
 
-      const platform =
-        (this.gameContext.activeGame() as 'fortnite' | 'roblox' | null) ??
-        (profile.primaryPlatform as 'fortnite' | 'roblox') ??
-        undefined;
+      const uiGame: SelectedGame =
+        this.gameContext.activeGame() ??
+        selectedGameFromBackend(profile.primaryPlatform) ??
+        'fortnite';
+      const platform = matchBackendPlatform(uiGame);
 
       const periodId = currentWeeklyPeriodIdForStats();
-      const activePlatform = platform ?? 'fortnite';
+      const activePlatform = uiGame;
       void this.hydratePlatformMedia(activePlatform);
 
       const [matches, weeklyRows, previousWeeklyRows, daily, community, leaderboard] =
@@ -907,10 +919,10 @@ export class DashboardPageComponent implements OnInit {
         ),
         firstValueFrom(this.statsService.listPlayerDailyTrend(userId, platform, 7)),
         firstValueFrom(
-          this.statsService.getCommunityBenchmarks(activePlatform, periodId),
+          this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
         ).catch(() => null),
         firstValueFrom(
-          this.statsService.listWeeklyLeaderboard(activePlatform, periodId, 5),
+          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 5),
         ).catch(() => null),
       ]);
 
@@ -922,7 +934,7 @@ export class DashboardPageComponent implements OnInit {
 
       if (community && community.sampleSize > 0) {
         this.communityBenchmarksApi.set(mapCommunityBenchmarksFromApi({
-          platform: activePlatform,
+          platform: selectedGameFromBackend(community.platform, activePlatform),
           sampleSize: community.sampleSize,
           avgWinRate: community.avgWinRate,
           avgKd: community.avgKd,
@@ -943,7 +955,7 @@ export class DashboardPageComponent implements OnInit {
           leaderboard.map((entry) => ({
             rank: entry.rank,
             gamerTag: entry.gamerTag,
-            platform: entry.platform as 'fortnite' | 'roblox',
+            platform: selectedGameFromBackend(entry.platform, activePlatform),
             score: entry.score,
             delta: entry.delta,
             trend: (entry.trend as 'up' | 'down' | 'flat') ?? 'flat',
@@ -959,13 +971,15 @@ export class DashboardPageComponent implements OnInit {
     }
   }
 
-  private async hydratePlatformMedia(platform: 'fortnite' | 'roblox'): Promise<void> {
+  private async hydratePlatformMedia(platform: SelectedGame): Promise<void> {
     void this.platformMedia.hydrateForPlatform(platform);
     if (platform === 'fortnite') {
       await this.fortniteOfficial.hydrate({ newsLimit: 6, featuredLimit: 8 });
       return;
     }
-    await this.robloxExperiencesSvc.load(8);
+    if (isRobloxExperienceGame(platform)) {
+      await this.robloxExperiencesSvc.load(8);
+    }
   }
 }
 

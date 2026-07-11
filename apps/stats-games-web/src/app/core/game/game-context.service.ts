@@ -1,11 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { AuthService, type SelectedGame } from '../services/auth.service';
+import { AuthService } from '../services/auth.service';
 import { PlayerService } from '../../services/player.service';
+import {
+  backendPlatformForGame,
+  type SelectedGame,
+} from './selected-game';
+import { gamePlatformMeta } from './game-platform.config';
 
 /**
  * Contexto global del juego activo — sincroniza Cognito, perfil y UI.
- * Las páginas pueden reaccionar a `refreshTick` para recargar stats.
  */
 @Injectable({ providedIn: 'root' })
 export class GameContextService {
@@ -18,6 +22,7 @@ export class GameContextService {
   readonly refreshTick = computed(() => this._refreshTick());
   readonly switching = computed(() => this._switching());
   readonly activeGame = computed(() => this.auth.selectedGame());
+  readonly activeMeta = computed(() => gamePlatformMeta(this.activeGame()));
 
   async switchPlatform(game: SelectedGame): Promise<void> {
     if (this.auth.selectedGame() === game) return;
@@ -36,9 +41,11 @@ export class GameContextService {
           this.player.upsertPlayerProfile({
             userId,
             gamerTag: profile.gamerTag,
-            primaryPlatform: game,
+            primaryPlatform: backendPlatformForGame(game),
             fortniteId: profile.fortniteId ?? undefined,
             robloxId: profile.robloxId ?? undefined,
+            valorantId: profile.valorantId ?? undefined,
+            rocketLeagueId: profile.rocketLeagueId ?? undefined,
           }),
         ).catch(() => undefined);
       });

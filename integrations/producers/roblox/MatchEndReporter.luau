@@ -1,5 +1,5 @@
 --[[
-  StatsGames — reporter de fin de partida (Roblox)
+  StatsGames — reporter de fin de partida (Roblox · BedWars / Arsenal / partners)
 
   Envía al webhook: jugador, place, JobId, fecha/hora, modo/mapa,
   duración (si se pasa) y stats. Arma un `summary` por defecto si no viene.
@@ -15,10 +15,9 @@
          deaths = 1,
          placement = 2,
          assists = 1,
-         mode = "BedWars",          -- opcional; default = game.Name
-         map = "Classic",           -- opcional
-         durationSec = 312,         -- opcional
-         summary = nil,             -- opcional; se genera solo
+         mode = "BedWars",          -- o "Arsenal"
+         map = "Classic",
+         durationSec = 312,
        })
 
   Requisitos:

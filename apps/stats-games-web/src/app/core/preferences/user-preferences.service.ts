@@ -12,7 +12,7 @@ export interface UserPreferences {
 const DEFAULT_PREFERENCES: UserPreferences = {
   publicProfileEnabled: true,
   appearInSearch: true,
-  statsMode: 'simple',
+  statsMode: 'advanced',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -24,14 +24,8 @@ export class UserPreferencesService {
   readonly appearInSearch = computed(() => this.prefs().appearInSearch);
   readonly statsMode = computed(() => this.prefs().statsMode);
 
-  readonly visibleNavItems = computed((): AppSubnavItem[] => {
-    if (this.statsMode() === 'advanced') {
-      return APP_SUBNAV_ITEMS;
-    }
-    return APP_SUBNAV_ITEMS.filter(
-      (item) => item.id !== 'analytics' && item.id !== 'ai-coach',
-    );
-  });
+  /** Game nav siempre: Overview, Partidas, Estadísticas, AI Coach. */
+  readonly visibleNavItems = computed((): AppSubnavItem[] => APP_SUBNAV_ITEMS);
 
   load(userId: string): void {
     if (this.loadedForUserId === userId) return;

@@ -42,7 +42,7 @@ export interface MatchCardStats {
       [class.sg-match-card--victory]="isVictory"
       [class.sg-match-card--podium]="isPodium"
       [class.sg-match-card--fortnite]="platformKey === 'fortnite'"
-      [class.sg-match-card--roblox]="platformKey === 'roblox'"
+      [attr.data-game]="platformKey"
       [class.sg-match-card--clickable]="clickable"
     >
       @if (isVictory) {
@@ -148,15 +148,27 @@ export class MatchStatCardComponent {
     return p != null && p > 1 && p <= 3;
   }
 
-  get platformTone(): 'cyan' | 'purple' | 'muted' {
-    if (this.platformKey === 'fortnite') return 'cyan';
-    if (this.platformKey === 'roblox') return 'purple';
+  get platformTone(): 'cyan' | 'purple' | 'muted' | 'lime' {
+    if (this.platformKey === 'fortnite' || this.platformKey === 'rocket_league') return 'cyan';
+    if (this.platformKey === 'valorant' || this.platformKey === 'adopt_me') return 'purple';
+    if (this.platformKey) return 'lime';
     return 'muted';
   }
 
   get platformKey(): SelectedGame | null {
     const p = this.platform?.toLowerCase();
-    if (p === 'fortnite' || p === 'roblox') return p;
+    if (!p) return null;
+    if (
+      p === 'fortnite' ||
+      p === 'valorant' ||
+      p === 'rocket_league' ||
+      p === 'blox_fruits' ||
+      p === 'adopt_me' ||
+      p === 'brookhaven'
+    ) {
+      return p;
+    }
+    if (p === 'roblox') return 'blox_fruits';
     return null;
   }
 

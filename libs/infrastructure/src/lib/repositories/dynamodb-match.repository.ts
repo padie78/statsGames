@@ -41,7 +41,7 @@ export class DynamoDbMatchRepository implements IMatchWriter, IMatchReader {
 
   async listByUser(
     userId: string,
-    options?: { platform?: 'fortnite' | 'roblox'; limit?: number },
+    options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league'; limit?: number },
   ): Promise<Match[]> {
     const client = getDocumentClient();
     const limit = options?.limit ?? 50;
@@ -66,7 +66,7 @@ export class DynamoDbMatchRepository implements IMatchWriter, IMatchReader {
       Match.reconstitute({
         userId: String(item['userId']),
         matchId: String(item['matchId']),
-        platform: item['platform'] as 'fortnite' | 'roblox',
+        platform: item['platform'] as 'fortnite' | 'roblox' | 'valorant' | 'rocket_league',
         stats: MatchStats.fromRecord(JSON.parse(String(item['statsJson'] ?? '{}'))),
         occurredAtIso: String(item['occurredAtIso']),
         correlationId: String(item['correlationId']),

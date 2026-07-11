@@ -17,6 +17,14 @@ export function isFortnitePlatform(platform: string): boolean {
   return platform?.toLowerCase() === 'fortnite';
 }
 
+export function isValorantPlatform(platform: string): boolean {
+  return platform?.toLowerCase() === 'valorant';
+}
+
+export function isRocketLeaguePlatform(platform: string): boolean {
+  return platform?.toLowerCase() === 'rocket_league';
+}
+
 export function parseMatchSummary(platform: string, summary: string): ParsedMatchSummary {
   const trimmed = summary?.trim() ?? '';
   const segments = trimmed
@@ -35,8 +43,16 @@ export function parseMatchSummary(platform: string, summary: string): ParsedMatc
   }
 
   const modeLabel = segments[0] ?? null;
+  const fallback = isValorantPlatform(platform)
+    ? 'Valorant'
+    : isRocketLeaguePlatform(platform)
+      ? 'Rocket League'
+      : isFortnitePlatform(platform)
+        ? 'Fortnite'
+        : 'Partida';
+
   return {
-    primaryLabel: modeLabel ?? 'Fortnite',
+    primaryLabel: modeLabel ?? fallback,
     detailLine: segments.length > 1 ? segments.slice(1).join(' · ') : null,
     experienceName: null,
     modeLabel,

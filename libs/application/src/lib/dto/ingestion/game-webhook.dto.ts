@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-export const GamePlatformSchema = z.enum(['fortnite', 'roblox']);
+export const GamePlatformSchema = z.enum([
+  'fortnite',
+  'roblox',
+  'valorant',
+  'rocket_league',
+]);
 
 export const GameWebhookPayloadSchema = z
   .object({

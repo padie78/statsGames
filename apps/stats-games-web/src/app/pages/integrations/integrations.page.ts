@@ -13,7 +13,10 @@ import { AuthService } from '../../core/auth/auth.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
 import { MatchNotificationsStore } from '../../stores/match-notifications.store';
 import { extractGraphqlErrorMessage, mapLinkPlatformError } from '../../utils/graphql-error.util';
+import { robloxAvatarUrl } from '../../utils/roblox-avatar.util';
 import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui';
+
+type LinkablePlatform = 'valorant' | 'rocket_league' | 'fortnite' | 'roblox';
 
 @Component({
   standalone: true,
@@ -34,7 +37,7 @@ import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui
         <header class="sg-page-header">
           <h1 class="sg-page-header__title">Integraciones</h1>
           <p class="sg-page-header__subtitle">
-            Vinculá tu Roblox UserId o Epic account para que las partidas lleguen a tu perfil.
+            Fase 1: Valorant + Rocket League. Fase 2: Fortnite + BedWars/Arsenal (Roblox).
           </p>
         </header>
 
@@ -49,21 +52,62 @@ import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui
         <section class="u-surface-card u-p-5">
           <h2 class="sg-page-header__title u-text-md u-mb-2">Estado de conexión</h2>
           <div class="u-flex u-gap-2 u-flex-wrap">
+            <sg-neon-badge [tone]="profile()?.valorantId ? 'lime' : 'muted'">
+              Valorant {{ profile()?.valorantId ? '✓ ' + profile()!.valorantId : 'sin vincular' }}
+            </sg-neon-badge>
+            <sg-neon-badge [tone]="profile()?.rocketLeagueId ? 'lime' : 'muted'">
+              Rocket League
+              {{ profile()?.rocketLeagueId ? '✓ ' + profile()!.rocketLeagueId : 'sin vincular' }}
+            </sg-neon-badge>
             <sg-neon-badge [tone]="profile()?.fortniteId ? 'cyan' : 'muted'">
               Fortnite {{ profile()?.fortniteId ? '✓ ' + profile()!.fortniteId : 'sin vincular' }}
             </sg-neon-badge>
             <sg-neon-badge [tone]="profile()?.robloxId ? 'cyan' : 'muted'">
-              Roblox {{ profile()?.robloxId ? '✓ ' + profile()!.robloxId : 'sin vincular' }}
+              Roblox experiences
+              {{ profile()?.robloxId ? '✓ ' + profile()!.robloxId : 'sin vincular' }}
             </sg-neon-badge>
           </div>
+          @if (profile()?.robloxId && robloxAvatar()) {
+            <div class="u-flex u-items-center u-gap-3 u-mt-4">
+              <img
+                class="sg-integrations-avatar"
+                [src]="robloxAvatar()!"
+                alt="Avatar Roblox"
+                width="64"
+                height="64"
+              />
+              <p class="u-hint u-m-0">Avatar vía Thumbnails API (UserId vinculado).</p>
+            </div>
+          }
+        </section>
+
+        <section class="u-surface-card u-p-5 u-flex u-flex-col u-gap-3">
+          <h2 class="sg-page-header__title u-text-md u-mb-0">Roadmap de datos</h2>
+          <ul class="sg-integrations__list u-m-0">
+            <li>
+              <strong>Valorant:</strong> Riot API → KDA, headshots, rondas, mapa, agente. Secret
+              <code>RIOT_API_KEY</code>.
+            </li>
+            <li>
+              <strong>Rocket League:</strong> webhook/companion + opcional ballchasing
+              (<code>BALLCHASING_API_KEY</code>) → goles, assists, saves, playlist.
+            </li>
+            <li>
+              <strong>Fortnite:</strong> poller fortnite-api.com (diff de carrera).
+            </li>
+            <li>
+              <strong>Roblox:</strong> Blox Fruits, Adopt Me!, Brookhaven RP (+ BedWars/Arsenal
+              badges). Un UserId vincula todas.
+            </li>
+          </ul>
         </section>
 
         <section class="u-surface-card u-p-5 sg-integrations-link">
           <header class="sg-integrations-link__header">
             <h2 class="sg-page-header__title u-text-md u-m-0">Vincular cuenta</h2>
             <p class="u-hint u-m-0">
-              Podés vincular o actualizar en cualquier momento. El ID tiene que coincidir con el
-              <code>platformUserId</code> del webhook.
+              El ID debe coincidir con el que usan poller / webhook
+              (<code>platformUserId</code>).
             </p>
           </header>
 
@@ -91,27 +135,10 @@ import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui
               </ion-item>
             </ion-list>
 
-            @if (linkForm.controls.platform.value === 'roblox') {
-              <div class="sg-integrations-help">
-                <p class="sg-integrations-help__title u-m-0">Cómo obtener tu Roblox UserId</p>
-                <ol class="sg-integrations-help__steps u-m-0">
-                  <li>
-                    Abrí tu perfil en Roblox. La URL es
-                    <code>roblox.com/users/<strong>123456789</strong>/profile</code>
-                  </li>
-                  <li>Copiá solo el número (ej. <code>123456789</code>), no el username.</li>
-                  <li>Pegalo acá y tocá Vincular.</li>
-                </ol>
-              </div>
-            } @else {
-              <div class="sg-integrations-help">
-                <p class="sg-integrations-help__title u-m-0">Fortnite / Epic</p>
-                <p class="u-hint u-m-0">
-                  Usá tu Epic account id (32 hex) o tu display name. Tiene que ser el mismo que
-                  usa el poller o el companion.
-                </p>
-              </div>
-            }
+            <div class="sg-integrations-help">
+              <p class="sg-integrations-help__title u-m-0">{{ helpTitle() }}</p>
+              <p class="u-hint u-m-0">{{ helpBody() }}</p>
+            </div>
 
             @if (linkError()) {
               <p class="u-error">{{ linkError() }}</p>
@@ -130,45 +157,30 @@ import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui
           </form>
         </section>
 
-        <section class="u-surface-card u-p-5 u-flex u-flex-col u-gap-3">
-          <h2 class="sg-page-header__title u-text-md u-mb-0">Cómo llega la data</h2>
-          <p class="u-hint u-m-0">
-            Al terminar una partida:
-            <code>POST /webhooks/&#123;platform&#125;</code> → <code>game_ingestion</code> → SQS →
-            <code>game_processor</code> → DynamoDB + AppSync.
-          </p>
-          <ul class="sg-integrations__list u-m-0">
-            <li>
-              <strong>Roblox:</strong> script en tu experience
-              (<code>integrations/producers/roblox/MatchEndReporter.luau</code>).
-            </li>
-            <li>
-              <strong>Fortnite:</strong> poller de stats o companion
-              (<code>integrations/producers/fortnite/send-match.mjs</code>).
-            </li>
-          </ul>
-        </section>
-
         <section class="u-surface-card u-p-5">
-          <h2 class="sg-page-header__title u-text-md u-mb-2">Webhook URL</h2>
+          <h2 class="sg-page-header__title u-text-md u-mb-2">Smoke test</h2>
           <p class="u-hint u-mb-2">
-            Header <code>X-Webhook-Secret</code>. Body con
-            <code>platformUserId</code>, <code>matchId</code> y <code>stats</code>.
+            <code>npm run send:match -- --platform valorant --kills 18 --deaths 14 --assists 6</code>
           </p>
-          <code class="sg-code-block">{{ webhookFortniteUrl }}</code>
-          <code class="sg-code-block u-mt-2">{{ webhookRobloxUrl }}</code>
+          <code class="sg-code-block">{{ webhookUrl }}</code>
           <div class="u-flex u-gap-2 u-flex-wrap u-mt-4">
             <button type="button" class="u-btn u-btn--ghost" (click)="demoNotification()">
               Simular partida en vivo
             </button>
           </div>
-          <p class="u-hint u-mt-2 u-m-0">
-            Prueba la campana del topbar: llega con “IA pendiente” y ~4s después pasa a “IA lista”.
-          </p>
         </section>
       </div>
     </ion-content>
   `,
+  styles: [
+    `
+      .sg-integrations-avatar {
+        border-radius: 12px;
+        border: 1px solid rgba(163, 230, 53, 0.35);
+        background: #0b1220;
+      }
+    `,
+  ],
 })
 export class IntegrationsPageComponent implements OnInit {
   readonly auth = inject(AuthService);
@@ -184,36 +196,79 @@ export class IntegrationsPageComponent implements OnInit {
   readonly linkSuccess = signal<string | null>(null);
 
   readonly webhookBase = environment.webhookUrlPattern ?? '';
-  readonly webhookFortniteUrl = this.webhookBase.replace('{platform}', 'fortnite');
-  readonly webhookRobloxUrl = this.webhookBase.replace('{platform}', 'roblox');
+  readonly webhookUrl = this.webhookBase || '…/webhooks/{platform}';
 
-  readonly allPlatformOptions: SelectOption<'fortnite' | 'roblox'>[] = [
-    { value: 'roblox', label: 'Roblox' },
-    { value: 'fortnite', label: 'Fortnite' },
+  readonly allPlatformOptions: SelectOption<LinkablePlatform>[] = [
+    { value: 'valorant', label: 'Valorant (Fase 1)' },
+    { value: 'rocket_league', label: 'Rocket League (Fase 1)' },
+    { value: 'fortnite', label: 'Fortnite (Fase 2)' },
+    { value: 'roblox', label: 'Roblox (Blox Fruits / Adopt Me / Brookhaven)' },
   ];
 
-  readonly externalIdLabel = computed(() =>
-    this.linkForm.controls.platform.value === 'fortnite'
-      ? 'Epic account id / display name'
-      : 'Roblox UserId (número)',
-  );
+  readonly robloxAvatar = computed(() => {
+    const id = this.profile()?.robloxId;
+    return id ? robloxAvatarUrl(id) : null;
+  });
 
-  readonly externalIdPlaceholder = computed(() =>
-    this.linkForm.controls.platform.value === 'fortnite'
-      ? 'ej. TuDisplayName o id Epic'
-      : 'ej. 123456789',
-  );
+  readonly externalIdLabel = computed(() => {
+    switch (this.linkForm.controls.platform.value) {
+      case 'valorant':
+        return 'Riot ID (Nombre#TAG)';
+      case 'rocket_league':
+        return 'Epic / player name';
+      case 'fortnite':
+        return 'Epic account id / display name';
+      default:
+        return 'Roblox UserId (número)';
+    }
+  });
+
+  readonly externalIdPlaceholder = computed(() => {
+    switch (this.linkForm.controls.platform.value) {
+      case 'valorant':
+        return 'ej. Player#NA1';
+      case 'rocket_league':
+        return 'ej. TuEpicName';
+      case 'fortnite':
+        return 'ej. TuDisplayName';
+      default:
+        return 'ej. 123456789';
+    }
+  });
+
+  readonly helpTitle = computed(() => {
+    switch (this.linkForm.controls.platform.value) {
+      case 'valorant':
+        return 'Valorant / Riot';
+      case 'rocket_league':
+        return 'Rocket League';
+      case 'fortnite':
+        return 'Fortnite';
+      default:
+        return 'BedWars & Arsenal';
+    }
+  });
+
+  readonly helpBody = computed(() => {
+    switch (this.linkForm.controls.platform.value) {
+      case 'valorant':
+        return 'Usá tu Riot ID exacto (Nombre#TAG). Stats vía Riot match-v1 tras configurar RIOT_API_KEY.';
+      case 'rocket_league':
+        return 'Nombre visible en replays/ballchasing o companion. API oficial Psyonix no está abierta: webhook o ballchasing.';
+      case 'fortnite':
+        return 'Stats públicas en Epic. Preferí account id 32-hex. Poller cada ~3 min.';
+      default:
+        return 'UserId numérico. Trackea Blox Fruits, Adopt Me!, Brookhaven RP, BedWars y Arsenal vía badges.';
+    }
+  });
 
   readonly submitLabel = computed(() => {
     const platform = this.linkForm.controls.platform.value;
-    const p = this.profile();
-    const already =
-      platform === 'roblox' ? !!p?.robloxId : !!p?.fortniteId;
-    return already ? 'Actualizar vínculo' : 'Vincular cuenta';
+    return this.linkedId(platform) ? 'Actualizar vínculo' : 'Vincular cuenta';
   });
 
   readonly linkForm = this.fb.nonNullable.group({
-    platform: ['roblox' as 'fortnite' | 'roblox', Validators.required],
+    platform: ['valorant' as LinkablePlatform, Validators.required],
     externalId: ['', [Validators.required, Validators.minLength(1)]],
   });
 
@@ -258,11 +313,7 @@ export class IntegrationsPageComponent implements OnInit {
       );
       this.profile.set(updated);
       this.loadError.set(null);
-      this.linkSuccess.set(
-        platform === 'roblox'
-          ? `Roblox vinculado: ${updated.robloxId}`
-          : `Fortnite vinculado: ${updated.fortniteId}`,
-      );
+      this.linkSuccess.set(`${this.platformLabel(platform)} vinculado: ${trimmedId}`);
       this.prefillExternalId(platform);
     } catch (err) {
       this.linkError.set(mapLinkPlatformError(err));
@@ -271,10 +322,9 @@ export class IntegrationsPageComponent implements OnInit {
     }
   }
 
-  /** Si no hay perfil en Dynamo, lo crea antes de vincular (evita PlayerNotFound). */
   private async ensurePlayerProfile(
     userId: string,
-    platform: 'fortnite' | 'roblox',
+    platform: LinkablePlatform,
   ): Promise<void> {
     if (this.profile()) return;
 
@@ -302,10 +352,7 @@ export class IntegrationsPageComponent implements OnInit {
     this.notifications.pushDemoMatch({
       userId: this.auth.userId() ?? 'demo',
       platform,
-      summary:
-        platform === 'roblox'
-          ? 'Roblox · partida terminada'
-          : 'Fortnite · partida terminada',
+      summary: `${this.platformLabel(platform)} · partida detectada`,
     });
   }
 
@@ -327,9 +374,7 @@ export class IntegrationsPageComponent implements OnInit {
           'No encontramos tu perfil. Completá el onboarding y volvé a esta página.',
         );
       } else {
-        const preferred = profile.robloxId ? 'fortnite' : 'roblox';
-        const platform =
-          !profile.robloxId ? 'roblox' : !profile.fortniteId ? 'fortnite' : preferred;
+        const platform = this.preferredPlatform(profile);
         this.linkForm.patchValue({ platform }, { emitEvent: false });
         this.prefillExternalId(platform);
       }
@@ -340,9 +385,45 @@ export class IntegrationsPageComponent implements OnInit {
     }
   }
 
-  private prefillExternalId(platform: 'fortnite' | 'roblox'): void {
+  private preferredPlatform(profile: PlayerProfileView): LinkablePlatform {
+    if (!profile.valorantId) return 'valorant';
+    if (!profile.rocketLeagueId) return 'rocket_league';
+    if (!profile.fortniteId) return 'fortnite';
+    if (!profile.robloxId) return 'roblox';
+    return 'valorant';
+  }
+
+  private linkedId(platform: LinkablePlatform): string | null | undefined {
     const p = this.profile();
-    const current = platform === 'roblox' ? p?.robloxId : p?.fortniteId;
-    this.linkForm.patchValue({ externalId: current ?? '' }, { emitEvent: false });
+    switch (platform) {
+      case 'valorant':
+        return p?.valorantId;
+      case 'rocket_league':
+        return p?.rocketLeagueId;
+      case 'fortnite':
+        return p?.fortniteId;
+      case 'roblox':
+        return p?.robloxId;
+    }
+  }
+
+  private prefillExternalId(platform: LinkablePlatform): void {
+    this.linkForm.patchValue(
+      { externalId: this.linkedId(platform) ?? '' },
+      { emitEvent: false },
+    );
+  }
+
+  private platformLabel(platform: LinkablePlatform): string {
+    switch (platform) {
+      case 'valorant':
+        return 'Valorant';
+      case 'rocket_league':
+        return 'Rocket League';
+      case 'fortnite':
+        return 'Fortnite';
+      case 'roblox':
+        return 'BedWars / Arsenal';
+    }
   }
 }

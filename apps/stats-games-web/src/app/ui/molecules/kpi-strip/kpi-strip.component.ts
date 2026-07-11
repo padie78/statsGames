@@ -25,8 +25,7 @@ export interface KpiStripItem {
   template: `
     <section
       class="sg-kpi-strip"
-      [class.sg-kpi-strip--roblox]="platform === 'roblox'"
-      [class.sg-kpi-strip--fortnite]="platform === 'fortnite'"
+      [attr.data-game]="platform || null"
       [class.sg-kpi-strip--animating]="animating"
       [attr.aria-label]="title"
     >

@@ -35,6 +35,30 @@ variable "fortnite_api_key" {
   description = "API key de fortnite-api.com (poller Fortnite Route B)."
 }
 
+variable "riot_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "API key Riot Games (poller Valorant)."
+}
+
+variable "valorant_region" {
+  type    = string
+  default = "americas"
+}
+
+variable "valorant_shard" {
+  type    = string
+  default = "na"
+}
+
+variable "ballchasing_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "API key ballchasing.com (poller Rocket League)."
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags adicionales propagados a todos los recursos."

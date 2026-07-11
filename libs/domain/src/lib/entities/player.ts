@@ -6,6 +6,8 @@ export interface PlayerProfileProps {
   primaryPlatform: GamePlatform;
   fortniteId?: string;
   robloxId?: string;
+  valorantId?: string;
+  rocketLeagueId?: string;
   avatarUrl?: string;
   createdAtIso: string;
   updatedAtIso: string;
@@ -21,6 +23,8 @@ export class PlayerProfile {
     primaryPlatform: GamePlatform;
     fortniteId?: string;
     robloxId?: string;
+    valorantId?: string;
+    rocketLeagueId?: string;
     avatarUrl?: string;
     nowIso?: string;
   }): PlayerProfile {
@@ -31,6 +35,8 @@ export class PlayerProfile {
       primaryPlatform: input.primaryPlatform,
       fortniteId: input.fortniteId,
       robloxId: input.robloxId,
+      valorantId: input.valorantId,
+      rocketLeagueId: input.rocketLeagueId,
       avatarUrl: input.avatarUrl,
       createdAtIso: now,
       updatedAtIso: now,
@@ -62,6 +68,14 @@ export class PlayerProfile {
     return this.props.robloxId;
   }
 
+  get valorantId(): string | undefined {
+    return this.props.valorantId;
+  }
+
+  get rocketLeagueId(): string | undefined {
+    return this.props.rocketLeagueId;
+  }
+
   get avatarUrl(): string | undefined {
     return this.props.avatarUrl;
   }
@@ -83,6 +97,8 @@ export class PlayerProfile {
     primaryPlatform?: GamePlatform;
     fortniteId?: string;
     robloxId?: string;
+    valorantId?: string;
+    rocketLeagueId?: string;
     avatarUrl?: string;
     nowIso?: string;
   }): PlayerProfile {
@@ -92,6 +108,8 @@ export class PlayerProfile {
       primaryPlatform: input.primaryPlatform ?? this.props.primaryPlatform,
       fortniteId: input.fortniteId ?? this.props.fortniteId,
       robloxId: input.robloxId ?? this.props.robloxId,
+      valorantId: input.valorantId ?? this.props.valorantId,
+      rocketLeagueId: input.rocketLeagueId ?? this.props.rocketLeagueId,
       avatarUrl: input.avatarUrl ?? this.props.avatarUrl,
       updatedAtIso: input.nowIso ?? new Date().toISOString(),
       versionId: this.props.versionId + 1,
@@ -99,9 +117,19 @@ export class PlayerProfile {
   }
 
   linkPlatform(platform: GamePlatform, externalId: string): PlayerProfile {
-    if (platform === 'fortnite') {
-      return this.update({ fortniteId: externalId, primaryPlatform: platform });
+    switch (platform) {
+      case 'fortnite':
+        return this.update({ fortniteId: externalId, primaryPlatform: platform });
+      case 'roblox':
+        return this.update({ robloxId: externalId, primaryPlatform: platform });
+      case 'valorant':
+        return this.update({ valorantId: externalId, primaryPlatform: platform });
+      case 'rocket_league':
+        return this.update({ rocketLeagueId: externalId, primaryPlatform: platform });
+      default: {
+        const _exhaustive: never = platform;
+        return _exhaustive;
+      }
     }
-    return this.update({ robloxId: externalId, primaryPlatform: platform });
   }
 }

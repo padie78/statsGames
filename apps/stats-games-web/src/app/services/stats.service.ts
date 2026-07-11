@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { generateClient } from 'aws-amplify/api';
 import { Observable, from, map } from 'rxjs';
+import type { BackendPlatform } from '../core/game/selected-game';
 import { assertGraphqlData } from '../utils/graphql-error.util';
 
 export interface PlayerStatsRollupView {
@@ -141,7 +142,7 @@ export class StatsService {
     userId: string,
     granularity: 'DAILY' | 'WEEKLY' | 'MONTHLY',
     periodId: string,
-    platform?: 'fortnite' | 'roblox',
+    platform?: BackendPlatform,
   ): Observable<PlayerStatsRollupView[]> {
     return from(
       this.client.graphql({
@@ -158,7 +159,7 @@ export class StatsService {
 
   listPlayerDailyTrend(
     userId: string,
-    platform?: 'fortnite' | 'roblox',
+    platform?: BackendPlatform,
     days = 7,
   ): Observable<PlayerStatsRollupView[]> {
     return from(
@@ -175,7 +176,7 @@ export class StatsService {
   }
 
   getCommunityBenchmarks(
-    platform: 'fortnite' | 'roblox',
+    platform: BackendPlatform,
     periodId: string,
   ): Observable<CommunityBenchmarksView> {
     return from(
@@ -192,7 +193,7 @@ export class StatsService {
   }
 
   listWeeklyLeaderboard(
-    platform: 'fortnite' | 'roblox',
+    platform: BackendPlatform,
     periodId: string,
     limit = 5,
   ): Observable<LeaderboardEntryView[]> {

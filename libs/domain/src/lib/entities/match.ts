@@ -80,9 +80,18 @@ export class Match {
     const placement = Number(record['placement'] ?? record['rank'] ?? NaN);
     const durationSec = Number(record['durationSec'] ?? NaN);
 
-    const bits: string[] = [
-      experience || (this.props.platform === 'fortnite' ? 'Fortnite' : 'Roblox'),
-    ];
+    const platformLabel =
+      this.props.platform === 'fortnite'
+        ? 'Fortnite'
+        : this.props.platform === 'roblox'
+          ? 'Roblox'
+          : this.props.platform === 'valorant'
+            ? 'Valorant'
+            : this.props.platform === 'rocket_league'
+              ? 'Rocket League'
+              : this.props.platform;
+
+    const bits: string[] = [experience || platformLabel];
     if (mode && mode !== experience) bits.push(mode);
     if (map) bits.push(map);
     if (Number.isFinite(placement) && placement > 0) bits.push(`Top ${Math.trunc(placement)}`);

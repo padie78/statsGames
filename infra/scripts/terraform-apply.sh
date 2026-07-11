@@ -15,3 +15,10 @@ echo "=== Webhooks de ingesta ==="
 terraform output webhook_url_pattern
 terraform output -raw media_proxy_base_url || true
 terraform output media_proxy_name || true
+
+echo ""
+echo "=== Fortnite / Valorant / RL / Roblox pollers ==="
+terraform output fortnite_stats_poller_name || true
+terraform output valorant_match_poller_name || true
+terraform output rocket_league_match_poller_name || true
+terraform output roblox_experience_poller_name || true

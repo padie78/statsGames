@@ -238,3 +238,136 @@ resource "aws_lambda_permission" "fortnite_stats_poller_events" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.fortnite_stats_poller.arn
 }
+
+# ─────────── Valorant Route A: Riot matchlist → SQS ───────────
+
+resource "aws_lambda_function" "valorant_match_poller" {
+  function_name    = "${var.name_prefix}-valorant-match-poller"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = 120
+  memory_size      = 512
+  architectures    = ["arm64"]
+
+  environment {
+    variables = {
+      TABLE_NAME               = var.table_name
+      GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+      RIOT_API_KEY             = var.riot_api_key
+      VALORANT_REGION          = var.valorant_region
+      VALORANT_SHARD           = var.valorant_shard
+      LOG_LEVEL                = "INFO"
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "valorant_match_poller" {
+  name                = "${var.name_prefix}-valorant-match-poller"
+  description         = "Poll Valorant match history via Riot API"
+  schedule_expression = var.valorant_poll_schedule
+  state               = var.riot_api_key != "" ? "ENABLED" : "DISABLED"
+}
+
+resource "aws_cloudwatch_event_target" "valorant_match_poller" {
+  rule      = aws_cloudwatch_event_rule.valorant_match_poller.name
+  target_id = "valorant-match-poller"
+  arn       = aws_lambda_function.valorant_match_poller.arn
+}
+
+resource "aws_lambda_permission" "valorant_match_poller_events" {
+  statement_id  = "AllowEventBridgeInvokeValorantMatchPoller"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.valorant_match_poller.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.valorant_match_poller.arn
+}
+
+# ─────────── Rocket League: ballchasing replays → SQS (opcional) ───────────
+
+resource "aws_lambda_function" "rocket_league_match_poller" {
+  function_name    = "${var.name_prefix}-rocket-league-match-poller"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = 120
+  memory_size      = 512
+  architectures    = ["arm64"]
+
+  environment {
+    variables = {
+      TABLE_NAME               = var.table_name
+      GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+      BALLCHASING_API_KEY      = var.ballchasing_api_key
+      LOG_LEVEL                = "INFO"
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "rocket_league_match_poller" {
+  name                = "${var.name_prefix}-rocket-league-match-poller"
+  description         = "Poll Rocket League replays via ballchasing.com"
+  schedule_expression = var.rocket_league_poll_schedule
+  state               = var.ballchasing_api_key != "" ? "ENABLED" : "DISABLED"
+}
+
+resource "aws_cloudwatch_event_target" "rocket_league_match_poller" {
+  rule      = aws_cloudwatch_event_rule.rocket_league_match_poller.name
+  target_id = "rocket-league-match-poller"
+  arn       = aws_lambda_function.rocket_league_match_poller.arn
+}
+
+resource "aws_lambda_permission" "rocket_league_match_poller_events" {
+  statement_id  = "AllowEventBridgeInvokeRocketLeagueMatchPoller"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.rocket_league_match_poller.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.rocket_league_match_poller.arn
+}
+
+# ─────────── Roblox BedWars + Arsenal: badge milestones → SQS ───────────
+
+resource "aws_lambda_function" "roblox_experience_poller" {
+  function_name    = "${var.name_prefix}-roblox-experience-poller"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = 120
+  memory_size      = 512
+  architectures    = ["arm64"]
+
+  environment {
+    variables = {
+      TABLE_NAME               = var.table_name
+      GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+      LOG_LEVEL                = "INFO"
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "roblox_experience_poller" {
+  name                = "${var.name_prefix}-roblox-experience-poller"
+  description         = "Poll Roblox BedWars + Arsenal badge milestones"
+  schedule_expression = var.roblox_experience_poll_schedule
+  state               = "ENABLED"
+}
+
+resource "aws_cloudwatch_event_target" "roblox_experience_poller" {
+  rule      = aws_cloudwatch_event_rule.roblox_experience_poller.name
+  target_id = "roblox-experience-poller"
+  arn       = aws_lambda_function.roblox_experience_poller.arn
+}
+
+resource "aws_lambda_permission" "roblox_experience_poller_events" {
+  statement_id  = "AllowEventBridgeInvokeRobloxExperiencePoller"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.roblox_experience_poller.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.roblox_experience_poller.arn
+}

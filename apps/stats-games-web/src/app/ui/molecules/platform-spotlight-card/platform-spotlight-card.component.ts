@@ -15,8 +15,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
   template: `
     <section
       class="sg-platform-spotlight"
-      [class.sg-platform-spotlight--roblox]="platform === 'roblox'"
-      [class.sg-platform-spotlight--fortnite]="platform === 'fortnite'"
+      [attr.data-game]="platform"
     >
       <img
         class="sg-platform-spotlight__art"
@@ -37,7 +36,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
             <p class="sg-platform-spotlight__eyebrow">Arena activa</p>
             <h2 class="sg-platform-spotlight__title">{{ meta.label }}</h2>
           </div>
-          <sg-neon-badge [tone]="platform === 'roblox' ? 'lime' : 'purple'">
+          <sg-neon-badge [tone]="badgeTone">
             LIVE CONTEXT
           </sg-neon-badge>
         </div>
@@ -75,5 +74,16 @@ export class PlatformSpotlightCardComponent {
 
   get meta(): GamePlatformMeta {
     return gamePlatformMeta(this.platform);
+  }
+
+  get badgeTone(): 'cyan' | 'purple' | 'lime' {
+    if (this.platform === 'valorant' || this.platform === 'adopt_me') return 'purple';
+    if (
+      this.platform === 'blox_fruits' ||
+      this.platform === 'brookhaven'
+    ) {
+      return 'lime';
+    }
+    return 'cyan';
   }
 }

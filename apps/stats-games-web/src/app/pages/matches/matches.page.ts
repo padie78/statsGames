@@ -2,6 +2,7 @@ import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal 
 import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
+import type { SelectedGame } from '../../core/game/selected-game';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import {
   KpiStripComponent,
@@ -115,9 +116,9 @@ export class MatchesPageComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
 
-  readonly bannerPlatform = computed((): 'fortnite' | 'roblox' => {
+  readonly bannerPlatform = computed((): SelectedGame => {
     const filter = this.platformFilter();
-    if (filter === 'fortnite' || filter === 'roblox') return filter;
+    if (filter !== 'all') return filter;
     return this.gameContext.activeGame() ?? 'fortnite';
   });
 

@@ -150,8 +150,7 @@ import {
             @for (platform of platforms; track platform.id) {
               <article
                 class="sg-home-hero__platform-card"
-                [class.sg-home-hero__platform-card--roblox]="platform.id === 'roblox'"
-                [class.sg-home-hero__platform-card--fortnite]="platform.id === 'fortnite'"
+                [attr.data-game]="platform.id"
               >
                 <img class="sg-home-hero__platform-art" [src]="platform.artUrl" [alt]="platform.label" />
                 <div class="sg-home-hero__platform-overlay"></div>
@@ -198,8 +197,7 @@ import {
             @for (platform of platforms; track platform.id) {
               <article
                 class="sg-home-platforms__card"
-                [class.sg-home-platforms__card--roblox]="platform.id === 'roblox'"
-                [class.sg-home-platforms__card--fortnite]="platform.id === 'fortnite'"
+                [attr.data-game]="platform.id"
               >
                 <img class="sg-home-platforms__art" [src]="platform.artUrl" [alt]="platform.label" />
                 <div class="sg-home-platforms__overlay"></div>

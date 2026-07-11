@@ -2,9 +2,9 @@ import {
   Component,
   EventEmitter,
   HostListener,
-  Input,
   Output,
   ViewEncapsulation,
+  computed,
   effect,
   inject,
   signal,
@@ -15,10 +15,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { UserPreferencesService } from '../../../core/preferences/user-preferences.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PlayerService, type PlayerSearchHitView } from '../../../services/player.service';
+import { APP_ACCOUNT_MENU_ITEMS } from '../../../core/navigation/app-nav.config';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
-import { GamePlatformSwitcherComponent } from '../../molecules/game-platform-switcher/game-platform-switcher.component';
 import { NotificationsBellComponent } from '../../molecules/notifications-bell/notifications-bell.component';
 
+/**
+ * Línea 2 del chrome TRN:
+ * Search —— User actions
+ */
 @Component({
   standalone: true,
   selector: 'sg-app-topbar',
@@ -27,24 +31,11 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
     RouterLink,
     RouterLinkActive,
     NeonBadgeComponent,
-    GamePlatformSwitcherComponent,
     NotificationsBellComponent,
   ],
   template: `
-    <header class="sg-topbar sg-topbar--global">
+    <header class="sg-topbar sg-topbar--trn">
       <div class="sg-topbar__inner">
-        <div class="sg-topbar__left">
-          <a routerLink="/" class="sg-topbar__brand" aria-label="StatsGames home">
-            <span class="sg-topbar__logo">SG</span>
-            <span class="sg-topbar__brand-copy">
-              <span class="sg-topbar__brand-name">StatsGames</span>
-              <span class="sg-topbar__brand-tag">Analytics</span>
-            </span>
-          </a>
-
-          <sg-game-platform-switcher class="sg-topbar__platform-switch" />
-        </div>
-
         <div class="sg-topbar__center sg-topbar__search-wrap">
           <label class="sg-topbar__search">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -52,7 +43,7 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
             </svg>
             <input
               type="search"
-              placeholder="Buscar jugador…"
+              placeholder="Search for a player…"
               [value]="searchQuery()"
               (input)="onSearchInput($event)"
               (focus)="searchOpen.set(true)"
@@ -83,23 +74,75 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
 
         <div class="sg-topbar__right">
           <sg-notifications-bell />
-          @if (live) {
-            <sg-neon-badge tone="cyan" [pulse]="true" class="sg-topbar__live-badge">Live</sg-neon-badge>
-          }
-          <div class="sg-topbar__user sg-topbar__user--desktop">
-            <span class="sg-topbar__avatar">{{ userInitials() }}</span>
-            <div class="sg-topbar__user-meta">
-              <span class="sg-topbar__user-email u-truncate">{{ auth.email() ?? 'Gamer' }}</span>
-              <span class="sg-topbar__user-role">Pro</span>
-            </div>
+
+          <div class="sg-topbar__account" [class.sg-topbar__account--open]="accountMenuOpen()">
+            <button
+              type="button"
+              class="sg-topbar__account-trigger"
+              [attr.aria-expanded]="accountMenuOpen()"
+              aria-haspopup="true"
+              aria-controls="sg-topbar-account-menu"
+              aria-label="Menú de cuenta"
+              (click)="toggleAccountMenu($event)"
+            >
+              <span class="sg-topbar__avatar">{{ userInitials() }}</span>
+              <span class="sg-topbar__account-meta">
+                <span class="sg-topbar__user-email u-truncate">
+                  {{ gamerTag() || auth.email() || 'Gamer' }}
+                </span>
+                <span class="sg-topbar__user-role">Cuenta</span>
+              </span>
+              <span class="sg-topbar__account-caret" aria-hidden="true"></span>
+            </button>
+
+            @if (accountMenuOpen()) {
+              <div
+                id="sg-topbar-account-menu"
+                class="sg-topbar__account-menu"
+                role="menu"
+                aria-label="Cuenta"
+              >
+                <div class="sg-topbar__account-head">
+                  <span class="sg-topbar__avatar">{{ userInitials() }}</span>
+                  <div class="sg-topbar__user-meta">
+                    <span class="sg-topbar__user-email u-truncate">
+                      {{ gamerTag() || auth.email() || 'Gamer' }}
+                    </span>
+                    <span class="sg-topbar__user-role">Pro</span>
+                  </div>
+                </div>
+
+                @if (profileRoute(); as profilePath) {
+                  <a
+                    class="sg-topbar__account-item"
+                    role="menuitem"
+                    [routerLink]="profilePath"
+                    (click)="closeAccountMenu()"
+                  >
+                    Mi perfil
+                  </a>
+                }
+                @for (item of accountMenuItems; track item.id) {
+                  <a
+                    class="sg-topbar__account-item"
+                    role="menuitem"
+                    [routerLink]="item.route"
+                    (click)="closeAccountMenu()"
+                  >
+                    {{ item.label }}
+                  </a>
+                }
+                <button
+                  type="button"
+                  class="sg-topbar__account-item sg-topbar__account-item--danger"
+                  role="menuitem"
+                  (click)="onAccountLogout()"
+                >
+                  Salir
+                </button>
+              </div>
+            }
           </div>
-          <button
-            type="button"
-            class="sg-topbar__logout u-btn u-btn--ghost sg-topbar__logout--desktop"
-            (click)="logout.emit()"
-          >
-            Salir
-          </button>
 
           <button
             type="button"
@@ -136,7 +179,7 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
             </svg>
             <input
               type="search"
-              placeholder="Buscar jugador…"
+              placeholder="Search for a player…"
               [value]="searchQuery()"
               (input)="onSearchInput($event)"
               (focus)="searchOpen.set(true)"
@@ -165,11 +208,6 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
           }
         </div>
 
-        <div class="sg-topbar__mobile-section">
-          <p class="sg-topbar__mobile-label">Plataforma</p>
-          <sg-game-platform-switcher class="sg-platform-switch--mobile-menu" />
-        </div>
-
         <nav class="sg-topbar__mobile-nav" aria-label="Secciones">
           @for (item of navItems(); track item.id) {
             <a
@@ -177,9 +215,6 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
               [routerLink]="item.route"
               routerLinkActive="sg-topbar__mobile-link--active"
               [routerLinkActiveOptions]="{ exact: true }"
-              [class.sg-topbar__mobile-link--lime]="item.tone === 'lime'"
-              [class.sg-topbar__mobile-link--purple]="item.tone === 'purple'"
-              [class.sg-topbar__mobile-link--cyan]="item.tone === 'cyan'"
               (click)="closeMobileMenu()"
             >
               <span>{{ item.label }}</span>
@@ -191,13 +226,24 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
         </nav>
 
         <div class="sg-topbar__mobile-footer">
-          <div class="sg-topbar__user sg-topbar__user--mobile">
-            <span class="sg-topbar__avatar">{{ userInitials() }}</span>
-            <div class="sg-topbar__user-meta">
-              <span class="sg-topbar__user-email u-truncate">{{ auth.email() ?? 'Gamer' }}</span>
-              <span class="sg-topbar__user-role">Pro</span>
-            </div>
-          </div>
+          @if (profileRoute(); as profilePath) {
+            <a
+              class="sg-topbar__mobile-link"
+              [routerLink]="profilePath"
+              (click)="closeMobileMenu()"
+            >
+              Mi perfil
+            </a>
+          }
+          @for (item of accountMenuItems; track item.id) {
+            <a
+              class="sg-topbar__mobile-link"
+              [routerLink]="item.route"
+              (click)="closeMobileMenu()"
+            >
+              {{ item.label }}
+            </a>
+          }
           <button type="button" class="u-btn u-btn--ghost sg-topbar__mobile-logout" (click)="onMobileLogout()">
             Salir
           </button>
@@ -213,20 +259,38 @@ export class AppTopbarComponent {
   private readonly router = inject(Router);
   private readonly search$ = new Subject<string>();
 
-  @Input() live = false;
   @Output() readonly logout = new EventEmitter<void>();
 
   readonly navItems = this.prefs.visibleNavItems;
+  readonly accountMenuItems = APP_ACCOUNT_MENU_ITEMS;
+  readonly gamerTag = signal<string | null>(null);
+  readonly profileRoute = computed(() => {
+    const tag = this.gamerTag();
+    return tag ? `/player/${encodeURIComponent(tag)}` : null;
+  });
   readonly searchQuery = signal('');
   readonly searchResults = signal<PlayerSearchHitView[]>([]);
   readonly searching = signal(false);
   readonly searchOpen = signal(false);
   readonly mobileMenuOpen = signal(false);
+  readonly accountMenuOpen = signal(false);
 
   constructor() {
     effect(() => {
       const userId = this.auth.userId();
       if (userId) this.prefs.load(userId);
+    });
+
+    effect(() => {
+      const userId = this.auth.userId();
+      if (!userId) {
+        this.gamerTag.set(null);
+        return;
+      }
+      void this.playerService
+        .getPlayerProfileOrNull(userId)
+        .then((profile) => this.gamerTag.set(profile?.gamerTag ?? null))
+        .catch(() => this.gamerTag.set(null));
     });
 
     this.search$
@@ -259,19 +323,33 @@ export class AppTopbarComponent {
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.closeMobileMenu());
+      .subscribe(() => {
+        this.closeMobileMenu();
+        this.closeAccountMenu();
+      });
 
     effect(() => {
       document.body.classList.toggle('sg-nav-lock', this.mobileMenuOpen());
     });
   }
 
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest('.sg-topbar__account')) {
+      this.closeAccountMenu();
+    }
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.closeMobileMenu();
+    this.closeAccountMenu();
   }
 
   userInitials(): string {
+    const tag = this.gamerTag();
+    if (tag) return tag.slice(0, 2).toUpperCase();
     const email = this.auth.email();
     if (!email) return 'SG';
     return email.slice(0, 2).toUpperCase();
@@ -290,6 +368,20 @@ export class AppTopbarComponent {
     this.searchResults.set([]);
     this.closeMobileMenu();
     void this.router.navigate(['/player', hit.gamerTag]);
+  }
+
+  toggleAccountMenu(event: Event): void {
+    event.stopPropagation();
+    this.accountMenuOpen.update((open) => !open);
+  }
+
+  closeAccountMenu(): void {
+    this.accountMenuOpen.set(false);
+  }
+
+  onAccountLogout(): void {
+    this.closeAccountMenu();
+    this.logout.emit();
   }
 
   toggleMobileMenu(): void {

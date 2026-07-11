@@ -141,10 +141,13 @@ function stampUserId(seeds: MockMatchSeed[], userId: string): MatchUpdateView[] 
 
 export function filterMockMatchesByPlatform(
   matches: MatchUpdateView[],
-  platform?: 'fortnite' | 'roblox' | null,
+  platform?: string | null,
 ): MatchUpdateView[] {
   if (!platform) return matches;
-  return matches.filter((m) => m.platform === platform);
+  const key = platform === 'blox_fruits' || platform === 'adopt_me' || platform === 'brookhaven'
+    ? 'roblox'
+    : platform;
+  return matches.filter((m) => m.platform === key);
 }
 
 export function buildMockMatchHistory(userId: string): MatchUpdateView[] {
@@ -158,7 +161,7 @@ export function buildMockLiveStream(userId: string): MatchUpdateView[] {
 export function resolveMatchHistory(
   apiMatches: MatchUpdateView[],
   userId: string,
-  platform?: 'fortnite' | 'roblox' | null,
+  platform?: string | null,
 ): MatchUpdateView[] {
   const source = apiMatches.length > 0 ? apiMatches : buildMockMatchHistory(userId);
   return filterMockMatchesByPlatform(source, platform);

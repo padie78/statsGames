@@ -43,6 +43,7 @@ export {
 } from './organisms/live-match-feed/live-match-feed.component';
 export { GameSelectionCardComponent } from './molecules/game-selection-card/game-selection-card.component';
 export { GamePlatformSwitcherComponent } from './molecules/game-platform-switcher/game-platform-switcher.component';
+export { PlayerSearchHeroComponent } from './molecules/player-search-hero/player-search-hero.component';
 export { AmbientPanelComponent, type AmbientPanelVariant } from './molecules/ambient-panel/ambient-panel.component';
 export { PlatformPageBannerComponent } from './molecules/platform-page-banner/platform-page-banner.component';
 export { PlatformSpotlightCardComponent } from './molecules/platform-spotlight-card/platform-spotlight-card.component';

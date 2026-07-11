@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, type SelectedGame } from '../../core/services/auth.service';
+import { GAME_PLATFORM_LIST } from '../../core/game/game-platform.config';
+import { backendPlatformForGame } from '../../core/game/selected-game';
 import { PlayerService } from '../../services/player.service';
 import { GameSelectionCardComponent, NeonBadgeComponent } from '../../ui';
 
@@ -29,22 +31,19 @@ import { GameSelectionCardComponent, NeonBadgeComponent } from '../../ui';
       <div class="auth-shell auth-shell--wide">
         <section class="u-surface-card u-p-5">
           <sg-neon-badge tone="purple">Onboarding</sg-neon-badge>
-          <h1 class="sg-page-header__title u-text-2xl u-mt-3 u-mb-2">Elegí tu plataforma</h1>
+          <h1 class="sg-page-header__title u-text-2xl u-mt-3 u-mb-2">Elegí tu juego</h1>
           <p class="sg-page-header__subtitle u-mb-4">
-            Seleccioná el juego principal para calibrar tu feed en vivo y métricas de rendimiento.
+            Valorant, Rocket League, Fortnite o Roblox (Blox Fruits, Adopt Me!, Brookhaven RP).
           </p>
 
-          <div class="sg-game-picker u-mb-4">
-            <sg-game-selection-card
-              game="roblox"
-              [selected]="selectedGame() === 'roblox'"
-              (select)="pickGame($event)"
-            />
-            <sg-game-selection-card
-              game="fortnite"
-              [selected]="selectedGame() === 'fortnite'"
-              (select)="pickGame($event)"
-            />
+          <div class="sg-game-picker sg-game-picker--grid u-mb-4">
+            @for (platform of platforms; track platform.id) {
+              <sg-game-selection-card
+                [game]="platform.id"
+                [selected]="selectedGame() === platform.id"
+                (select)="pickGame($event)"
+              />
+            }
           </div>
 
           @if (error()) {
@@ -71,6 +70,7 @@ export class OnboardingPageComponent {
   private readonly player = inject(PlayerService);
   private readonly router = inject(Router);
 
+  readonly platforms = GAME_PLATFORM_LIST;
   readonly selectedGame = signal<SelectedGame | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -98,7 +98,7 @@ export class OnboardingPageComponent {
         this.player.upsertPlayerProfile({
           userId,
           gamerTag,
-          primaryPlatform: game,
+          primaryPlatform: backendPlatformForGame(game),
         }),
       );
 

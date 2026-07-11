@@ -16,7 +16,7 @@ import { AppSyncRealtimeService } from '../../services/appsync-realtime.service'
 import { MatchNotificationsStore } from '../../stores/match-notifications.store';
 import {
   AppSubnavComponent,
-  AppTopbarComponent,
+  GamePlatformSwitcherComponent,
   MatchNotificationToastComponent,
 } from '../../ui';
 
@@ -26,21 +26,26 @@ import {
   encapsulation: ViewEncapsulation.None,
   imports: [
     RouterOutlet,
-    AppTopbarComponent,
+    GamePlatformSwitcherComponent,
     AppSubnavComponent,
     MatchNotificationToastComponent,
   ],
   template: `
     <div
-      class="sg-app-shell sg-app-shell--dual-topbar"
-      [class.sg-app-shell--roblox]="activeGame() === 'roblox'"
-      [class.sg-app-shell--fortnite]="activeGame() === 'fortnite'"
+      class="sg-app-shell sg-app-shell--trn"
+      [attr.data-game]="activeGame() ?? 'fortnite'"
       [class.sg-app-shell--scrolled]="chromeScroll.isScrolled()"
       [style.--sg-chrome-scroll]="chromeScroll.scrollProgress()"
       [style.--sg-shell-glow]="shellGlow()"
     >
-      <sg-app-topbar [live]="realtime.isLive()" (logout)="logout()" />
-      <sg-app-subnav />
+      <div class="sg-app-shell__chrome">
+        <!-- 1) Logo + games -->
+        <sg-game-platform-switcher />
+        <!-- 2) Game tabs + per-game search + account -->
+        <div class="sg-app-shell__header-block">
+          <sg-app-subnav (logout)="logout()" />
+        </div>
+      </div>
       <main class="sg-app-shell__content">
         <router-outlet />
       </main>

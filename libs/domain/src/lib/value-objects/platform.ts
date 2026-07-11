@@ -1,8 +1,13 @@
 import { InvalidPlatformError } from '../errors/domain-errors';
 
-export type GamePlatform = 'fortnite' | 'roblox';
+export type GamePlatform = 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
 
-const PLATFORMS: ReadonlySet<string> = new Set(['fortnite', 'roblox']);
+const PLATFORMS: ReadonlySet<string> = new Set([
+  'fortnite',
+  'roblox',
+  'valorant',
+  'rocket_league',
+]);
 
 export class Platform {
   private constructor(public readonly value: GamePlatform) {}
@@ -13,6 +18,10 @@ export class Platform {
       throw new InvalidPlatformError(raw);
     }
     return new Platform(normalized as GamePlatform);
+  }
+
+  static all(): readonly GamePlatform[] {
+    return ['valorant', 'rocket_league', 'fortnite', 'roblox'];
   }
 
   toString(): string {

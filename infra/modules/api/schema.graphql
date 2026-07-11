@@ -31,6 +31,8 @@ type PlayerProfile @aws_api_key @aws_cognito_user_pools {
   primaryPlatform: String!
   fortniteId: String
   robloxId: String
+  valorantId: String
+  rocketLeagueId: String
   avatarUrl: String
   createdAtIso: AWSDateTime!
   updatedAtIso: AWSDateTime!
@@ -58,6 +60,8 @@ input UpsertPlayerProfileInput {
   primaryPlatform: String!
   fortniteId: String
   robloxId: String
+  valorantId: String
+  rocketLeagueId: String
   avatarUrl: String
 }
 

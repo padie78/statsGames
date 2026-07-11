@@ -1,4 +1,11 @@
-import type { SelectedGame } from '../services/auth.service';
+import {
+  backendPlatformForGame,
+  isRobloxExperienceGame,
+  type SelectedGame,
+} from './selected-game';
+
+export type { SelectedGame };
+export { backendPlatformForGame, isRobloxExperienceGame };
 
 export interface GamePlatformMeta {
   id: SelectedGame;
@@ -8,40 +15,49 @@ export interface GamePlatformMeta {
   tagline: string;
   statsHint: string;
   artUrl: string;
-  /** Arte vertical para picker tipo portrait (Mobalytics-style) */
   portraitUrl: string;
   iconUrl: string;
-  /** Loop WebM opcional — si falta, usa animación CSS */
   ambientVideoUrl?: string;
-  /**
-   * Banner press kit opcional (copiar a /assets/press/... tras revisar licencia Epic/Roblox).
-   * Si existe, PlatformMediaService lo prioriza sobre artUrl.
-   */
   pressBannerUrl?: string;
-  /** Trailer oficial YouTube (click-to-play, no hostear MP4) */
   officialTrailerVideoId?: string;
   officialTrailerTitle?: string;
-  accent: 'lime' | 'purple';
-  /** Color para fondos y glow del shell cuando este juego está activo */
+  accent: 'lime' | 'cyan' | 'purple' | 'amber' | 'rose' | 'sky';
   shellGlow: string;
+  themeClass: string;
 }
 
 export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
-  roblox: {
-    id: 'roblox',
-    label: 'Roblox',
-    shortLabel: 'RBX',
-    badge: 'Sandbox · Experiences',
-    tagline: 'Sesiones largas, XP y economía de experiencias.',
-    statsHint: 'Sessions · XP/h · Hops',
-    artUrl: '/assets/games/roblox-hero.png',
-    portraitUrl: '/assets/games/roblox-hero.png',
-    iconUrl: '/assets/games/roblox-icon.png',
-    ambientVideoUrl: '/assets/ambient/roblox-abstract-loop.webm',
-    officialTrailerVideoId: '_EPelwsaF9E',
-    officialTrailerTitle: 'Roblox 2021 Cinematic (oficial)',
-    accent: 'lime',
-    shellGlow: 'rgba(107, 203, 138, 0.12)',
+  valorant: {
+    id: 'valorant',
+    label: 'Valorant',
+    shortLabel: 'VAL',
+    badge: 'Tactical FPS · Ranked',
+    tagline: 'KDA, headshots y clutch por ronda.',
+    statsHint: 'K/D · HS% · Rounds',
+    artUrl: '/assets/games/valorant-hero.svg',
+    portraitUrl: '/assets/games/valorant-portrait.svg',
+    iconUrl: '/assets/games/valorant-icon.svg',
+    officialTrailerVideoId: 'IhhjcL2enJk',
+    officialTrailerTitle: 'Valorant trailer',
+    accent: 'rose',
+    shellGlow: 'rgba(255, 70, 85, 0.14)',
+    themeClass: 'sg-theme--valorant',
+  },
+  rocket_league: {
+    id: 'rocket_league',
+    label: 'Rocket League',
+    shortLabel: 'RL',
+    badge: 'Sports · Competitive',
+    tagline: 'Goles, saves y MMR en cada playlist.',
+    statsHint: 'Goals · Saves · Shot%',
+    artUrl: '/assets/games/rocket_league-hero.svg',
+    portraitUrl: '/assets/games/rocket_league-portrait.svg',
+    iconUrl: '/assets/games/rocket_league-icon.svg',
+    officialTrailerVideoId: 'SgSX3gOrj60',
+    officialTrailerTitle: 'Rocket League trailer',
+    accent: 'sky',
+    shellGlow: 'rgba(56, 189, 248, 0.14)',
+    themeClass: 'sg-theme--rocket_league',
   },
   fortnite: {
     id: 'fortnite',
@@ -50,23 +66,69 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     badge: 'Battle Royale · Ranked',
     tagline: 'Placement, eliminations y clutch en cada storm.',
     statsHint: 'Placement · K/D · Win Rate',
-    artUrl: '/assets/games/fortnite-hero.png',
-    portraitUrl: '/assets/games/fortnite-hero.png',
-    iconUrl: '/assets/games/fortnite-icon.png',
-    ambientVideoUrl: '/assets/ambient/fortnite-abstract-loop.webm',
+    artUrl: '/assets/games/fortnite-hero.svg',
+    portraitUrl: '/assets/games/fortnite-portrait.svg',
+    iconUrl: '/assets/games/fortnite-icon.svg',
     officialTrailerVideoId: 'V5L24DFTFUo',
-    officialTrailerTitle: 'Chapter 7 Season 3 · Official Cinematic',
+    officialTrailerTitle: 'Fortnite cinematic',
     accent: 'purple',
     shellGlow: 'rgba(139, 131, 240, 0.14)',
+    themeClass: 'sg-theme--fortnite',
+  },
+  blox_fruits: {
+    id: 'blox_fruits',
+    label: 'Blox Fruits',
+    shortLabel: 'BF',
+    badge: 'Roblox · Adventure',
+    tagline: 'Seas, fruits y raids — hitos por badges.',
+    statsHint: 'Seas · Badges · Progress',
+    artUrl: '/assets/games/blox_fruits-hero.svg',
+    portraitUrl: '/assets/games/blox_fruits-portrait.svg',
+    iconUrl: '/assets/games/blox_fruits-icon.svg',
+    accent: 'amber',
+    shellGlow: 'rgba(251, 191, 36, 0.14)',
+    themeClass: 'sg-theme--blox_fruits',
+  },
+  adopt_me: {
+    id: 'adopt_me',
+    label: 'Adopt Me!',
+    shortLabel: 'AM',
+    badge: 'Roblox · Pets',
+    tagline: 'Pets, eggs y quests de temporada.',
+    statsHint: 'Quests · Pets · Badges',
+    artUrl: '/assets/games/adopt_me-hero.svg',
+    portraitUrl: '/assets/games/adopt_me-portrait.svg',
+    iconUrl: '/assets/games/adopt_me-icon.svg',
+    accent: 'rose',
+    shellGlow: 'rgba(244, 114, 182, 0.14)',
+    themeClass: 'sg-theme--adopt_me',
+  },
+  brookhaven: {
+    id: 'brookhaven',
+    label: 'Brookhaven RP',
+    shortLabel: 'BH',
+    badge: 'Roblox · Roleplay',
+    tagline: 'Vida en la ciudad — sesiones y estilo.',
+    statsHint: 'Sessions · Presence',
+    artUrl: '/assets/games/brookhaven-hero.svg',
+    portraitUrl: '/assets/games/brookhaven-portrait.svg',
+    iconUrl: '/assets/games/brookhaven-icon.svg',
+    accent: 'lime',
+    shellGlow: 'rgba(132, 204, 22, 0.14)',
+    themeClass: 'sg-theme--brookhaven',
   },
 };
 
 export const GAME_PLATFORM_LIST: GamePlatformMeta[] = [
-  GAME_PLATFORMS['roblox'],
-  GAME_PLATFORMS['fortnite'],
+  GAME_PLATFORMS.valorant,
+  GAME_PLATFORMS.rocket_league,
+  GAME_PLATFORMS.fortnite,
+  GAME_PLATFORMS.blox_fruits,
+  GAME_PLATFORMS.adopt_me,
+  GAME_PLATFORMS.brookhaven,
 ];
 
 export function gamePlatformMeta(game: SelectedGame | null | undefined): GamePlatformMeta {
-  if (game === 'roblox') return GAME_PLATFORMS['roblox'];
-  return GAME_PLATFORMS['fortnite'];
+  if (game && game in GAME_PLATFORMS) return GAME_PLATFORMS[game];
+  return GAME_PLATFORMS.fortnite;
 }

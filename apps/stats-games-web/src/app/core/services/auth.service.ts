@@ -14,8 +14,12 @@ import { isOAuthConfigured } from '../../amplify.config';
 import { environment } from '../../../environments/environment';
 import { AuthPendingConfirmationError, isAlreadyAuthenticatedError, mapAuthErrorMessage } from '../auth/auth.errors';
 import { decodeJwtPayload } from '../auth/appsync-auth.util';
+import {
+  normalizeSelectedGame,
+  type SelectedGame,
+} from '../game/selected-game';
 
-export type SelectedGame = 'roblox' | 'fortnite';
+export type { SelectedGame };
 export type SocialProvider = 'Google' | 'Apple' | 'Discord';
 
 @Injectable({ providedIn: 'root' })
@@ -145,11 +149,7 @@ export class AuthService {
     try {
       const attrs = await fetchUserAttributes();
       const raw = attrs['custom:selected_game'];
-      if (raw === 'roblox' || raw === 'fortnite') {
-        this._selectedGame.set(raw);
-      } else {
-        this._selectedGame.set(null);
-      }
+      this._selectedGame.set(normalizeSelectedGame(raw));
 
       if (attrs.email) {
         this._email.set(attrs.email);
@@ -215,8 +215,10 @@ export class AuthService {
     this._userId.set(sub);
     this._email.set(email);
 
-    if (selectedGame === 'roblox' || selectedGame === 'fortnite') {
-      this._selectedGame.set(selectedGame);
+    const normalized =
+      typeof selectedGame === 'string' ? normalizeSelectedGame(selectedGame) : null;
+    if (normalized) {
+      this._selectedGame.set(normalized);
     }
   }
 }

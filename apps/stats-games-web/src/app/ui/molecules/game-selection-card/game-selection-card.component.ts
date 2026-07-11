@@ -14,8 +14,7 @@ import type { SelectedGame } from '../../../core/services/auth.service';
       type="button"
       class="sg-game-tile"
       [class.sg-game-tile--selected]="selected"
-      [class.sg-game-tile--roblox]="game === 'roblox'"
-      [class.sg-game-tile--fortnite]="game === 'fortnite'"
+      [attr.data-game]="game"
       [attr.aria-pressed]="selected"
       (click)="select.emit(game)"
     >

@@ -83,6 +83,18 @@ output "fortnite_stats_poller_name" {
   value = module.lambdas.fortnite_stats_poller_name
 }
 
+output "valorant_match_poller_name" {
+  value = module.lambdas.valorant_match_poller_name
+}
+
+output "rocket_league_match_poller_name" {
+  value = module.lambdas.rocket_league_match_poller_name
+}
+
+output "roblox_experience_poller_name" {
+  value = module.lambdas.roblox_experience_poller_name
+}
+
 output "game_processor_name" {
   value = module.lambdas.game_processor_name
 }

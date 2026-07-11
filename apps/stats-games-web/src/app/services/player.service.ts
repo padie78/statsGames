@@ -10,6 +10,8 @@ export interface PlayerProfileView {
   primaryPlatform: string;
   fortniteId?: string | null;
   robloxId?: string | null;
+  valorantId?: string | null;
+  rocketLeagueId?: string | null;
   avatarUrl?: string | null;
 }
 
@@ -31,15 +33,17 @@ export interface PlayerSearchHitView {
 export interface UpsertPlayerProfileInput {
   userId: string;
   gamerTag: string;
-  primaryPlatform: 'fortnite' | 'roblox';
+  primaryPlatform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
   fortniteId?: string;
   robloxId?: string;
+  valorantId?: string;
+  rocketLeagueId?: string;
   avatarUrl?: string;
 }
 
 export interface LinkPlatformAccountInput {
   userId: string;
-  platform: 'fortnite' | 'roblox';
+  platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
   externalId: string;
 }
 
@@ -63,15 +67,21 @@ interface SearchPlayersResp {
   searchPlayers: PlayerSearchHitView[];
 }
 
+const PROFILE_FIELDS = /* GraphQL */ `
+  userId
+  gamerTag
+  primaryPlatform
+  fortniteId
+  robloxId
+  valorantId
+  rocketLeagueId
+  avatarUrl
+`;
+
 const GET_PLAYER_PROFILE = /* GraphQL */ `
   query GetPlayerProfile($userId: ID!) {
     getPlayerProfile(userId: $userId) {
-      userId
-      gamerTag
-      primaryPlatform
-      fortniteId
-      robloxId
-      avatarUrl
+      ${PROFILE_FIELDS}
     }
   }
 `;
@@ -79,12 +89,7 @@ const GET_PLAYER_PROFILE = /* GraphQL */ `
 const UPSERT_PLAYER_PROFILE = /* GraphQL */ `
   mutation UpsertPlayerProfile($input: UpsertPlayerProfileInput!) {
     upsertPlayerProfile(input: $input) {
-      userId
-      gamerTag
-      primaryPlatform
-      fortniteId
-      robloxId
-      avatarUrl
+      ${PROFILE_FIELDS}
       createdAtIso
       updatedAtIso
       versionId
@@ -95,12 +100,7 @@ const UPSERT_PLAYER_PROFILE = /* GraphQL */ `
 const LINK_PLATFORM_ACCOUNT = /* GraphQL */ `
   mutation LinkPlatformAccount($input: LinkPlatformAccountInput!) {
     linkPlatformAccount(input: $input) {
-      userId
-      gamerTag
-      primaryPlatform
-      fortniteId
-      robloxId
-      avatarUrl
+      ${PROFILE_FIELDS}
       createdAtIso
       updatedAtIso
       versionId

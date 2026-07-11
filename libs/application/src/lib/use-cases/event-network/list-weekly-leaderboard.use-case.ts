@@ -8,7 +8,7 @@ export class ListWeeklyLeaderboardUseCase {
   ) {}
 
   async execute(input: {
-    platform: 'fortnite' | 'roblox';
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
     periodId: string;
     limit?: number;
   }) {

@@ -57,6 +57,15 @@ jobs:
           - path: ingestion/fortnite_stats_poller
             artifact: fortnite_stats_poller
             tf_output: fortnite_stats_poller_name
+          - path: ingestion/valorant_match_poller
+            artifact: valorant_match_poller
+            tf_output: valorant_match_poller_name
+          - path: ingestion/rocket_league_match_poller
+            artifact: rocket_league_match_poller
+            tf_output: rocket_league_match_poller_name
+          - path: ingestion/roblox_experience_poller
+            artifact: roblox_experience_poller
+            tf_output: roblox_experience_poller_name
 
     steps:
       - name: Checkout
@@ -115,6 +124,15 @@ jobs:
           - path: ingestion/fortnite_stats_poller
             artifact: fortnite_stats_poller
             tf_output: fortnite_stats_poller_name
+          - path: ingestion/valorant_match_poller
+            artifact: valorant_match_poller
+            tf_output: valorant_match_poller_name
+          - path: ingestion/rocket_league_match_poller
+            artifact: rocket_league_match_poller
+            tf_output: rocket_league_match_poller_name
+          - path: ingestion/roblox_experience_poller
+            artifact: roblox_experience_poller
+            tf_output: roblox_experience_poller_name
 
     steps:
       - name: Checkout

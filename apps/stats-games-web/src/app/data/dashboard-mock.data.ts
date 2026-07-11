@@ -1,7 +1,9 @@
+import type { SelectedGame } from '../core/game/selected-game';
+
 export interface LeaderboardEntry {
   rank: number;
   gamerTag: string;
-  platform: 'fortnite' | 'roblox';
+  platform: SelectedGame;
   score: number;
   delta: string;
   trend: 'up' | 'down' | 'flat';
@@ -30,24 +32,24 @@ export interface LiveTickerItem {
 
 export const MOCK_LEADERBOARD: LeaderboardEntry[] = [
   { rank: 1, gamerTag: 'NeoFragger', platform: 'fortnite', score: 2840, delta: '+12%', trend: 'up' },
-  { rank: 2, gamerTag: 'ShadowAim', platform: 'fortnite', score: 2712, delta: '+8%', trend: 'up' },
-  { rank: 3, gamerTag: 'UpStatsPro', platform: 'roblox', score: 2655, delta: '+5%', trend: 'up' },
-  { rank: 4, gamerTag: 'PixelQueen', platform: 'roblox', score: 2490, delta: '-2%', trend: 'down' },
-  { rank: 5, gamerTag: 'TRN_Demo', platform: 'fortnite', score: 2388, delta: '+3%', trend: 'up' },
+  { rank: 2, gamerTag: 'AceHunter', platform: 'valorant', score: 2712, delta: '+8%', trend: 'up' },
+  { rank: 3, gamerTag: 'FruitKing', platform: 'blox_fruits', score: 2655, delta: '+5%', trend: 'up' },
+  { rank: 4, gamerTag: 'PetTrader', platform: 'adopt_me', score: 2490, delta: '-2%', trend: 'down' },
+  { rank: 5, gamerTag: 'OctanePro', platform: 'rocket_league', score: 2388, delta: '+3%', trend: 'up' },
 ];
 
 export const MOCK_TRENDING: TrendingItem[] = [
   { id: '1', label: 'Zero Build ranked surge', meta: 'Fortnite · +18% players', tone: 'cyan' },
-  { id: '2', label: 'Blox Fruits PvP meta shift', meta: 'Roblox · Hot today', tone: 'purple' },
-  { id: '3', label: 'Placement avg improving', meta: 'Community · Top 15%', tone: 'cyan' },
-  { id: '4', label: 'New season challenges', meta: 'S37 · 4d left', tone: 'pink' },
+  { id: '2', label: 'Blox Fruits seas grind', meta: 'Roblox · Hot today', tone: 'purple' },
+  { id: '3', label: 'Valorant Act climb', meta: 'VAL · Top 15%', tone: 'cyan' },
+  { id: '4', label: 'Adopt Me! pet meta', meta: 'AM · Season pets', tone: 'pink' },
 ];
 
 export const MOCK_ACHIEVEMENTS: AchievementItem[] = [
   { id: 'streak', title: 'Win streak', subtitle: '3 strong sessions', icon: '🔥', tone: 'lime' },
   { id: 'top', title: 'Top 12%', subtitle: 'Placement this week', icon: '⚡', tone: 'purple' },
   { id: 'grind', title: 'Grinder', subtitle: '10+ matches logged', icon: '💀', tone: 'pink' },
-  { id: 'clutch', title: 'Clutch kills', subtitle: 'Best: 12 eliminations', icon: '🎯', tone: 'cyan' },
+  { id: 'clutch', title: 'Clutch kills', subtitle: 'Best: 12 eliminations', icon: '🎯', tone: 'cyan' },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
 ];
 
 export const MOCK_TICKER: LiveTickerItem[] = [

@@ -1,4 +1,5 @@
-import type { SelectedGame } from '../core/services/auth.service';
+import type { SelectedGame } from '../core/game/selected-game';
+import { isRobloxExperienceGame } from '../core/game/selected-game';
 import type { LeaderboardEntry } from './dashboard-mock.data';
 
 export interface CommunityBenchmarks {
@@ -17,7 +18,7 @@ export interface CommunityBenchmarks {
 export interface CommunityRankRow {
   rank: number;
   gamerTag: string;
-  platform: 'fortnite' | 'roblox';
+  platform: SelectedGame;
   isYou: boolean;
   kd: number;
   winRate: number;
@@ -45,29 +46,35 @@ interface PeerSeed {
   trend: 'up' | 'down' | 'flat';
 }
 
+const BENCHMARK_FPS: Omit<CommunityBenchmarks, 'platform'> = {
+  sampleSize: 18_400,
+  avgWinRate: 31,
+  avgKd: 1.12,
+  avgKillsPerWeek: 84,
+  avgMatchesPerWeek: 22,
+  winRateStd: 14,
+  kdStd: 0.45,
+  killsStd: 38,
+};
+
+const BENCHMARK_ROBLOX: Omit<CommunityBenchmarks, 'platform'> = {
+  sampleSize: 12_600,
+  avgWinRate: 28,
+  avgKd: 0.98,
+  avgKillsPerWeek: 62,
+  avgMatchesPerWeek: 18,
+  winRateStd: 13,
+  kdStd: 0.4,
+  killsStd: 30,
+};
+
 export const MOCK_COMMUNITY_BENCHMARKS: Record<SelectedGame, CommunityBenchmarks> = {
-  fortnite: {
-    platform: 'fortnite',
-    sampleSize: 18_400,
-    avgWinRate: 31,
-    avgKd: 1.12,
-    avgKillsPerWeek: 84,
-    avgMatchesPerWeek: 22,
-    winRateStd: 14,
-    kdStd: 0.45,
-    killsStd: 38,
-  },
-  roblox: {
-    platform: 'roblox',
-    sampleSize: 12_600,
-    avgWinRate: 28,
-    avgKd: 0.98,
-    avgKillsPerWeek: 62,
-    avgMatchesPerWeek: 18,
-    winRateStd: 13,
-    kdStd: 0.4,
-    killsStd: 30,
-  },
+  valorant: { platform: 'valorant', ...BENCHMARK_FPS, sampleSize: 22_100, avgKd: 1.05 },
+  rocket_league: { platform: 'rocket_league', ...BENCHMARK_FPS, sampleSize: 15_200, avgKd: 0.92 },
+  fortnite: { platform: 'fortnite', ...BENCHMARK_FPS },
+  blox_fruits: { platform: 'blox_fruits', ...BENCHMARK_ROBLOX, sampleSize: 14_800 },
+  adopt_me: { platform: 'adopt_me', ...BENCHMARK_ROBLOX, sampleSize: 11_200, avgKd: 0.7 },
+  brookhaven: { platform: 'brookhaven', ...BENCHMARK_ROBLOX, sampleSize: 9_400, avgKd: 0.55 },
 };
 
 const PEERS_FORTNITE: PeerSeed[] = [
@@ -102,6 +109,23 @@ const PEERS_ROBLOX: PeerSeed[] = [
   { gamerTag: 'LagWarrior', kd: 0.8, winRate: 19, kills: 46, matches: 16, delta: '-2%', trend: 'down' },
 ];
 
+const PEERS_VALORANT: PeerSeed[] = PEERS_FORTNITE.map((p, i) => ({
+  ...p,
+  gamerTag: ['AceHunter', 'JettMain', 'CypherWatch', 'ClutchSage', 'ReynaFlash', 'OmenSmoke'][i % 6] + (i + 1),
+}));
+
+const PEERS_RL: PeerSeed[] = PEERS_FORTNITE.map((p, i) => ({
+  ...p,
+  gamerTag: ['OctanePro', 'AerialKing', 'SaveGod', 'DemoLord', 'BoostStarve', 'FlipReset'][i % 6] + (i + 1),
+}));
+
+function peersFor(platform: SelectedGame): PeerSeed[] {
+  if (platform === 'valorant') return PEERS_VALORANT;
+  if (platform === 'rocket_league') return PEERS_RL;
+  if (isRobloxExperienceGame(platform)) return PEERS_ROBLOX;
+  return PEERS_FORTNITE;
+}
+
 export const MOCK_LEADERBOARD_FORTNITE: LeaderboardEntry[] = PEERS_FORTNITE.slice(0, 5).map(
   (peer, index) => ({
     rank: index + 1,
@@ -117,7 +141,7 @@ export const MOCK_LEADERBOARD_ROBLOX: LeaderboardEntry[] = PEERS_ROBLOX.slice(0,
   (peer, index) => ({
     rank: index + 1,
     gamerTag: peer.gamerTag,
-    platform: 'roblox' as const,
+    platform: 'blox_fruits' as const,
     score: communityScore(peer),
     delta: peer.delta,
     trend: peer.trend,
@@ -125,7 +149,16 @@ export const MOCK_LEADERBOARD_ROBLOX: LeaderboardEntry[] = PEERS_ROBLOX.slice(0,
 );
 
 export function mockLeaderboardForPlatform(platform: SelectedGame): LeaderboardEntry[] {
-  return platform === 'roblox' ? MOCK_LEADERBOARD_ROBLOX : MOCK_LEADERBOARD_FORTNITE;
+  return peersFor(platform)
+    .slice(0, 5)
+    .map((peer, index) => ({
+      rank: index + 1,
+      gamerTag: peer.gamerTag,
+      platform,
+      score: communityScore(peer),
+      delta: peer.delta,
+      trend: peer.trend,
+    }));
 }
 
 export function communityScore(input: {
@@ -152,7 +185,7 @@ export function buildCommunityRankNeighborhood(input: {
 }): CommunityRankTableView {
   const radius = input.radius ?? 3;
   const platform = input.platform;
-  const peers = platform === 'roblox' ? PEERS_ROBLOX : PEERS_FORTNITE;
+  const peers = peersFor(platform);
   const tag = (input.gamerTag || 'Vos').trim() || 'Vos';
 
   const board: CommunityRankRow[] = peers

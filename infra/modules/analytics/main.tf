@@ -7,7 +7,7 @@ resource "aws_glue_catalog_database" "analytics" {
 
 locals {
   data_lake_s3_root = "s3://${var.data_lake_bucket_name}/"
-  platforms         = ["fortnite", "roblox"]
+  platforms         = ["valorant", "rocket_league", "fortnite", "roblox"]
 }
 
 resource "aws_glue_catalog_table" "match_history" {

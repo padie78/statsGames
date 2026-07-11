@@ -7,6 +7,8 @@ export const PlayerProfileDtoSchema = z.object({
   primaryPlatform: GamePlatformSchema,
   fortniteId: z.string().optional(),
   robloxId: z.string().optional(),
+  valorantId: z.string().optional(),
+  rocketLeagueId: z.string().optional(),
   avatarUrl: z.string().url().optional(),
   createdAtIso: z.string().min(1),
   updatedAtIso: z.string().min(1),
@@ -21,6 +23,8 @@ export const UpsertPlayerProfileInputSchema = z.object({
   primaryPlatform: GamePlatformSchema,
   fortniteId: z.string().optional(),
   robloxId: z.string().optional(),
+  valorantId: z.string().optional(),
+  rocketLeagueId: z.string().optional(),
   avatarUrl: z.string().url().optional(),
 });
 

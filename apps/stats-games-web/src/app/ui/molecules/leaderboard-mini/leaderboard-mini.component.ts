@@ -1,12 +1,16 @@
 import { Component, Input, ViewEncapsulation } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
+import {
+  selectedGameFromBackend,
+  type SelectedGame,
+} from '../../../core/game/selected-game';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 export interface LeaderboardEntry {
   rank: number;
   gamerTag: string;
-  platform: 'fortnite' | 'roblox';
+  platform: SelectedGame;
   score: number;
   delta: string;
   trend: 'up' | 'down' | 'flat';
@@ -46,8 +50,8 @@ export interface LeaderboardEntry {
                 [src]="platformIcon(entry.platform)"
                 [alt]="entry.platform"
               />
-              <sg-neon-badge [tone]="entry.platform === 'fortnite' ? 'cyan' : 'purple'">
-                {{ entry.platform === 'fortnite' ? 'FN' : 'RBX' }}
+              <sg-neon-badge [tone]="badgeTone(entry.platform)">
+                {{ shortLabel(entry.platform) }}
               </sg-neon-badge>
               <span class="sg-leaderboard-mini__score">{{ entry.score }}</span>
               <span
@@ -70,7 +74,18 @@ export class LeaderboardMiniComponent {
   @Input({ required: true }) entries: LeaderboardEntry[] = [];
   @Input() highlightGamerTag = '';
 
-  platformIcon(platform: 'fortnite' | 'roblox'): string {
-    return gamePlatformMeta(platform).iconUrl;
+  platformIcon(platform: SelectedGame | string): string {
+    return gamePlatformMeta(selectedGameFromBackend(platform)).iconUrl;
+  }
+
+  shortLabel(platform: SelectedGame | string): string {
+    return gamePlatformMeta(selectedGameFromBackend(platform)).shortLabel;
+  }
+
+  badgeTone(platform: SelectedGame | string): 'cyan' | 'purple' | 'lime' | 'muted' {
+    const g = selectedGameFromBackend(platform);
+    if (g === 'fortnite' || g === 'rocket_league') return 'cyan';
+    if (g === 'valorant' || g === 'adopt_me') return 'purple';
+    return 'lime';
   }
 }

@@ -15,8 +15,7 @@ import { AmbientPanelComponent } from '../ambient-panel/ambient-panel.component'
   template: `
     <header
       class="sg-platform-banner"
-      [class.sg-platform-banner--roblox]="platform === 'roblox'"
-      [class.sg-platform-banner--fortnite]="platform === 'fortnite'"
+      [attr.data-game]="platform"
       [class.sg-platform-banner--animating]="animating"
     >
       <sg-ambient-panel
@@ -67,6 +66,9 @@ export class PlatformPageBannerComponent implements OnChanges {
   }
 
   get badgeTone(): 'cyan' | 'purple' | 'lime' {
-    return this.platform === 'fortnite' ? 'cyan' : 'lime';
+    if (this.platform === 'valorant' || this.platform === 'adopt_me') return 'purple';
+    if (this.platform === 'blox_fruits' || this.platform === 'brookhaven') return 'lime';
+    if (this.platform === 'fortnite' || this.platform === 'rocket_league') return 'cyan';
+    return 'lime';
   }
 }

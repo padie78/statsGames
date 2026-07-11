@@ -26,6 +26,11 @@ env:
   TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'stats-games' }}
   TF_VAR_appsync_graphql_api_name: ${{ vars.APPSYNC_GRAPHQL_API_NAME || 'api' }}
   TF_VAR_webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
+  TF_VAR_fortnite_api_key: ${{ secrets.FORTNITE_API_KEY }}
+  TF_VAR_riot_api_key: ${{ secrets.RIOT_API_KEY }}
+  TF_VAR_ballchasing_api_key: ${{ secrets.BALLCHASING_API_KEY }}
+  TF_VAR_valorant_region: ${{ vars.VALORANT_REGION || 'americas' }}
+  TF_VAR_valorant_shard: ${{ vars.VALORANT_SHARD || 'na' }}
 
 jobs:
   terraform:

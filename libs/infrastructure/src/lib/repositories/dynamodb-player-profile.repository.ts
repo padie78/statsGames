@@ -106,6 +106,8 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
           primaryPlatform: profile.primaryPlatform,
           fortniteId: profile.fortniteId,
           robloxId: profile.robloxId,
+          valorantId: profile.valorantId,
+          rocketLeagueId: profile.rocketLeagueId,
           avatarUrl: profile.avatarUrl,
           createdAtIso: profile.createdAtIso,
           updatedAtIso: profile.updatedAtIso,
@@ -166,9 +168,11 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
     return PlayerProfile.reconstitute({
       userId: String(item['userId']),
       gamerTag: String(item['gamerTag']),
-      primaryPlatform: item['primaryPlatform'] as 'fortnite' | 'roblox',
+      primaryPlatform: item['primaryPlatform'] as PlayerProfile['primaryPlatform'],
       fortniteId: item['fortniteId'] ? String(item['fortniteId']) : undefined,
       robloxId: item['robloxId'] ? String(item['robloxId']) : undefined,
+      valorantId: item['valorantId'] ? String(item['valorantId']) : undefined,
+      rocketLeagueId: item['rocketLeagueId'] ? String(item['rocketLeagueId']) : undefined,
       avatarUrl: item['avatarUrl'] ? String(item['avatarUrl']) : undefined,
       createdAtIso: String(item['createdAtIso']),
       updatedAtIso: String(item['updatedAtIso']),
@@ -178,13 +182,19 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
 
   private async syncPlatformAccountLinks(profile: PlayerProfile): Promise<void> {
     const client = getDocumentClient();
-    const links: Array<{ platform: 'fortnite' | 'roblox'; externalId: string }> = [];
+    const links: Array<{ platform: PlayerProfile['primaryPlatform']; externalId: string }> = [];
 
     if (profile.fortniteId) {
       links.push({ platform: 'fortnite', externalId: profile.fortniteId });
     }
     if (profile.robloxId) {
       links.push({ platform: 'roblox', externalId: profile.robloxId });
+    }
+    if (profile.valorantId) {
+      links.push({ platform: 'valorant', externalId: profile.valorantId });
+    }
+    if (profile.rocketLeagueId) {
+      links.push({ platform: 'rocket_league', externalId: profile.rocketLeagueId });
     }
 
     for (const link of links) {

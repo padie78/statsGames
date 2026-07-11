@@ -1,6 +1,13 @@
 import { Component, Input, ViewEncapsulation } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { GAME_PLATFORMS } from '../../../core/game/game-platform.config';
+import {
+  GAME_PLATFORMS,
+  gamePlatformMeta,
+} from '../../../core/game/game-platform.config';
+import {
+  isRobloxExperienceGame,
+  type SelectedGame,
+} from '../../../core/game/selected-game';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 @Component({
@@ -16,32 +23,17 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
       </header>
 
       <div class="sg-integration-status__rows">
-        <div class="sg-integration-status__row">
-          <div class="sg-integration-status__brand">
-            <img
-              class="sg-integration-status__icon"
-              [src]="fortniteMeta.iconUrl"
-              alt="Fortnite"
-            />
-            <span>Fortnite</span>
+        @for (row of rows; track row.id) {
+          <div class="sg-integration-status__row">
+            <div class="sg-integration-status__brand">
+              <img class="sg-integration-status__icon" [src]="row.iconUrl" [alt]="row.label" />
+              <span>{{ row.label }}</span>
+            </div>
+            <sg-neon-badge [tone]="row.connected ? 'lime' : 'muted'">
+              {{ row.connected ? 'Conectado' : 'Pendiente' }}
+            </sg-neon-badge>
           </div>
-          <sg-neon-badge [tone]="fortniteConnected ? 'lime' : 'muted'">
-            {{ fortniteConnected ? 'Conectado' : 'Pendiente' }}
-          </sg-neon-badge>
-        </div>
-        <div class="sg-integration-status__row">
-          <div class="sg-integration-status__brand">
-            <img
-              class="sg-integration-status__icon"
-              [src]="robloxMeta.iconUrl"
-              alt="Roblox"
-            />
-            <span>Roblox</span>
-          </div>
-          <sg-neon-badge [tone]="robloxConnected ? 'lime' : 'muted'">
-            {{ robloxConnected ? 'Conectado' : 'Pendiente' }}
-          </sg-neon-badge>
-        </div>
+        }
         <div class="sg-integration-status__row">
           <span>Live feed</span>
           <sg-neon-badge [tone]="liveActive ? 'cyan' : 'muted'" [pulse]="liveActive">
@@ -53,10 +45,59 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
   `,
 })
 export class IntegrationStatusCardComponent {
+  @Input() valorantConnected = false;
+  @Input() rocketLeagueConnected = false;
   @Input() fortniteConnected = false;
   @Input() robloxConnected = false;
   @Input() liveActive = false;
 
-  readonly fortniteMeta = GAME_PLATFORMS['fortnite'];
-  readonly robloxMeta = GAME_PLATFORMS['roblox'];
+  get rows(): { id: string; label: string; iconUrl: string; connected: boolean }[] {
+    return [
+      {
+        id: 'valorant',
+        label: 'Valorant',
+        iconUrl: GAME_PLATFORMS.valorant.iconUrl,
+        connected: this.valorantConnected,
+      },
+      {
+        id: 'rocket_league',
+        label: 'Rocket League',
+        iconUrl: GAME_PLATFORMS.rocket_league.iconUrl,
+        connected: this.rocketLeagueConnected,
+      },
+      {
+        id: 'fortnite',
+        label: 'Fortnite',
+        iconUrl: GAME_PLATFORMS.fortnite.iconUrl,
+        connected: this.fortniteConnected,
+      },
+      {
+        id: 'roblox',
+        label: 'Roblox (BF / AM / BH)',
+        iconUrl: GAME_PLATFORMS.blox_fruits.iconUrl,
+        connected: this.robloxConnected,
+      },
+    ];
+  }
+}
+
+/** Helper for dual-strip connection checks. */
+export function isGameAccountConnected(
+  game: SelectedGame,
+  ids: {
+    valorantId?: string | null;
+    rocketLeagueId?: string | null;
+    fortniteId?: string | null;
+    robloxId?: string | null;
+  },
+): boolean {
+  if (game === 'valorant') return !!ids.valorantId;
+  if (game === 'rocket_league') return !!ids.rocketLeagueId;
+  if (game === 'fortnite') return !!ids.fortniteId;
+  if (isRobloxExperienceGame(game)) return !!ids.robloxId;
+  return false;
+}
+
+export function shortBadgeForGame(game: SelectedGame): string {
+  return gamePlatformMeta(game).shortLabel;
 }

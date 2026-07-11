@@ -42,3 +42,15 @@ output "media_proxy_base_url" {
 output "fortnite_stats_poller_name" {
   value = aws_lambda_function.fortnite_stats_poller.function_name
 }
+
+output "valorant_match_poller_name" {
+  value = aws_lambda_function.valorant_match_poller.function_name
+}
+
+output "rocket_league_match_poller_name" {
+  value = aws_lambda_function.rocket_league_match_poller.function_name
+}
+
+output "roblox_experience_poller_name" {
+  value = aws_lambda_function.roblox_experience_poller.function_name
+}

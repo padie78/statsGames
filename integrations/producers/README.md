@@ -1,68 +1,59 @@
-# Match producers — Fortnite & Roblox → StatsGames
-
-Tu backend ya tiene el spine:
+# Match producers — multi-juego StatsGames
 
 ```text
-POST /webhooks/{platform}  →  game_ingestion  →  SQS  →  game_processor  →  DynamoDB + AppSync
+Valorant (Riot) ────────┐
+Rocket League (BC/WH) ──┤
+Fortnite (fortnite-api) ┼──► SQS ──► game_processor ──► DynamoDB + AppSync
+BedWars/Arsenal badges ─┘
+Webhook POST /webhooks/{platform}
 ```
 
-Epic **no** ofrece un webhook público de “partida terminada” para Battle Royale.
-Roblox **sí** permite que *tu experiencia* (server script) envíe HTTP al terminar un match.
+| Plataforma | Fase | Integración | Secret / key |
+|---|---|---|---|
+| **Valorant** | 1 | Riot matchlist poller | `RIOT_API_KEY` |
+| **Rocket League** | 1 | Webhook + opcional ballchasing | `BALLCHASING_API_KEY` |
+| **Fortnite** | 2 | Career diff poller | `FORTNITE_API_KEY` |
+| **Roblox** | 2 | **Solo BedWars + Arsenal** (badges) | — |
 
-| Plataforma | Camino real | Qué hay en este folder |
-|---|---|---|
-| **Roblox** | Server script en tu experience → webhook | `roblox/MatchEndReporter.luau` |
-| **Fortnite** | Poll de stats de carrera (diff) → SQS, o companion local | Lambda `fortnite_stats_poller` + `fortnite/send-match.mjs` |
-| **Ambas** | Test manual del pipeline | `send-match.mjs` |
+## Fase 1 — Valorant
 
-## Setup rápido
+1. Key en [developer.riotgames.com](https://developer.riotgames.com/).
+2. GitHub secret `RIOT_API_KEY` (+ vars `VALORANT_REGION` / `VALORANT_SHARD`).
+3. Vincular Riot ID `Nombre#TAG` en Integraciones.
+4. Deploy infra + lambda `valorant-match-poller`.
 
-1. En la app → **Integraciones**, vinculá tu Epic Account ID / Roblox UserId.
-2. Configurá `webhook_secret` en Terraform y el header `X-Webhook-Secret`.
-3. Copiá la URL de webhook desde Integraciones.
+Datos: KDA, assists, % headshots, rondas, mapa, agente.
 
-### Roblox (push al terminar partida)
+## Fase 1 — Rocket League
 
-1. Pegá `roblox/MatchEndReporter.luau` en ServerScriptService (ModuleScript).
-2. Seteá `WebhookUrl` y `WebhookSecret` (el `platformUserId` sale de `player.UserId`).
-3. Al finalizar el round, llamá `MatchEndReporter.report(player, stats)`.
+Psyonix no expone match history pública. Caminos:
 
-El reporter **auto-completa** contexto del servidor:
+1. **Webhook / companion** (inmediato):  
+   `npm run send:match -- --platform rocket_league --kills 5`
+2. **ballchasing.com** (replays): secret `BALLCHASING_API_KEY` → poller.
 
-- `occurredAt` (ISO), `placeId`, `placeName` / `experienceName`, `universeId`, `jobId`
-- `playerName`, `playerDisplayName`, `playerUserId`
-- `mode` (default = `game.Name`), `summary` armado si no lo pasás
-- `durationSec` si mandás `durationSec` o `startedAt` (`os.clock()` al inicio del round)
+Datos: goles, assists, saves, shots, playlist/mapa.
 
-Ejemplo mínimo:
+## Fase 2 — Fortnite
 
-```lua
-MatchEndReporter.report(player, {
-  matchId = HttpService:GenerateGUID(false),
-  kills = kills,
-  deaths = deaths,
-  placement = placement,
-  durationSec = roundDuration,
-  mode = "Ranked",
-  map = currentMapName,
-})
-```
+Ver `fortnite/probe-stats.mjs`. Diff de carrera cada ~3 min.
 
-### Fortnite (poller Route B)
+## Fase 2 — Roblox · BedWars & Arsenal
 
-1. Creá API key en [fortnite-api.com](https://fortnite-api.com/).
-2. En `terraform.tfvars`: `fortnite_api_key = "..."`.
-3. Deploy infra + lambda `fortnite-stats-poller` (EventBridge cada 3 min).
-4. Vinculá el **Epic account id** (o display name) en Integraciones.
+No se trackea “todo Roblox”. Solo:
 
-El poller guarda un snapshot de carrera; cuando suben las partidas, encola un evento sintético hacia `game_processor`.
+- **BedWars** (universe `2619619496`)
+- **Arsenal** (universe `111958650`)
 
-### Test local del webhook
+Poller de badges públicos → hitos en el feed. Ver `roblox/README.md`.
+
+## Smoke
 
 ```bash
-export SG_WEBHOOK_URL='https://xxxx.execute-api.eu-central-1.amazonaws.com/webhooks/roblox'
-export SG_WEBHOOK_SECRET='tu-secreto'
-export SG_PLATFORM_USER_ID='123456789'   # debe estar vinculado
-
-npm run send:match -- --platform roblox --kills 7 --deaths 2 --placement 4
+npm run send:match -- --platform valorant --kills 18 --deaths 14 --assists 6
+npm run send:match -- --platform rocket_league --kills 4
+npm run send:match -- --platform fortnite --kills 8 --placement 1
+npm run send:match -- --platform roblox --mode BedWars --kills 7 --placement 2
+npm run send:match -- --platform roblox --mode Arsenal --kills 15
+npm run probe:roblox -- 8367095373
 ```

@@ -39,6 +39,10 @@ module "lambdas" {
   game_ingestion_dlq_arn   = module.queues.dlq_arns["game_ingestion"]
   webhook_secret           = var.webhook_secret
   fortnite_api_key         = var.fortnite_api_key
+  riot_api_key             = var.riot_api_key
+  valorant_region          = var.valorant_region
+  valorant_shard           = var.valorant_shard
+  ballchasing_api_key      = var.ballchasing_api_key
 }
 
 module "api" {

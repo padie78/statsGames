@@ -129,11 +129,26 @@ export class NotificationsBellComponent {
   }
 
   platformShort(platform: string): string {
-    return platform.toLowerCase() === 'roblox' ? 'RBX' : 'FN';
+    const key = platform.toLowerCase();
+    const map: Record<string, string> = {
+      valorant: 'VAL',
+      rocket_league: 'RL',
+      fortnite: 'FN',
+      roblox: 'RBX',
+      blox_fruits: 'BF',
+      adopt_me: 'AM',
+      brookhaven: 'BH',
+      bedwars: 'BW',
+      arsenal: 'ARS',
+    };
+    return map[key] ?? platform.slice(0, 3).toUpperCase();
   }
 
-  platformTone(platform: string): 'cyan' | 'purple' {
-    return platform.toLowerCase() === 'roblox' ? 'purple' : 'cyan';
+  platformTone(platform: string): 'cyan' | 'purple' | 'lime' {
+    const key = platform.toLowerCase();
+    if (key === 'valorant') return 'purple';
+    if (key === 'fortnite' || key === 'rocket_league') return 'cyan';
+    return 'lime';
   }
 
   onItemClick(item: MatchNotification): void {

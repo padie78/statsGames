@@ -10,7 +10,9 @@
     "start:web": "nx serve stats-games-web",
     "sync:env": "bash scripts/sync-local-env.sh",
     "seed:mock": "node scripts/seed-mock-data.mjs",
-    "send:match": "node integrations/producers/send-match.mjs"
+    "send:match": "node integrations/producers/send-match.mjs",
+    "probe:fortnite": "node integrations/producers/fortnite/probe-stats.mjs",
+    "probe:roblox": "node integrations/producers/roblox/probe-badges.mjs"
   },
   "workspaces": [
     "lambda_code/ingestion/*",

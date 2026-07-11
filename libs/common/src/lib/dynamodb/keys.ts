@@ -10,6 +10,10 @@
  *                        SK = LINK  → userId (Cognito sub)
  */
 
+export type { GamePlatform } from '../platforms/catalog';
+export { GAME_PLATFORMS, isGamePlatform } from '../platforms/catalog';
+import type { GamePlatform } from '../platforms/catalog';
+
 export const KeyPrefix = {
   User: 'USER#',
   Match: 'MATCH#',
@@ -25,8 +29,6 @@ export const KeyPrefix = {
 export function normalizeGamerTag(gamerTag: string): string {
   return gamerTag.trim().toLowerCase();
 }
-
-export type GamePlatform = 'fortnite' | 'roblox';
 
 export const DynamoKeys = {
   userPk(userId: string): string {
@@ -57,7 +59,7 @@ export const DynamoKeys = {
     return KeyPrefix.Link;
   },
 
-  /** Snapshot de stats de carrera para detectar partidas nuevas (poller Fortnite). */
+  /** Snapshot de stats / cursor de poller (Fortnite career, Valorant last match, etc.). */
   statsSnapshotPk(platform: GamePlatform, externalId: string): string {
     return `STATS_SNAPSHOT#${platform}#${externalId}`;
   },

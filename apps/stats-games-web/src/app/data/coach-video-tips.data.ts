@@ -3,13 +3,18 @@
  * Reglas: youtube-nocookie, click-to-play, sin hostear MP4.
  */
 import { gamePlatformMeta } from '../core/game/game-platform.config';
+import {
+  isRobloxExperienceGame,
+  normalizeSelectedGame,
+  type SelectedGame,
+} from '../core/game/selected-game';
 
 export interface CoachVideoTip {
   videoId: string;
   title: string;
   subtitle: string;
   creatorName: string;
-  platform: 'fortnite' | 'roblox' | 'both';
+  platform: SelectedGame | 'both';
 }
 
 const FORTNITE_TRAILERS: CoachVideoTip[] = [
@@ -36,20 +41,40 @@ const FORTNITE_TRAILERS: CoachVideoTip[] = [
   },
 ];
 
+const VALORANT_TRAILERS: CoachVideoTip[] = [
+  {
+    videoId: 'IhhjcL2enJk',
+    title: 'Valorant · Official Trailer',
+    subtitle: 'Trailer oficial Riot · click para reproducir.',
+    creatorName: 'VALORANT',
+    platform: 'valorant',
+  },
+];
+
+const RL_TRAILERS: CoachVideoTip[] = [
+  {
+    videoId: 'SgSX3gOrj60',
+    title: 'Rocket League · Trailer',
+    subtitle: 'Trailer oficial · click para reproducir.',
+    creatorName: 'Rocket League',
+    platform: 'rocket_league',
+  },
+];
+
 const ROBLOX_TRAILERS: CoachVideoTip[] = [
   {
     videoId: '_EPelwsaF9E',
     title: 'Roblox 2021 Cinematic',
     subtitle: 'Cinematic oficial del canal Roblox.',
     creatorName: 'Roblox',
-    platform: 'roblox',
+    platform: 'blox_fruits',
   },
   {
     videoId: 'eAvXhNlO-rA',
     title: 'Roblox · Official Trailer',
     subtitle: 'Trailer oficial 2020 · canal Roblox.',
     creatorName: 'Roblox',
-    platform: 'roblox',
+    platform: 'adopt_me',
   },
 ];
 
@@ -59,7 +84,10 @@ export function coachTipForPlatform(platform: string): CoachVideoTip | null {
 }
 
 export function coachTipsForPlatform(platform: string): CoachVideoTip[] {
-  if (platform === 'fortnite') {
+  const game = normalizeSelectedGame(platform) ?? (platform === 'roblox' ? 'blox_fruits' : null);
+  if (!game) return [];
+
+  if (game === 'fortnite') {
     const meta = gamePlatformMeta('fortnite');
     if (meta.officialTrailerVideoId) {
       const configured = FORTNITE_TRAILERS.find((t) => t.videoId === meta.officialTrailerVideoId);
@@ -68,7 +96,18 @@ export function coachTipsForPlatform(platform: string): CoachVideoTip[] {
     }
     return FORTNITE_TRAILERS;
   }
-  if (platform === 'roblox') {
+  if (game === 'valorant') {
+    const meta = gamePlatformMeta('valorant');
+    if (meta.officialTrailerVideoId) {
+      const hit = VALORANT_TRAILERS.find((t) => t.videoId === meta.officialTrailerVideoId);
+      return hit ? [hit, ...VALORANT_TRAILERS.filter((t) => t !== hit)] : VALORANT_TRAILERS;
+    }
+    return VALORANT_TRAILERS;
+  }
+  if (game === 'rocket_league') {
+    return RL_TRAILERS;
+  }
+  if (isRobloxExperienceGame(game)) {
     return ROBLOX_TRAILERS;
   }
   return [];

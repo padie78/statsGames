@@ -19,6 +19,8 @@ import { getDocumentClient } from '../aws/dynamodb-client.factory';
 const DEFAULT_STD = {
   fortnite: { winRateStd: 14, kdStd: 0.45, killsStd: 38 },
   roblox: { winRateStd: 13, kdStd: 0.4, killsStd: 30 },
+  valorant: { winRateStd: 12, kdStd: 0.35, killsStd: 18 },
+  rocket_league: { winRateStd: 15, kdStd: 0.5, killsStd: 12 },
 } as const;
 
 function computeLeaderboardScore(input: SyncWeeklyCommunityInput): number {
@@ -90,7 +92,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
   }
 
   async getCommunityBenchmarks(
-    platform: 'fortnite' | 'roblox',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league',
     periodId: string,
   ): Promise<CommunityBenchmarksDto | null> {
     const client = getDocumentClient();
@@ -133,7 +135,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
   }
 
   async listWeeklyLeaderboard(
-    platform: 'fortnite' | 'roblox',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league',
     periodId: string,
     limit: number,
   ): Promise<LeaderboardEntryDto[]> {
@@ -175,7 +177,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
   }
 
   private async recomputeCommunityBenchmarkTotals(
-    platform: 'fortnite' | 'roblox',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league',
     periodId: string,
   ): Promise<void> {
     const client = getDocumentClient();
@@ -230,7 +232,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
   private async markPlayerSeen(
     userId: string,
     periodId: string,
-    platform: 'fortnite' | 'roblox',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league',
   ): Promise<boolean> {
     const client = getDocumentClient();
     try {

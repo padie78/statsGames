@@ -22,6 +22,8 @@ export class UpsertPlayerProfileUseCase {
           primaryPlatform: parsed.primaryPlatform,
           fortniteId: parsed.fortniteId,
           robloxId: parsed.robloxId,
+          valorantId: parsed.valorantId,
+          rocketLeagueId: parsed.rocketLeagueId,
           avatarUrl: parsed.avatarUrl,
         })
       : PlayerProfile.create({
@@ -30,6 +32,8 @@ export class UpsertPlayerProfileUseCase {
           primaryPlatform: parsed.primaryPlatform,
           fortniteId: parsed.fortniteId,
           robloxId: parsed.robloxId,
+          valorantId: parsed.valorantId,
+          rocketLeagueId: parsed.rocketLeagueId,
           avatarUrl: parsed.avatarUrl,
         });
 

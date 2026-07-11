@@ -1,7 +1,10 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewEncapsulation } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
-import type { SelectedGame } from '../../../core/services/auth.service';
+import {
+  selectedGameFromBackend,
+  type SelectedGame,
+} from '../../../core/game/selected-game';
 import { AnimatedValueComponent } from '../../atoms/animated-value/animated-value.component';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 import { AmbientPanelComponent } from '../../molecules/ambient-panel/ambient-panel.component';
@@ -21,11 +24,10 @@ import { ShareLinkButtonComponent } from '../../molecules/share-link-button/shar
   template: `
     <section
       class="sg-dashboard-hero sg-dashboard-hero--cinematic"
-      [class.sg-dashboard-hero--roblox]="platform === 'roblox'"
-      [class.sg-dashboard-hero--fortnite]="platform === 'fortnite'"
+      [attr.data-game]="platform"
       [class.sg-dashboard-hero--animating]="animating"
     >
-      @for (_platform of [platform]; track _platform) {
+      @for (_platform of [resolvedPlatform]; track _platform) {
         <sg-ambient-panel
           [platform]="_platform"
           variant="hero"
@@ -137,7 +139,7 @@ import { ShareLinkButtonComponent } from '../../molecules/share-link-button/shar
 })
 export class DashboardHeroComponent implements OnChanges {
   @Input({ required: true }) gamerTag!: string;
-  @Input() platform: 'fortnite' | 'roblox' = 'fortnite';
+  @Input() platform: SelectedGame | string = 'fortnite';
   @Input() artUrl = '';
   /** Avatar del jugador (API Roblox / perfil) — ≤150px, player-owned */
   @Input() avatarUrl: string | null = null;
@@ -167,20 +169,24 @@ export class DashboardHeroComponent implements OnChanges {
     }
   }
 
+  get resolvedPlatform(): SelectedGame {
+    return selectedGameFromBackend(String(this.platform));
+  }
+
   get platformIconUrl(): string {
-    return gamePlatformMeta(this.platform as SelectedGame).iconUrl;
+    return gamePlatformMeta(this.resolvedPlatform).iconUrl;
   }
 
   get ambientVideoUrl(): string {
-    return gamePlatformMeta(this.platform as SelectedGame).ambientVideoUrl ?? '';
+    return gamePlatformMeta(this.resolvedPlatform).ambientVideoUrl ?? '';
   }
 
   get platformLabel(): string {
-    return gamePlatformMeta(this.platform as SelectedGame).label;
+    return gamePlatformMeta(this.resolvedPlatform).label;
   }
 
   get platformTagline(): string {
-    return gamePlatformMeta(this.platform as SelectedGame).tagline;
+    return gamePlatformMeta(this.resolvedPlatform).tagline;
   }
 
   get bestPlacementLabel(): string {
@@ -191,9 +197,13 @@ export class DashboardHeroComponent implements OnChanges {
     return this.gamerTag.slice(0, 2).toUpperCase();
   }
 
-  get platformTone(): 'cyan' | 'purple' | 'muted' {
-    if (this.platform === 'fortnite') return 'cyan';
-    if (this.platform === 'roblox') return 'purple';
+  get platformTone(): 'cyan' | 'purple' | 'lime' | 'muted' {
+    const p = String(this.platform);
+    if (p === 'fortnite' || p === 'rocket_league') return 'cyan';
+    if (p === 'valorant') return 'purple';
+    if (p === 'blox_fruits' || p === 'adopt_me' || p === 'brookhaven' || p === 'roblox') {
+      return 'lime';
+    }
     return 'muted';
   }
 }

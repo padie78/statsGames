@@ -1,10 +1,13 @@
 import { Component, Input, ViewEncapsulation, inject } from '@angular/core';
-import { GAME_PLATFORM_LIST } from '../../../core/game/game-platform.config';
+import { GAME_PLATFORM_LIST, gamePlatformMeta } from '../../../core/game/game-platform.config';
 import { GameContextService } from '../../../core/game/game-context.service';
-import type { SelectedGame } from '../../../core/services/auth.service';
+import {
+  isRobloxExperienceGame,
+  type SelectedGame,
+} from '../../../core/game/selected-game';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
-/** Game picker estilo OP.GG — solo art propio + estado de cuenta. */
+/** Game picker estilo OP.GG — grid de todos los juegos trackeados. */
 @Component({
   standalone: true,
   selector: 'sg-dual-platform-strip',
@@ -14,7 +17,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
     <section class="sg-dual-platform sg-dual-platform--opgg" aria-label="Games">
       <header class="sg-dual-platform__header">
         <p class="sg-dual-platform__eyebrow">Games</p>
-        <p class="sg-dual-platform__lead">Elegí la plataforma para ver tus stats y el coach.</p>
+        <p class="sg-dual-platform__lead">Elegí el juego para ver stats, badges y coach.</p>
       </header>
 
       <div class="sg-dual-platform__rail">
@@ -23,8 +26,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
             type="button"
             class="sg-dual-platform__card"
             [class.sg-dual-platform__card--active]="activePlatform === p.id"
-            [class.sg-dual-platform__card--roblox]="p.id === 'roblox'"
-            [class.sg-dual-platform__card--fortnite]="p.id === 'fortnite'"
+            [attr.data-game]="p.id"
             [attr.aria-pressed]="activePlatform === p.id"
             [attr.aria-label]="'Abrir ' + p.label"
             [disabled]="gameContext.switching()"
@@ -60,16 +62,26 @@ export class DualPlatformStripComponent {
   readonly gameContext = inject(GameContextService);
 
   @Input() activePlatform: SelectedGame = 'fortnite';
+  @Input() valorantConnected = false;
+  @Input() rocketLeagueConnected = false;
   @Input() fortniteConnected = false;
   @Input() robloxConnected = false;
 
   readonly platforms = GAME_PLATFORM_LIST;
 
   isConnected(platform: SelectedGame): boolean {
-    return platform === 'fortnite' ? this.fortniteConnected : this.robloxConnected;
+    if (platform === 'valorant') return this.valorantConnected;
+    if (platform === 'rocket_league') return this.rocketLeagueConnected;
+    if (platform === 'fortnite') return this.fortniteConnected;
+    if (isRobloxExperienceGame(platform)) return this.robloxConnected;
+    return false;
   }
 
   select(game: SelectedGame): void {
     void this.gameContext.switchPlatform(game);
+  }
+
+  label(game: SelectedGame): string {
+    return gamePlatformMeta(game).label;
   }
 }
