@@ -7,6 +7,11 @@ import {
 export type { SelectedGame };
 export { backendPlatformForGame, isRobloxExperienceGame };
 
+/** Cover para fan / switcher — still del trailer oficial en YouTube. */
+function youtubeCover(videoId: string): string {
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+}
+
 export interface GamePlatformMeta {
   id: SelectedGame;
   label: string;
@@ -15,7 +20,10 @@ export interface GamePlatformMeta {
   tagline: string;
   statsHint: string;
   artUrl: string;
+  /** Imagen de cover (trailer YT / experience Roblox). */
   portraitUrl: string;
+  /** Fallback local si falla el remoto. */
+  portraitFallbackUrl: string;
   iconUrl: string;
   ambientVideoUrl?: string;
   pressBannerUrl?: string;
@@ -35,10 +43,11 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     tagline: 'KDA, headshots y clutch por ronda.',
     statsHint: 'K/D · HS% · Rounds',
     artUrl: '/assets/games/valorant-hero.svg',
-    portraitUrl: '/assets/games/valorant-portrait.svg',
+    portraitUrl: youtubeCover('e_E9W2vsRbQ'),
+    portraitFallbackUrl: '/assets/games/valorant-portrait.svg',
     iconUrl: '/assets/games/valorant-icon.svg',
-    officialTrailerVideoId: 'IhhjcL2enJk',
-    officialTrailerTitle: 'Valorant trailer',
+    officialTrailerVideoId: 'e_E9W2vsRbQ',
+    officialTrailerTitle: 'Valorant cinematic',
     accent: 'rose',
     shellGlow: 'rgba(255, 70, 85, 0.14)',
     themeClass: 'sg-theme--valorant',
@@ -51,7 +60,8 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     tagline: 'KDA, CS y visión por rol y campeón.',
     statsHint: 'KDA · CS · Vision',
     artUrl: '/assets/games/league_of_legends-hero.svg',
-    portraitUrl: '/assets/games/league_of_legends-portrait.svg',
+    portraitUrl: youtubeCover('tEnsqpThaFg'),
+    portraitFallbackUrl: '/assets/games/league_of_legends-portrait.svg',
     iconUrl: '/assets/games/league_of_legends-icon.svg',
     officialTrailerVideoId: 'tEnsqpThaFg',
     officialTrailerTitle: 'League of Legends cinematic',
@@ -67,9 +77,10 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     tagline: 'ADR, HS% y rounds en cada mapa.',
     statsHint: 'K/D · ADR · HS%',
     artUrl: '/assets/games/cs2-hero.svg',
-    portraitUrl: '/assets/games/cs2-portrait.svg',
+    portraitUrl: youtubeCover('nSE38xjMLqE'),
+    portraitFallbackUrl: '/assets/games/cs2-portrait.svg',
     iconUrl: '/assets/games/cs2-icon.svg',
-    officialTrailerVideoId: 'n1sP7VD2I04',
+    officialTrailerVideoId: 'nSE38xjMLqE',
     officialTrailerTitle: 'Counter-Strike 2 trailer',
     accent: 'amber',
     shellGlow: 'rgba(222, 155, 45, 0.16)',
@@ -83,7 +94,8 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     tagline: 'Goles, saves y MMR en cada playlist.',
     statsHint: 'Goals · Saves · Shot%',
     artUrl: '/assets/games/rocket_league-hero.svg',
-    portraitUrl: '/assets/games/rocket_league-portrait.svg',
+    portraitUrl: youtubeCover('SgSX3gOrj60'),
+    portraitFallbackUrl: '/assets/games/rocket_league-portrait.svg',
     iconUrl: '/assets/games/rocket_league-icon.svg',
     officialTrailerVideoId: 'SgSX3gOrj60',
     officialTrailerTitle: 'Rocket League trailer',
@@ -99,7 +111,8 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     tagline: 'Placement, eliminations y clutch en cada storm.',
     statsHint: 'Placement · K/D · Win Rate',
     artUrl: '/assets/games/fortnite-hero.svg',
-    portraitUrl: '/assets/games/fortnite-portrait.svg',
+    portraitUrl: youtubeCover('V5L24DFTFUo'),
+    portraitFallbackUrl: '/assets/games/fortnite-portrait.svg',
     iconUrl: '/assets/games/fortnite-icon.svg',
     officialTrailerVideoId: 'V5L24DFTFUo',
     officialTrailerTitle: 'Fortnite cinematic',
@@ -115,7 +128,9 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     tagline: 'Seas, fruits y raids — hitos por badges.',
     statsHint: 'Seas · Badges · Progress',
     artUrl: '/assets/games/blox_fruits-hero.svg',
-    portraitUrl: '/assets/games/blox_fruits-portrait.svg',
+    portraitUrl:
+      'https://tr.rbxcdn.com/180DAY-a64f70da20fc1e80ee76fe5d49c1be0a/512/512/Image/Png/noFilter',
+    portraitFallbackUrl: '/assets/games/blox_fruits-portrait.svg',
     iconUrl: '/assets/games/blox_fruits-icon.svg',
     accent: 'amber',
     shellGlow: 'rgba(251, 191, 36, 0.14)',
@@ -129,7 +144,9 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     tagline: 'Pets, eggs y quests de temporada.',
     statsHint: 'Quests · Pets · Badges',
     artUrl: '/assets/games/adopt_me-hero.svg',
-    portraitUrl: '/assets/games/adopt_me-portrait.svg',
+    portraitUrl:
+      'https://tr.rbxcdn.com/180DAY-c614dbe36b99f06774bfefa0137096ab/512/512/Image/Png/noFilter',
+    portraitFallbackUrl: '/assets/games/adopt_me-portrait.svg',
     iconUrl: '/assets/games/adopt_me-icon.svg',
     accent: 'rose',
     shellGlow: 'rgba(244, 114, 182, 0.14)',
@@ -143,7 +160,9 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     tagline: 'Vida en la ciudad — sesiones y estilo.',
     statsHint: 'Sessions · Presence',
     artUrl: '/assets/games/brookhaven-hero.svg',
-    portraitUrl: '/assets/games/brookhaven-portrait.svg',
+    portraitUrl:
+      'https://tr.rbxcdn.com/180DAY-681b48f8fd3d50f8292d1b084158725f/512/512/Image/Png/noFilter',
+    portraitFallbackUrl: '/assets/games/brookhaven-portrait.svg',
     iconUrl: '/assets/games/brookhaven-icon.svg',
     accent: 'lime',
     shellGlow: 'rgba(132, 204, 22, 0.14)',

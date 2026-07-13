@@ -8,10 +8,16 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
-import { GAME_PLATFORM_LIST } from '../../core/game/game-platform.config';
+import { defaultHomeRouteForRole } from '../../core/auth/user-role';
+import { GameContextService } from '../../core/game/game-context.service';
+import {
+  GAME_PLATFORM_LIST,
+  gamePlatformMeta,
+} from '../../core/game/game-platform.config';
+import type { SelectedGame } from '../../core/game/selected-game';
 import { HOME_FEATURES, HOME_STATS } from '../../data/home.data';
 import { MOCK_LEADERBOARD, MOCK_TICKER } from '../../data/dashboard-mock.data';
 import { coachTipsForPlatform } from '../../data/coach-video-tips.data';
@@ -51,14 +57,16 @@ import {
 
           <nav class="sg-home-header__nav" aria-label="Principal">
             <a href="#features" class="sg-home-header__link">Features</a>
-            <a href="#platforms" class="sg-home-header__link">Plataformas</a>
+            <a href="#platforms" class="sg-home-header__link">Juegos</a>
             <a href="#media" class="sg-home-header__link">Media</a>
             <a href="#leaderboard" class="sg-home-header__link">Leaderboard</a>
           </nav>
 
           <div class="sg-home-header__actions sg-home-header__actions--desktop">
             @if (isAuthenticated()) {
-              <a routerLink="/tabs/dashboard" class="u-btn u-btn--primary">Ir al dashboard</a>
+              <button type="button" class="u-btn u-btn--primary" (click)="focusGamePicker()">
+                Elegí tu juego
+              </button>
             } @else {
               <a routerLink="/login" class="u-btn u-btn--ghost">Ingresar</a>
               <a routerLink="/register" class="u-btn u-btn--primary">Empezar gratis</a>
@@ -94,15 +102,20 @@ import {
         >
           <nav class="sg-home-header__mobile-nav" aria-label="Principal móvil">
             <a href="#features" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Features</a>
-            <a href="#platforms" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Plataformas</a>
+            <a href="#platforms" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Juegos</a>
             <a href="#media" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Media</a>
             <a href="#leaderboard" class="sg-home-header__mobile-link" (click)="closeMobileMenu()">Leaderboard</a>
           </nav>
 
           <div class="sg-home-header__mobile-actions">
             @if (isAuthenticated()) {
-              <a routerLink="/tabs/dashboard" class="u-btn u-btn--primary" (click)="closeMobileMenu()">Ir al dashboard</a>
-              <a routerLink="/tabs/matches" class="u-btn u-btn--ghost" (click)="closeMobileMenu()">Ver partidas</a>
+              <button
+                type="button"
+                class="u-btn u-btn--primary"
+                (click)="focusGamePicker(); closeMobileMenu()"
+              >
+                Elegí tu juego
+              </button>
             } @else {
               <a routerLink="/register" class="u-btn u-btn--primary" (click)="closeMobileMenu()">Empezar gratis</a>
               <a routerLink="/login" class="u-btn u-btn--ghost" (click)="closeMobileMenu()">Ingresar</a>
@@ -116,25 +129,54 @@ import {
 
         <section class="sg-home-hero">
           <div class="sg-home-hero__copy">
-            <sg-neon-badge tone="muted">Gaming analytics</sg-neon-badge>
+            <sg-neon-badge tone="muted">Multi-juego · AI Coach</sg-neon-badge>
             <h1 class="sg-home-hero__title">
-              El companion definitivo<br />
-              <span class="sg-home-hero__accent">para gamers competitivos</span>
+              Stats, partidas y coach<br />
+              <span class="sg-home-hero__accent">en todos tus títulos</span>
             </h1>
             <p class="sg-home-hero__subtitle">
-              Telemetría en vivo, estadísticas avanzadas y coaching inteligente para
-              Fortnite y Roblox. Un solo perfil, dos arenas.
+              Valorant, League of Legends, CS2, Rocket League, Fortnite y Roblox (Blox Fruits,
+              Adopt Me!, Brookhaven). Un gamer tag. Switcher por juego. Analytics en vivo.
             </p>
 
             <div class="sg-home-hero__cta">
               @if (isAuthenticated()) {
-                <a routerLink="/tabs/dashboard" class="u-btn u-btn--primary u-btn--lg">Abrir dashboard</a>
-                <a routerLink="/tabs/matches" class="u-btn u-btn--ghost u-btn--lg">Ver partidas</a>
+                <button
+                  type="button"
+                  class="u-btn u-btn--primary u-btn--lg"
+                  (click)="focusGamePicker()"
+                >
+                  Elegí tu juego
+                </button>
+                @if (activeGameLabel(); as label) {
+                  <button
+                    type="button"
+                    class="u-btn u-btn--ghost u-btn--lg"
+                    [disabled]="entering()"
+                    (click)="enterPortal(activeGame()!)"
+                  >
+                    Continuar en {{ label }}
+                  </button>
+                }
               } @else {
                 <a routerLink="/register" class="u-btn u-btn--primary u-btn--lg">Crear cuenta</a>
                 <a routerLink="/login" class="u-btn u-btn--ghost u-btn--lg">Ya tengo cuenta</a>
               }
             </div>
+
+            @if (isAuthenticated()) {
+              <p class="sg-home-hero__pick-hint">
+                Tocá una carta para abrir el portal de ese juego.
+              </p>
+            } @else {
+              <p class="sg-home-hero__pick-hint">
+                Tocá un juego para crear tu cuenta y entrar a ese portal.
+              </p>
+            }
+
+            @if (enterError()) {
+              <p class="u-error u-mt-3">{{ enterError() }}</p>
+            }
 
             <div class="sg-home-hero__stats">
               @for (stat of homeStats; track stat.label) {
@@ -146,29 +188,47 @@ import {
             </div>
           </div>
 
-          <div class="sg-home-hero__visual" aria-hidden="true">
-            @for (platform of platforms; track platform.id) {
-              <article
-                class="sg-home-hero__platform-card"
-                [attr.data-game]="platform.id"
-              >
-                <img class="sg-home-hero__platform-art" [src]="platform.artUrl" [alt]="platform.label" />
-                <div class="sg-home-hero__platform-overlay"></div>
-                <div class="sg-home-hero__platform-body">
-                  <img class="sg-home-hero__platform-icon" [src]="platform.iconUrl" [alt]="platform.label" />
-                  <span class="sg-home-hero__platform-name">{{ platform.label }}</span>
-                  <span class="sg-home-hero__platform-hint">{{ platform.statsHint }}</span>
-                </div>
-              </article>
-            }
+          <div
+            id="game-pick"
+            class="sg-home-hero__visual"
+            [class.sg-home-hero__visual--pulse]="pickerPulse()"
+          >
+            <div class="sg-home-hero__picker" role="list" aria-label="Elegí un juego">
+              @for (platform of platforms; track platform.id) {
+                <button
+                  type="button"
+                  class="sg-home-hero__card"
+                  role="listitem"
+                  [class.sg-home-hero__card--active]="activeGame() === platform.id"
+                  [attr.data-game]="platform.id"
+                  [attr.aria-label]="
+                    (isAuthenticated() ? 'Abrir portal de ' : 'Empezar con ') + platform.label
+                  "
+                  [disabled]="entering()"
+                  (click)="pickGame(platform.id)"
+                >
+                  <img
+                    class="sg-home-hero__card-art"
+                    [src]="platform.portraitUrl"
+                    [attr.data-fallback]="platform.portraitFallbackUrl"
+                    alt=""
+                    width="160"
+                    height="240"
+                    loading="lazy"
+                    (error)="onPortraitError($event)"
+                  />
+                  <span class="sg-home-hero__card-caption">{{ platform.label }}</span>
+                </button>
+              }
+            </div>
           </div>
         </section>
-
         <section id="features" class="sg-home-section">
           <header class="sg-home-section__header">
-            <h2 class="sg-home-section__title">Todo lo que necesitás para subir de nivel</h2>
+            <h2 class="sg-home-section__title">Herramientas para subir de rank</h2>
             <p class="sg-home-section__subtitle">
-              Paridad TRN con feed en vivo, perfiles públicos, historial de partidas y analytics por plataforma.
+              Feed live, historial, perfiles públicos y AI Coach — todo filtrado por el juego
+              que tengas activo en el switcher.
             </p>
           </header>
 
@@ -187,38 +247,42 @@ import {
 
         <section id="platforms" class="sg-home-section sg-home-platforms">
           <header class="sg-home-section__header">
-            <h2 class="sg-home-section__title">Dos plataformas, un perfil</h2>
+            <h2 class="sg-home-section__title">Ocho títulos. Un hub.</h2>
             <p class="sg-home-section__subtitle">
-              Cambiá entre Roblox y Fortnite desde el topbar. Stats, partidas y dashboard se adaptan al contexto activo.
+              Tocá un título para entrar a su portal. Dashboard, partidas y coach se adaptan a ese juego.
             </p>
           </header>
 
           <div class="sg-home-platforms__grid">
             @for (platform of platforms; track platform.id) {
-              <article
-                class="sg-home-platforms__card"
+              <button
+                type="button"
+                class="sg-home-platforms__item sg-home-platforms__item--action"
                 [attr.data-game]="platform.id"
+                [disabled]="entering()"
+                (click)="pickGame(platform.id)"
               >
-                <img class="sg-home-platforms__art" [src]="platform.artUrl" [alt]="platform.label" />
-                <div class="sg-home-platforms__overlay"></div>
-                <div class="sg-home-platforms__body">
-                  <img class="sg-home-platforms__icon" [src]="platform.iconUrl" [alt]="platform.label" />
-                  <div>
-                    <h3 class="sg-home-platforms__name">{{ platform.label }}</h3>
-                    <p class="sg-home-platforms__badge">{{ platform.badge }}</p>
-                    <p class="sg-home-platforms__tagline">{{ platform.tagline }}</p>
-                  </div>
+                <img
+                  class="sg-home-platforms__icon"
+                  [src]="platform.iconUrl"
+                  [alt]=""
+                  width="40"
+                  height="40"
+                />
+                <div class="sg-home-platforms__copy">
+                  <h3 class="sg-home-platforms__name">{{ platform.label }}</h3>
+                  <p class="sg-home-platforms__tagline">{{ platform.tagline }}</p>
                 </div>
-              </article>
+              </button>
             }
           </div>
         </section>
-
         <section id="media" class="sg-home-section sg-home-media">
           <header class="sg-home-section__header">
             <h2 class="sg-home-section__title">Media oficial</h2>
             <p class="sg-home-section__subtitle">
-              News MOTD, icons de experiences y trailers oficiales vía APIs / YouTube — sin scrapear wikis.
+              News Fortnite, experiences Roblox y trailers oficiales vía API / YouTube —
+              sin scrapear wikis.
             </p>
           </header>
 
@@ -249,9 +313,10 @@ import {
         <section id="leaderboard" class="sg-home-section sg-home-leaderboard-wrap">
           <div class="sg-home-leaderboard__copy">
             <sg-neon-badge tone="muted">Community</sg-neon-badge>
-            <h2 class="sg-home-section__title">Leaderboard global</h2>
+            <h2 class="sg-home-section__title">Leaderboard de la comunidad</h2>
             <p class="sg-home-section__subtitle u-mb-4">
-              Mirá quién lidera la comunidad. Perfiles públicos, búsqueda por gamer tag y stats compartibles.
+              Ranking por título. Perfiles públicos, búsqueda por gamer tag y stats para
+              compartir.
             </p>
             <a routerLink="/player/NeoFragger" class="u-btn u-btn--ghost">Ver perfil de ejemplo</a>
           </div>
@@ -261,13 +326,20 @@ import {
         <section class="sg-home-cta u-surface-card">
           <div class="sg-home-cta__glow" aria-hidden="true"></div>
           <div class="sg-home-cta__content">
-            <h2 class="sg-home-cta__title">Listo para trackear tu próxima partida?</h2>
+            <h2 class="sg-home-cta__title">¿Listo para la próxima ranked?</h2>
             <p class="sg-home-cta__subtitle">
-              Conectá Fortnite o Roblox, cargá mock data para probar, y desbloqueá el dashboard completo.
+              Primero elegí el juego. Después vinculá Riot, Steam, Epic o Roblox y abrí
+              dashboard, historial y AI Coach.
             </p>
             <div class="sg-home-cta__actions">
               @if (isAuthenticated()) {
-                <a routerLink="/tabs/dashboard" class="u-btn u-btn--primary u-btn--lg">Ir al dashboard</a>
+                <button
+                  type="button"
+                  class="u-btn u-btn--primary u-btn--lg"
+                  (click)="focusGamePicker()"
+                >
+                  Elegí tu juego
+                </button>
                 <a routerLink="/tabs/integrations" class="u-btn u-btn--ghost u-btn--lg">Conectar cuentas</a>
               } @else {
                 <a routerLink="/register" class="u-btn u-btn--primary u-btn--lg">Crear cuenta gratis</a>
@@ -279,7 +351,7 @@ import {
 
         <footer class="sg-home-footer">
           <span class="sg-home-footer__brand">StatsGames</span>
-          <span class="sg-home-footer__meta">Fortnite + Roblox Analytics · AWS Serverless</span>
+          <span class="sg-home-footer__meta">8 títulos · analytics en vivo · AWS Serverless</span>
         </footer>
       </div>
     </ion-content>
@@ -287,6 +359,8 @@ import {
 })
 export class HomePageComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly gameContext = inject(GameContextService);
+  private readonly router = inject(Router);
   private readonly fortniteOfficial = inject(FortniteOfficialMediaService);
   private readonly robloxExperiencesSvc = inject(RobloxExperiencesService);
 
@@ -296,8 +370,16 @@ export class HomePageComponent implements OnInit {
   readonly leaderboard = MOCK_LEADERBOARD;
   readonly tickerItems = MOCK_TICKER;
   readonly mobileMenuOpen = signal(false);
+  readonly pickerPulse = signal(false);
+  readonly entering = signal(false);
+  readonly enterError = signal<string | null>(null);
 
   readonly isAuthenticated = computed(() => this.auth.isAuthenticated());
+  readonly activeGame = computed(() => this.auth.selectedGame());
+  readonly activeGameLabel = computed(() => {
+    const game = this.activeGame();
+    return game ? gamePlatformMeta(game).label : null;
+  });
   readonly fortniteNews = computed(() => this.fortniteOfficial.news().slice(0, 4));
   readonly fortniteNewsBanner = computed(() => this.fortniteOfficial.newsBannerUrl());
   readonly fortniteMediaLoading = computed(() => this.fortniteOfficial.loading());
@@ -327,5 +409,50 @@ export class HomePageComponent implements OnInit {
 
   closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
+  }
+
+  focusGamePicker(): void {
+    this.enterError.set(null);
+    this.pickerPulse.set(true);
+    document.getElementById('game-pick')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => this.pickerPulse.set(false), 1200);
+  }
+
+  async pickGame(game: SelectedGame): Promise<void> {
+    if (this.entering()) return;
+
+    if (!this.isAuthenticated()) {
+      await this.router.navigate(['/register'], { queryParams: { game } });
+      return;
+    }
+
+    await this.enterPortal(game);
+  }
+
+  async enterPortal(game: SelectedGame): Promise<void> {
+    if (this.entering()) return;
+
+    this.entering.set(true);
+    this.enterError.set(null);
+
+    try {
+      await this.gameContext.switchPlatform(game);
+      const role = this.auth.userRole();
+      await this.router.navigateByUrl(defaultHomeRouteForRole(role));
+    } catch (err) {
+      this.enterError.set(
+        err instanceof Error ? err.message : 'No se pudo abrir el portal de ese juego',
+      );
+    } finally {
+      this.entering.set(false);
+    }
+  }
+
+  onPortraitError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    const fallback = img.getAttribute('data-fallback');
+    if (fallback && img.src !== fallback) {
+      img.src = fallback;
+    }
   }
 }

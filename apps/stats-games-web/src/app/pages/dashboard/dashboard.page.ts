@@ -826,7 +826,7 @@ export class DashboardPageComponent implements OnInit {
     const comparison = this.weekComparison();
     const community = this.communityComparison();
     if (!w || w.matchCount === 0) {
-      return 'Vinculá Fortnite o Roblox en Integraciones para ver tus stats en vivo.';
+      return 'Vinculá un juego en Integraciones (Riot, Steam, Epic o Roblox) para ver tus stats en vivo.';
     }
 
     const topWinRate = community.find((item) => item.label === 'Win rate');

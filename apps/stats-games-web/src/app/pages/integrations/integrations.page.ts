@@ -43,7 +43,8 @@ type LinkablePlatform =
         <header class="sg-page-header">
           <h1 class="sg-page-header__title">Integraciones</h1>
           <p class="sg-page-header__subtitle">
-            Fase 1: Valorant + Rocket League. Fase 2: Fortnite + BedWars/Arsenal (Roblox).
+            Vinculá Valorant, LoL, CS2, Rocket League, Fortnite y Roblox. El poller captura
+            partidas al cerrar según cada API.
           </p>
         </header>
 
@@ -102,27 +103,22 @@ type LinkablePlatform =
           <h2 class="sg-page-header__title u-text-md u-mb-0">Roadmap de datos</h2>
           <ul class="sg-integrations__list u-m-0">
             <li>
-              <strong>Valorant:</strong> Riot API Key + Riot ID (<code>Nombre#TAG</code>) → partidas al
-              cerrar (poll ≤3 min) → KDA, HS%, rondas, mapa, agente + análisis Bedrock. Requiere
-              secret GitHub <code>RIOT_API_KEY</code> (sin key el poller queda DISABLED).
+              <strong>Valorant:</strong> Riot ID → matchlist (≤3 min) → KDA, HS%, mapa, agente + Bedrock.
             </li>
             <li>
-              <strong>Rocket League:</strong> webhook/companion + opcional ballchasing
-              (<code>BALLCHASING_API_KEY</code>) → goles, assists, saves, playlist.
+              <strong>League of Legends:</strong> Riot ID → match-v5 → KDA, CS, visión, campeón.
+            </li>
+            <li>
+              <strong>CS2:</strong> SteamID64 → validación Steam; partidas vía webhook / companion.
+            </li>
+            <li>
+              <strong>Rocket League:</strong> webhook/companion + opcional ballchasing.
             </li>
             <li>
               <strong>Fortnite:</strong> poller fortnite-api.com (diff de carrera).
             </li>
             <li>
-              <strong>Roblox:</strong> Blox Fruits, Adopt Me!, Brookhaven RP (+ BedWars/Arsenal
-              badges). Un UserId vincula todas.
-            </li>
-            <li>
-              <strong>League of Legends:</strong> Riot ID (<code>Nombre#TAG</code>) → partidas
-              ranked / normales vía Riot API.
-            </li>
-            <li>
-              <strong>CS2:</strong> SteamID64 (<code>7656119…</code>) → stats vía Steam Web API.
+              <strong>Roblox:</strong> Blox Fruits, Adopt Me!, Brookhaven (+ BedWars/Arsenal badges).
             </li>
           </ul>
         </section>
@@ -224,12 +220,12 @@ export class IntegrationsPageComponent implements OnInit {
   readonly webhookUrl = this.webhookBase || '…/webhooks/{platform}';
 
   readonly allPlatformOptions: SelectOption<LinkablePlatform>[] = [
-    { value: 'valorant', label: 'Valorant (Fase 1)' },
-    { value: 'rocket_league', label: 'Rocket League (Fase 1)' },
-    { value: 'fortnite', label: 'Fortnite (Fase 2)' },
-    { value: 'roblox', label: 'Roblox (Blox Fruits / Adopt Me / Brookhaven)' },
+    { value: 'valorant', label: 'Valorant' },
     { value: 'league_of_legends', label: 'League of Legends' },
     { value: 'cs2', label: 'Counter-Strike 2' },
+    { value: 'rocket_league', label: 'Rocket League' },
+    { value: 'fortnite', label: 'Fortnite' },
+    { value: 'roblox', label: 'Roblox (Blox Fruits / Adopt Me / Brookhaven)' },
   ];
 
   readonly robloxAvatar = computed(() => {

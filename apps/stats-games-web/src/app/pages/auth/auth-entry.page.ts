@@ -237,7 +237,8 @@ function passwordMatchValidator(control: AbstractControl) {
           <footer class="auth-gate__footer">
             <p class="auth-gate__footer-line">Hecho con pasión por gamers, para gamers</p>
             <p class="auth-gate__legal">
-              StatsGames no está afiliado a Epic Games ni Roblox Corporation. Fortnite y Roblox son marcas de sus respectivos titulares.
+              StatsGames no está afiliado a Riot Games, Valve, Psyonix, Epic Games ni Roblox
+              Corporation. Las marcas de cada juego pertenecen a sus respectivos titulares.
             </p>
           </footer>
           </div>

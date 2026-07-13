@@ -43,11 +43,21 @@ const FORTNITE_TRAILERS: CoachVideoTip[] = [
 
 const VALORANT_TRAILERS: CoachVideoTip[] = [
   {
-    videoId: 'IhhjcL2enJk',
+    videoId: 'e_E9W2vsRbQ',
     title: 'Valorant · Official Trailer',
     subtitle: 'Trailer oficial Riot · click para reproducir.',
     creatorName: 'VALORANT',
     platform: 'valorant',
+  },
+];
+
+const CS2_TRAILERS: CoachVideoTip[] = [
+  {
+    videoId: 'nSE38xjMLqE',
+    title: 'Counter-Strike 2 · Launch Trailer',
+    subtitle: 'Trailer oficial Valve · click para reproducir.',
+    creatorName: 'Valve',
+    platform: 'cs2',
   },
 ];
 
@@ -103,6 +113,9 @@ export function coachTipsForPlatform(platform: string): CoachVideoTip[] {
       return hit ? [hit, ...VALORANT_TRAILERS.filter((t) => t !== hit)] : VALORANT_TRAILERS;
     }
     return VALORANT_TRAILERS;
+  }
+  if (game === 'cs2') {
+    return CS2_TRAILERS;
   }
   if (game === 'rocket_league') {
     return RL_TRAILERS;

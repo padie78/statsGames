@@ -1,20 +1,25 @@
 // =============================================================================
-// App-wide visual refinements — cyber energy without clutter
+// App-wide visual refinements — clarity first, energy without HUD typography
 // =============================================================================
 
 // —— Page headers ——
 .sg-page-header__title {
   margin: 0;
   font-family: var(--sg-font-display);
-  font-size: var(--sg-fs-xl);
+  font-size: var(--sg-fs-2xl);
   font-weight: var(--sg-fw-bold);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--sg-tracking-display);
+  line-height: var(--sg-lh-tight);
+  text-transform: none;
   color: var(--sg-text-primary);
 }
 
 .sg-page-header__subtitle {
   margin: var(--sg-space-2) 0 0;
-  font-size: var(--sg-fs-sm);
+  font-family: var(--sg-font-body);
+  font-size: var(--sg-fs-md);
+  font-weight: var(--sg-fw-regular);
+  letter-spacing: var(--sg-tracking-normal);
   color: var(--sg-text-secondary);
   line-height: var(--sg-lh-snug);
 }
@@ -28,8 +33,10 @@
 
 .sg-games-bar__brand-name {
   font-family: var(--sg-font-display);
-  letter-spacing: 0.1em;
+  letter-spacing: var(--sg-tracking-display);
+  text-transform: none;
   font-weight: var(--sg-fw-bold);
+  font-size: var(--sg-fs-lg);
 }
 
 .sg-topbar__avatar {
@@ -439,4 +446,52 @@
   .sg-dashboard__section-title {
     font-size: var(--sg-fs-2xl);
   }
+}
+
+// =============================================================================
+// Typography rebalance — soften leftover HUD / sci-fi tracking
+// =============================================================================
+
+h1,
+h2,
+h3,
+.sg-panel-header__title,
+.sg-dashboard__section-title,
+.sg-live-feed__title,
+.sg-match-analysis__title,
+.sg-hero__title,
+.sg-auth-card__title,
+.sg-onboarding__title {
+  font-family: var(--sg-font-display);
+  letter-spacing: var(--sg-tracking-display);
+  text-transform: none;
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-games-bar__label,
+.sg-game-nav__tab,
+.sg-subnav__link,
+.sg-dual-platform__name,
+.sg-dual-platform__eyebrow,
+.sg-panel-header__eyebrow,
+.sg-section-eyebrow {
+  font-family: var(--sg-font-body);
+  letter-spacing: var(--sg-tracking-normal);
+  text-transform: none;
+}
+
+.sg-stat__value,
+.sg-kpi__value,
+.sg-match-card__kills,
+.sg-leaderboard-mini__score {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--sg-tracking-tight);
+}
+
+.sg-dual-platform__eyebrow,
+.sg-panel-header__eyebrow {
+  font-size: var(--sg-fs-xs);
+  font-weight: var(--sg-fw-semibold);
+  color: var(--sg-text-muted);
+  letter-spacing: var(--sg-tracking-label);
 }

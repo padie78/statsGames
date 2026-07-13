@@ -19,9 +19,9 @@ output "game_ingestion_queue_arn" {
 }
 
 output "match_ai_analysis_queue_url" {
-  value = aws_sqs_queue.main["match_ai_analysis"].url
+  value = try(aws_sqs_queue.main["match_ai_analysis"].url, "")
 }
 
 output "match_ai_analysis_queue_arn" {
-  value = aws_sqs_queue.main["match_ai_analysis"].arn
+  value = try(aws_sqs_queue.main["match_ai_analysis"].arn, "")
 }

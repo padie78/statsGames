@@ -43,7 +43,7 @@ export const MEDIA_POLICY = {
 } as const;
 
 export const MEDIA_LEGAL_DISCLAIMER =
-  'StatsGames no está afiliado, respaldado ni patrocinado por Epic Games, Roblox Corporation ni sus licenciantes. Fortnite y Roblox son marcas de sus respectivos titulares.';
+  'StatsGames no está afiliado, respaldado ni patrocinado por Riot Games, Valve, Psyonix, Epic Games, Roblox Corporation ni sus licenciantes. Valorant, League of Legends, Counter-Strike, Rocket League, Fortnite y Roblox son marcas de sus respectivos titulares.';
 
 export const MEDIA_YOUTUBE_ATTRIBUTION_PREFIX = 'Video ©';
 

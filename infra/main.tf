@@ -39,7 +39,7 @@ module "lambdas" {
   game_ingestion_dlq_arn      = module.queues.dlq_arns["game_ingestion"]
   match_ai_analysis_queue_url = module.queues.match_ai_analysis_queue_url
   match_ai_analysis_queue_arn = module.queues.match_ai_analysis_queue_arn
-  match_ai_analysis_dlq_arn   = module.queues.dlq_arns["match_ai_analysis"]
+  match_ai_analysis_dlq_arn   = try(module.queues.dlq_arns["match_ai_analysis"], "")
   webhook_secret              = var.webhook_secret
   fortnite_api_key            = var.fortnite_api_key
   riot_api_key                = var.riot_api_key

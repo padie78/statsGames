@@ -51,10 +51,10 @@ ion-toolbar {
 
 ion-title {
   font-family: var(--sg-font-display);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: var(--sg-fs-sm);
-  font-weight: var(--sg-fw-bold);
+  letter-spacing: var(--sg-tracking-display);
+  text-transform: none;
+  font-size: var(--sg-fs-md);
+  font-weight: var(--sg-fw-semibold);
 }
 
 ion-item {
@@ -157,7 +157,8 @@ ion-content.auth-gate::part(scroll) {
   font-family: var(--sg-font-display);
   font-size: var(--sg-fs-2xl);
   font-weight: var(--sg-fw-bold);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--sg-tracking-display);
+  text-transform: none;
   color: var(--sg-text-primary);
 }
 
@@ -180,10 +181,11 @@ ion-content.auth-gate::part(scroll) {
   border: 1px solid var(--sg-border-subtle);
   background: rgba(12, 18, 32, 0.72);
   backdrop-filter: blur(8px);
-  font-family: var(--sg-font-display);
-  font-size: var(--sg-fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--sg-font-body);
+  font-size: var(--sg-fs-sm);
+  font-weight: var(--sg-fw-medium);
+  letter-spacing: var(--sg-tracking-normal);
+  text-transform: none;
   color: var(--sg-text-secondary);
 }
 
@@ -571,9 +573,11 @@ ion-content.auth-page::part(scroll) {
   gap: var(--sg-space-3);
   margin: var(--sg-space-4) 0;
   color: var(--sg-text-muted);
+  font-family: var(--sg-font-body);
   font-size: var(--sg-fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: var(--sg-fw-medium);
+  text-transform: none;
+  letter-spacing: var(--sg-tracking-normal);
 }
 
 .auth-divider::before,

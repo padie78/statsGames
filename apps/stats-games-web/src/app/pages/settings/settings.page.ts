@@ -200,7 +200,7 @@ const GAMER_TAG_PATTERN = /^[a-zA-Z0-9_-]{3,32}$/;
 
           <div class="u-flex u-flex-col u-gap-2 u-mt-4">
             <a routerLink="/tabs/integrations" class="u-btn u-btn--ghost u-btn--block">
-              Conectar Fortnite / Roblox
+              Conectar cuentas de juego
             </a>
             <button type="button" class="u-btn u-btn--ghost u-btn--block" (click)="logout()">
               Cerrar sesión

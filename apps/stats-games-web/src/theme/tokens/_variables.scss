@@ -75,18 +75,18 @@
   --sg-gradient-ai: linear-gradient(135deg, #3de0f5 0%, #7ee0c8 48%, #f5d075 100%);
   --sg-gradient-streak: linear-gradient(90deg, #ff4d9a 0%, #f5d075 100%);
 
-  // —— Typography ——
-  --sg-font-display: 'Orbitron', 'Manrope', system-ui, sans-serif;
-  --sg-font-body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
-  --sg-font-mono: 'JetBrains Mono', 'Roboto Mono', ui-monospace, monospace;
+  // —— Typography (editorial grotesk — readable, not sci-fi HUD) ——
+  --sg-font-display: 'Bricolage Grotesque', 'Source Sans 3', system-ui, sans-serif;
+  --sg-font-body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --sg-font-mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
 
-  --sg-fs-xs: 0.72rem;
-  --sg-fs-sm: 0.84rem;
-  --sg-fs-md: 0.95rem;
+  --sg-fs-xs: 0.75rem;
+  --sg-fs-sm: 0.875rem;
+  --sg-fs-md: 1rem;
   --sg-fs-lg: 1.125rem;
-  --sg-fs-xl: 1.45rem;
-  --sg-fs-2xl: 1.9rem;
-  --sg-fs-3xl: 2.45rem;
+  --sg-fs-xl: 1.5rem;
+  --sg-fs-2xl: 1.875rem;
+  --sg-fs-3xl: 2.375rem;
 
   --sg-fw-regular: 400;
   --sg-fw-medium: 500;
@@ -94,10 +94,15 @@
   --sg-fw-bold: 700;
   --sg-fw-black: 800;
 
-  --sg-lh-tight: 1.18;
-  --sg-lh-snug: 1.4;
+  --sg-lh-tight: 1.15;
+  --sg-lh-snug: 1.35;
   --sg-lh-normal: 1.55;
-  --sg-lh-relaxed: 1.68;
+  --sg-lh-relaxed: 1.7;
+
+  --sg-tracking-tight: -0.025em;
+  --sg-tracking-display: -0.02em;
+  --sg-tracking-normal: 0;
+  --sg-tracking-label: 0.02em;
 
   // —— Spacing ——
   --sg-space-1: 0.25rem;

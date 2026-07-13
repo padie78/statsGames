@@ -16,49 +16,55 @@ export const HOME_STATS: HomeStat[] = [
   { label: 'Partidas trackeadas', value: '2.4M+', tone: 'cyan' },
   { label: 'Jugadores activos', value: '18K', tone: 'cyan' },
   { label: 'Eventos live / día', value: '340K', tone: 'purple' },
-  { label: 'Plataformas', value: '2', tone: 'cyan' },
+  { label: 'Títulos en el hub', value: '8', tone: 'lime' },
 ];
 
 export const HOME_FEATURES: HomeFeature[] = [
   {
     id: 'live',
-    title: 'Live Feed',
-    description: 'Eventos de partida en tiempo real vía AppSync. Sin refrescar la página.',
+    title: 'Feed en vivo',
+    description:
+      'Cada cierre de partida llega por AppSync. Dashboard y notificaciones sin F5.',
     icon: '📡',
     tone: 'cyan',
   },
   {
     id: 'stats',
-    title: 'Analytics profundo',
-    description: 'K/D, placement, tendencias diarias y rollups semanales por plataforma.',
+    title: 'Stats por título',
+    description:
+      'K/D, HS%, CS, ADR, placement o badges — métricas nativas del juego activo.',
     icon: '📊',
     tone: 'cyan',
   },
   {
     id: 'profile',
-    title: 'Perfil público',
-    description: 'Compartí tu gamer tag. Buscá jugadores y mirá su historial.',
+    title: 'Un gamer tag',
+    description:
+      'Riot, Steam, Epic y Roblox bajo el mismo perfil. Público, buscable y compartible.',
     icon: '🔗',
     tone: 'purple',
   },
   {
     id: 'ai',
     title: 'AI Coach',
-    description: 'Insights post-partida y recomendaciones para subir de rank.',
+    description:
+      'Post-partida con Bedrock: glosario del título, errores clave y plan de mejora.',
     icon: '🧠',
     tone: 'pink',
   },
   {
     id: 'multi',
-    title: 'Multi-plataforma',
-    description: 'Roblox y Fortnite en un solo command center con switch global.',
+    title: 'Switcher de juegos',
+    description:
+      'Valorant, LoL, CS2, Rocket League, Fortnite y experiencias Roblox en un chrome.',
     icon: '🎮',
     tone: 'lime',
   },
   {
     id: 'ranked',
     title: 'Leaderboards',
-    description: 'Compará tu rendimiento con la comunidad global.',
+    description:
+      'Ranking semanal por comunidad y título. Medí dónde estás vs el promedio.',
     icon: '🏆',
     tone: 'purple',
   },

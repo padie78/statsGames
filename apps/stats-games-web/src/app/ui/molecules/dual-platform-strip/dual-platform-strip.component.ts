@@ -35,8 +35,10 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
             <img
               class="sg-dual-platform__art"
               [src]="p.portraitUrl"
+              [attr.data-fallback]="p.portraitFallbackUrl"
               [alt]="p.label"
               loading="lazy"
+              (error)="onPortraitError($event)"
             />
             <div class="sg-dual-platform__overlay" aria-hidden="true"></div>
             <div class="sg-dual-platform__top">
@@ -70,6 +72,14 @@ export class DualPlatformStripComponent {
   @Input() robloxConnected = false;
 
   readonly platforms = GAME_PLATFORM_LIST;
+
+  onPortraitError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    const fallback = img.getAttribute('data-fallback');
+    if (fallback && img.src !== fallback) {
+      img.src = fallback;
+    }
+  }
 
   isConnected(platform: SelectedGame): boolean {
     if (platform === 'valorant') return this.valorantConnected;
