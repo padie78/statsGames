@@ -398,7 +398,6 @@ resource "aws_lambda_function" "match_ai_analyzer" {
 }
 
 resource "aws_lambda_event_source_mapping" "match_ai_analyzer" {
-  count                              = var.match_ai_analysis_queue_arn != "" ? 1 : 0
   event_source_arn                   = var.match_ai_analysis_queue_arn
   function_name                      = aws_lambda_function.match_ai_analyzer.arn
   batch_size                         = 3
