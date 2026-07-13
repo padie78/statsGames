@@ -3,11 +3,13 @@ import { Component, Input, ViewEncapsulation } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
 import type { SelectedGame } from '../../../core/services/auth.service';
+import { formatMatchRelativeTime } from '../../../utils/match-stats.util';
 import {
-  computeKdRatio,
-  formatMatchRelativeTime,
-  getMatchOutcome,
-} from '../../../utils/match-stats.util';
+  buildMatchCardStatCells,
+  getMatchOutcomeForPlatform,
+  isMatchWin,
+  normalizeStatsPlatform,
+} from '../../../utils/platform-stats.util';
 import { matchDetailRoute } from '../../../utils/match-analysis.util';
 import { parseMatchSummary } from '../../../utils/match-display.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
@@ -25,6 +27,17 @@ export interface MatchCardStats {
   agent?: string | null;
   mode?: string | null;
   won?: boolean | null;
+  score?: number | null;
+  adr?: number | null;
+  champion?: string | null;
+  role?: string | null;
+  cs?: number | null;
+  visionScore?: number | null;
+  goals?: number | null;
+  saves?: number | null;
+  shots?: number | null;
+  shotPct?: number | null;
+  durationSec?: number | null;
 }
 
 @Component({
@@ -109,20 +122,12 @@ export interface MatchCardStats {
           class="sg-match-card__stats"
           [class.sg-match-card__stats--detailed]="detailed"
         >
-          <sg-stat-value
-            label="Placement"
-            [value]="stats.placement != null ? '#' + stats.placement : '—'"
-            [accent]="isVictory || isPodium ? 'lime' : 'default'"
-          />
-          <sg-stat-value
-            label="Kills"
-            [value]="stats.kills ?? '—'"
-            [accent]="isVictory ? 'lime' : 'default'"
-          />
-          <sg-stat-value label="Deaths" [value]="stats.deaths ?? '—'" />
-          @if (detailed) {
-            <sg-stat-value label="Assists" [value]="stats.assists ?? '—'" />
-            <sg-stat-value label="K/D" [value]="kdRatio" accent="purple" />
+          @for (cell of statCells; track cell.label) {
+            <sg-stat-value
+              [label]="cell.label"
+              [value]="cell.value"
+              [accent]="cell.accent ?? 'default'"
+            />
           }
         </div>
       </div>
@@ -147,12 +152,12 @@ export class MatchStatCardComponent {
   }
 
   get isVictory(): boolean {
-    return this.stats.placement === 1;
+    return isMatchWin(this.stats);
   }
 
   get isPodium(): boolean {
     const p = this.stats.placement;
-    return p != null && p > 1 && p <= 3;
+    return p != null && p > 1 && p <= 3 && normalizeStatsPlatform(this.platform) === 'fortnite';
   }
 
   get platformTone(): 'cyan' | 'purple' | 'muted' | 'lime' {
@@ -163,19 +168,19 @@ export class MatchStatCardComponent {
   }
 
   get platformKey(): SelectedGame | null {
-    const p = this.platform?.toLowerCase();
-    if (!p) return null;
+    const p = normalizeStatsPlatform(this.platform);
     if (
       p === 'fortnite' ||
       p === 'valorant' ||
       p === 'rocket_league' ||
+      p === 'league_of_legends' ||
+      p === 'cs2' ||
       p === 'blox_fruits' ||
       p === 'adopt_me' ||
       p === 'brookhaven'
     ) {
       return p;
     }
-    if (p === 'roblox') return 'blox_fruits';
     return null;
   }
 
@@ -199,18 +204,23 @@ export class MatchStatCardComponent {
   }
 
   get outcome() {
-    return getMatchOutcome(this.stats.placement);
+    return getMatchOutcomeForPlatform(this.platform, this.stats);
   }
 
-  get kdRatio(): string {
-    const kills = this.stats.kills ?? 0;
-    const deaths = this.stats.deaths ?? 0;
-    return computeKdRatio(kills, deaths);
+  get statCells() {
+    return buildMatchCardStatCells(this.platform, this.stats, this.detailed);
   }
 
   get modeLabel(): string {
     if (this.isVictory) return 'Victoria';
-    if (!this.detailed) return `${this.platformLabel} · ${this.matchId}`;
+    if (!this.detailed) {
+      const agent = this.stats.agent ?? this.stats.champion;
+      const map = this.stats.map;
+      if (agent && map) return `${agent} · ${map}`;
+      if (agent) return agent;
+      if (map) return map;
+      return `${this.platformLabel} · ${this.matchId}`;
+    }
 
     return parseMatchSummary(this.platform, this.summary).primaryLabel;
   }

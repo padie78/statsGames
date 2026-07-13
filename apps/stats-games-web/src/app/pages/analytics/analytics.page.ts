@@ -58,6 +58,7 @@ import {
   filterMatchesInDayRange,
   filterMatchesWithinDays,
 } from '../../utils/match-stats.util';
+import { aggregatePlatformMatchStats } from '../../utils/platform-stats.util';
 import {
   buildCommunityComparison,
   formatCommunitySampleSize,
@@ -122,13 +123,32 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
           <div class="u-surface-card u-p-5">
             <div class="u-grid-stats sg-analytics__kpi-grid">
               <sg-stat-value label="Partidas" [value]="weekMatchCount()" />
-              <sg-stat-value label="Kills" [value]="weekKills()" accent="cyan" />
-              <sg-stat-value label="K/D" [value]="weeklyKd()" accent="purple" />
-              <sg-stat-value label="Win rate" [value]="weekSummary().winRate" accent="lime" />
-              <sg-stat-value label="Victorias" [value]="weekSummary().winCount" accent="lime" />
-              <sg-stat-value label="Placement medio" [value]="avgPlacementLabel()" />
+              <sg-stat-value label="Win rate" [value]="platformWeekSummary().winRate" accent="lime" />
+              <sg-stat-value label="Victorias" [value]="platformWeekSummary().winCount" accent="lime" />
+              <sg-stat-value label="KDA" [value]="platformWeekSummary().kda" accent="purple" />
+              <sg-stat-value label="K/D" [value]="platformWeekSummary().kd" accent="cyan" />
+              <sg-stat-value [label]="analyticsKillLabel()" [value]="platformWeekSummary().totalKills" accent="cyan" />
+              @if (showValCs2Extras()) {
+                <sg-stat-value label="HS%" [value]="platformWeekSummary().avgHeadshotPct" accent="lime" />
+              }
+              @if (showValorantExtras()) {
+                <sg-stat-value label="ACS" [value]="platformWeekSummary().avgScore" accent="cyan" />
+              }
+              @if (showLolExtras()) {
+                <sg-stat-value label="CS medio" [value]="platformWeekSummary().avgCs" accent="cyan" />
+                <sg-stat-value label="Visión" [value]="platformWeekSummary().avgVision" accent="purple" />
+              }
+              @if (showCs2Extras()) {
+                <sg-stat-value label="ADR" [value]="platformWeekSummary().avgAdr" accent="cyan" />
+              }
+              @if (showRlExtras()) {
+                <sg-stat-value label="Saves" [value]="platformWeekSummary().totalSaves" accent="cyan" />
+                <sg-stat-value label="Shot %" [value]="platformWeekSummary().avgShotPct" />
+              }
+              @if (showFortniteExtras()) {
+                <sg-stat-value label="Placement medio" [value]="avgPlacementLabel()" />
+              }
               <sg-stat-value label="Racha días" [value]="playStreak()" accent="cyan" />
-              <sg-stat-value label="Deaths" [value]="weekDeaths()" />
             </div>
           </div>
         </section>
@@ -248,6 +268,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
           <div class="sg-analytics__community-stack">
             <sg-community-rank-table
               title="Tu vecindario en el ranking"
+              [platform]="activePlatform()"
               [rows]="communityRank().rows"
               [yourRank]="communityRank().yourRank"
               [totalPlayers]="communityRank().totalPlayers"
@@ -316,9 +337,42 @@ export class AnalyticsPageComponent implements OnInit {
 
   readonly weekSummary = computed(() => aggregateMatchStats(this.weekMatches()));
 
+  readonly platformWeekSummary = computed(() =>
+    aggregatePlatformMatchStats(this.weekMatches()),
+  );
+
   readonly previousWeekSummary = computed(() =>
     aggregateMatchStats(this.previousWeekMatches()),
   );
+
+  analyticsKillLabel(): string {
+    return this.activePlatform() === 'rocket_league' ? 'Goles' : 'Kills';
+  }
+
+  showValorantExtras(): boolean {
+    return this.activePlatform() === 'valorant';
+  }
+
+  showLolExtras(): boolean {
+    return this.activePlatform() === 'league_of_legends';
+  }
+
+  showCs2Extras(): boolean {
+    return this.activePlatform() === 'cs2';
+  }
+
+  showValCs2Extras(): boolean {
+    const p = this.activePlatform();
+    return p === 'valorant' || p === 'cs2';
+  }
+
+  showRlExtras(): boolean {
+    return this.activePlatform() === 'rocket_league';
+  }
+
+  showFortniteExtras(): boolean {
+    return this.activePlatform() === 'fortnite';
+  }
 
   readonly chartDailyTrend = computed(() => {
     const api = this.dailyTrend();
@@ -398,19 +452,28 @@ export class AnalyticsPageComponent implements OnInit {
     const benchmarks =
       this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform];
     const summary = this.weekSummary();
+    const platformSummary = this.platformWeekSummary();
     const weekly = this.weeklyForCharts();
     const matchCount = weekly?.matchCount || summary.matchCount;
     const kills = weekly?.totalKills || summary.totalKills;
-    const kd = this.weeklyKd();
+    const useKda = platform === 'valorant' || platform === 'league_of_legends';
+    const kd = useKda ? platformSummary.kda : this.weeklyKd();
 
     return buildCommunityComparison({
       benchmarks,
-      winRate: summary.winRate,
-      winRateNumeric: parsePlayerWinRateForCommunity(summary.winRate),
+      winRate: platformSummary.winRate,
+      winRateNumeric: parsePlayerWinRateForCommunity(platformSummary.winRate),
       kd,
       kdNumeric: parsePlayerKdForCommunity(kd),
       kills,
       matchCount,
+      kdLabel: useKda ? 'KDA' : 'K/D',
+      killsLabel:
+        platform === 'rocket_league'
+          ? 'Goles / semana'
+          : platform === 'fortnite'
+            ? 'Elims / semana'
+            : 'Kills / semana',
     });
   });
 
@@ -418,18 +481,25 @@ export class AnalyticsPageComponent implements OnInit {
     const platform = this.activePlatform();
     const benchmarks =
       this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform];
-    const kd = parsePlayerKdForCommunity(this.weeklyKd()) ?? 0;
-    const wr = parsePlayerWinRateForCommunity(this.weekSummary().winRate) ?? 0;
+    const useKda = platform === 'valorant' || platform === 'league_of_legends';
+    const kdRaw = useKda
+      ? parsePlayerKdForCommunity(this.platformWeekSummary().kda)
+      : parsePlayerKdForCommunity(this.weeklyKd());
+    const kd = kdRaw ?? 0;
+    const wr = parsePlayerWinRateForCommunity(this.platformWeekSummary().winRate) ?? 0;
+    const kdLabel = useKda ? 'KDA' : 'K/D';
+    const killsLabel =
+      platform === 'rocket_league' ? 'Goles' : platform === 'fortnite' ? 'Elims' : 'Kills';
 
     return [
-      { label: 'K/D', you: Number(kd.toFixed(2)), benchmark: Number(benchmarks.avgKd.toFixed(2)) },
+      { label: kdLabel, you: Number(kd.toFixed(2)), benchmark: Number(benchmarks.avgKd.toFixed(2)) },
       {
         label: 'Win rate %',
         you: Number(wr.toFixed(1)),
         benchmark: Number(benchmarks.avgWinRate.toFixed(1)),
       },
       {
-        label: 'Kills',
+        label: killsLabel,
         you: this.weekKills(),
         benchmark: Math.round(benchmarks.avgKillsPerWeek),
       },

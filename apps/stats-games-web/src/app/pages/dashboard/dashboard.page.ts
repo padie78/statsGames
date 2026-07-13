@@ -78,6 +78,10 @@ import {
   toMatchCardStats,
 } from '../../utils/match-stats.util';
 import {
+  aggregatePlatformMatchStats,
+  buildPlatformKpiItems,
+} from '../../utils/platform-stats.util';
+import {
   buildCommunityComparison,
   formatCommunitySampleSize,
   mapCommunityBenchmarksFromApi,
@@ -290,6 +294,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
           <div class="sg-dashboard__community-stack">
             <sg-community-rank-table
+              [platform]="heroPlatform()"
               [rows]="communityRank().rows"
               [yourRank]="communityRank().yourRank"
               [totalPlayers]="communityRank().totalPlayers"
@@ -468,7 +473,13 @@ export class DashboardPageComponent implements OnInit {
     if (g) return g;
     const primary = this.profile()?.primaryPlatform?.toLowerCase();
     if (primary === 'roblox') return 'blox_fruits' as const;
-    if (primary === 'valorant' || primary === 'rocket_league' || primary === 'fortnite') {
+    if (
+      primary === 'valorant' ||
+      primary === 'league_of_legends' ||
+      primary === 'cs2' ||
+      primary === 'rocket_league' ||
+      primary === 'fortnite'
+    ) {
       return primary;
     }
     return 'fortnite' as const;
@@ -590,6 +601,14 @@ export class DashboardPageComponent implements OnInit {
       kdNumeric: parsePlayerKdForCommunity(kd),
       kills,
       matchCount,
+      kdLabel:
+        platform === 'valorant' || platform === 'league_of_legends' ? 'KDA' : 'K/D',
+      killsLabel:
+        platform === 'rocket_league'
+          ? 'Goles / semana'
+          : platform === 'fortnite'
+            ? 'Elims / semana'
+            : 'Kills / semana',
     });
   });
 
@@ -687,12 +706,28 @@ export class DashboardPageComponent implements OnInit {
   readonly highlightMatch = computed(() => {
     const matches = this.weekMatches();
     if (!matches.length) return null;
+    const platform = this.heroPlatform();
 
     const ranked = [...matches].sort((a, b) => {
-      const pa = a.stats?.placement ?? 999;
-      const pb = b.stats?.placement ?? 999;
-      if (pa !== pb) return pa - pb;
-      return (b.stats?.kills ?? 0) - (a.stats?.kills ?? 0);
+      const winA = a.stats?.won === true || a.stats?.placement === 1 ? 1 : 0;
+      const winB = b.stats?.won === true || b.stats?.placement === 1 ? 1 : 0;
+      if (winA !== winB) return winB - winA;
+
+      if (platform === 'fortnite') {
+        const pa = a.stats?.placement ?? 999;
+        const pb = b.stats?.placement ?? 999;
+        if (pa !== pb) return pa - pb;
+      }
+
+      const scoreA =
+        (a.stats?.kills ?? a.stats?.goals ?? 0) * 3 +
+        (a.stats?.assists ?? 0) +
+        (a.stats?.score ?? 0) / 100;
+      const scoreB =
+        (b.stats?.kills ?? b.stats?.goals ?? 0) * 3 +
+        (b.stats?.assists ?? 0) +
+        (b.stats?.score ?? 0) / 100;
+      return scoreB - scoreA;
     });
 
     const best = ranked[0];
@@ -706,47 +741,21 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly kpiItems = computed<KpiStripItem[]>(() => {
-    const summary = this.weekSummary();
+    const summary = aggregatePlatformMatchStats(this.weekMatches());
     const comparison = this.weekComparison();
     const winsDelta = comparison.find((item) => item.label === 'Victorias');
-    const killsDelta = comparison.find((item) => item.label === 'Kills');
+    const killsDelta = comparison.find((item) => item.label === 'Kills' || item.label === 'Goles');
     const matchesDelta = comparison.find((item) => item.label === 'Partidas');
     const kdDelta = comparison.find((item) => item.label === 'K/D');
 
-    return [
-      {
-        label: 'Victorias',
-        value: summary.winCount,
-        accent: 'lime',
-        icon: 'placement',
-        delta: shortComparisonNote(winsDelta?.note),
-        deltaTrend: winsDelta?.trend,
+    return buildPlatformKpiItems(this.heroPlatform(), summary, {
+      deltas: {
+        wins: { note: shortComparisonNote(winsDelta?.note), trend: winsDelta?.trend },
+        kills: { note: shortComparisonNote(killsDelta?.note), trend: killsDelta?.trend },
+        matches: { note: shortComparisonNote(matchesDelta?.note), trend: matchesDelta?.trend },
+        kd: { note: shortComparisonNote(kdDelta?.note), trend: kdDelta?.trend },
       },
-      { label: 'Win rate', value: summary.winRate, accent: 'cyan', icon: 'kd' },
-      {
-        label: 'K/D',
-        value: this.weeklyKd(),
-        accent: 'cyan',
-        icon: 'kd',
-        delta: shortComparisonNote(kdDelta?.note),
-        deltaTrend: kdDelta?.trend,
-      },
-      {
-        label: 'Kills',
-        value: this.weekKills(),
-        accent: 'lime',
-        icon: 'kills',
-        delta: shortComparisonNote(killsDelta?.note),
-        deltaTrend: killsDelta?.trend,
-      },
-      {
-        label: 'Partidas',
-        value: this.weekMatchCount(),
-        icon: 'matches',
-        delta: shortComparisonNote(matchesDelta?.note),
-        deltaTrend: matchesDelta?.trend,
-      },
-    ];
+    });
   });
 
   readonly effectiveRecentMatches = computed(() => {

@@ -3,6 +3,11 @@ import { RouterLink } from '@angular/router';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
 import type { SelectedGame } from '../../../core/services/auth.service';
 import { matchDetailRoute } from '../../../utils/match-analysis.util';
+import {
+  buildMatchCardStatCells,
+  isMatchWin,
+  normalizeStatsPlatform,
+} from '../../../utils/platform-stats.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 import type { MatchCardStats } from '../match-stat-card/match-stat-card.component';
 
@@ -43,24 +48,15 @@ import type { MatchCardStats } from '../match-stat-card/match-stat-card.componen
         <p class="sg-match-highlight__summary">{{ summary || 'Sin resumen' }}</p>
 
         <div class="sg-match-highlight__stats">
-          <div
-            class="sg-match-highlight__stat"
-            [class.sg-match-highlight__stat--accent]="isVictory || isPodium"
-          >
-            <span class="sg-match-highlight__stat-value">{{ stats.placement != null ? '#' + stats.placement : '—' }}</span>
-            <span class="sg-match-highlight__stat-label">Placement</span>
-          </div>
-          <div
-            class="sg-match-highlight__stat"
-            [class.sg-match-highlight__stat--accent]="isVictory"
-          >
-            <span class="sg-match-highlight__stat-value">{{ stats.kills ?? '—' }}</span>
-            <span class="sg-match-highlight__stat-label">Kills</span>
-          </div>
-          <div class="sg-match-highlight__stat">
-            <span class="sg-match-highlight__stat-value">{{ stats.deaths ?? '—' }}</span>
-            <span class="sg-match-highlight__stat-label">Deaths</span>
-          </div>
+          @for (cell of highlightCells; track cell.label) {
+            <div
+              class="sg-match-highlight__stat"
+              [class.sg-match-highlight__stat--accent]="isVictory || isPodium"
+            >
+              <span class="sg-match-highlight__stat-value">{{ cell.value }}</span>
+              <span class="sg-match-highlight__stat-label">{{ cell.label }}</span>
+            </div>
+          }
         </div>
 
         <div class="sg-match-highlight__footer">
@@ -88,12 +84,17 @@ export class MatchHighlightCardComponent {
   @Input() showHistoryLink = true;
 
   get isVictory(): boolean {
-    return this.stats.placement === 1;
+    return isMatchWin(this.stats);
   }
 
   get isPodium(): boolean {
     const p = this.stats.placement;
-    return p != null && p > 1 && p <= 3;
+    return (
+      p != null &&
+      p > 1 &&
+      p <= 3 &&
+      normalizeStatsPlatform(this.platform) === 'fortnite'
+    );
   }
 
   get headline(): string {
@@ -102,20 +103,24 @@ export class MatchHighlightCardComponent {
     return 'Mejor partida reciente';
   }
 
+  get highlightCells() {
+    return buildMatchCardStatCells(this.platform, this.stats, false).slice(0, 3);
+  }
+
   get platformKey(): SelectedGame | null {
-    const p = this.platform?.toLowerCase();
-    if (!p) return null;
+    const p = normalizeStatsPlatform(this.platform);
     if (
       p === 'fortnite' ||
       p === 'valorant' ||
       p === 'rocket_league' ||
+      p === 'league_of_legends' ||
+      p === 'cs2' ||
       p === 'blox_fruits' ||
       p === 'adopt_me' ||
       p === 'brookhaven'
     ) {
       return p;
     }
-    if (p === 'roblox') return 'blox_fruits';
     return null;
   }
 
@@ -127,7 +132,7 @@ export class MatchHighlightCardComponent {
   get platformTone(): 'cyan' | 'purple' | 'lime' {
     const g = this.platformKey;
     if (g === 'valorant' || g === 'adopt_me') return 'purple';
-    if (g === 'blox_fruits' || g === 'brookhaven') return 'lime';
+    if (g === 'blox_fruits' || g === 'brookhaven' || g === 'league_of_legends') return 'lime';
     return 'cyan';
   }
 

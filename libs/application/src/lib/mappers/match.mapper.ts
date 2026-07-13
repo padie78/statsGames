@@ -28,36 +28,60 @@ function toOptionalBool(value: unknown): boolean | undefined {
 }
 
 function extractStats(record: Record<string, unknown>): MatchStatsDto | undefined {
-  const kills = toOptionalInt(record['kills'] ?? record['eliminations']);
+  const kills = toOptionalInt(record['kills'] ?? record['eliminations'] ?? record['goals']);
   const deaths = toOptionalInt(record['deaths']);
   const placement = toOptionalInt(record['placement'] ?? record['rank']);
   const assists = toOptionalInt(record['assists']);
-  const headshotPct = toOptionalFloat(record['headshotPct']);
+  const headshotPct = toOptionalFloat(record['headshotPct'] ?? record['hsPct']);
   const roundsWon = toOptionalInt(record['roundsWon']);
   const roundsLost = toOptionalInt(record['roundsLost']);
   const map = toOptionalString(record['map']);
-  const agent = toOptionalString(record['agent']);
-  const mode = toOptionalString(record['mode']);
+  const champion = toOptionalString(record['champion']);
+  const agent = toOptionalString(record['agent']) ?? champion;
+  const mode = toOptionalString(record['mode'] ?? record['playlist']);
   const won = toOptionalBool(record['won']);
+  const score = toOptionalInt(record['score'] ?? record['acs']);
+  const adr = toOptionalFloat(record['adr'] ?? record['damagePerRound']);
+  const role = toOptionalString(record['role'] ?? record['teamPosition'] ?? record['lane']);
+  const cs = toOptionalInt(record['cs'] ?? record['totalMinionsKilled']);
+  const visionScore = toOptionalInt(record['visionScore']);
+  const goals = toOptionalInt(record['goals']);
+  const saves = toOptionalInt(record['saves']);
+  const shots = toOptionalInt(record['shots']);
+  const shotPct = toOptionalFloat(record['shotPct']);
+  const durationSec = toOptionalInt(record['durationSec'] ?? record['gameLength']);
 
-  if (
-    kills == null &&
-    deaths == null &&
-    placement == null &&
-    assists == null &&
-    headshotPct == null &&
-    roundsWon == null &&
-    roundsLost == null &&
-    map == null &&
-    agent == null &&
-    mode == null &&
-    won == null
-  ) {
-    return undefined;
-  }
+  // Rocket League: goals actúan como "kills" en KPIs genéricos.
+  const resolvedKills = kills ?? goals;
+
+  const hasAny =
+    resolvedKills != null ||
+    deaths != null ||
+    placement != null ||
+    assists != null ||
+    headshotPct != null ||
+    roundsWon != null ||
+    roundsLost != null ||
+    map != null ||
+    agent != null ||
+    mode != null ||
+    won != null ||
+    score != null ||
+    adr != null ||
+    champion != null ||
+    role != null ||
+    cs != null ||
+    visionScore != null ||
+    goals != null ||
+    saves != null ||
+    shots != null ||
+    shotPct != null ||
+    durationSec != null;
+
+  if (!hasAny) return undefined;
 
   return {
-    kills,
+    kills: resolvedKills,
     deaths,
     placement,
     assists,
@@ -68,6 +92,17 @@ function extractStats(record: Record<string, unknown>): MatchStatsDto | undefine
     agent,
     mode,
     won,
+    score,
+    adr,
+    champion,
+    role,
+    cs,
+    visionScore,
+    goals,
+    saves,
+    shots,
+    shotPct,
+    durationSec,
   };
 }
 

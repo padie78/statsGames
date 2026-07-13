@@ -15,6 +15,17 @@ export interface MatchStatsView {
   agent?: string | null;
   mode?: string | null;
   won?: boolean | null;
+  score?: number | null;
+  adr?: number | null;
+  champion?: string | null;
+  role?: string | null;
+  cs?: number | null;
+  visionScore?: number | null;
+  goals?: number | null;
+  saves?: number | null;
+  shots?: number | null;
+  shotPct?: number | null;
+  durationSec?: number | null;
 }
 
 export interface MatchOutcome {
@@ -56,7 +67,25 @@ export function toMatchCardStats(stats?: MatchStatsView | null): MatchCardStats 
     agent: stats.agent ?? undefined,
     mode: stats.mode ?? undefined,
     won: stats.won ?? undefined,
+    score: stats.score ?? undefined,
+    adr: stats.adr ?? undefined,
+    champion: stats.champion ?? undefined,
+    role: stats.role ?? undefined,
+    cs: stats.cs ?? undefined,
+    visionScore: stats.visionScore ?? undefined,
+    goals: stats.goals ?? undefined,
+    saves: stats.saves ?? undefined,
+    shots: stats.shots ?? undefined,
+    shotPct: stats.shotPct ?? undefined,
+    durationSec: stats.durationSec ?? undefined,
   };
+}
+
+export function isMatchWin(stats?: MatchStatsView | null): boolean {
+  if (!stats) return false;
+  if (stats.won === true) return true;
+  if (stats.won === false) return false;
+  return stats.placement === 1;
 }
 
 export function computeKdRatio(kills: number, deaths: number): string {
@@ -188,7 +217,7 @@ export function computePlayStreakFromDailyTrend(
 export function computeWinStreak(matches: MatchUpdateView[]): number {
   let streak = 0;
   for (const match of sortMatches(matches, 'newest')) {
-    if (match.stats?.placement === 1) streak += 1;
+    if (isMatchWin(match.stats)) streak += 1;
     else break;
   }
   return streak;
@@ -255,16 +284,17 @@ export function aggregateMatchStats(matches: MatchUpdateView[]): MatchAggregateS
 
   for (const match of matches) {
     const stats = match.stats;
-    totalKills += stats?.kills ?? 0;
+    totalKills += stats?.kills ?? stats?.goals ?? 0;
     totalDeaths += stats?.deaths ?? 0;
     totalAssists += stats?.assists ?? 0;
+
+    if (isMatchWin(stats)) winCount += 1;
 
     const placement = stats?.placement;
     if (placement != null && placement > 0) {
       placementSum += placement;
       placementCount += 1;
       bestPlacement = bestPlacement == null ? placement : Math.min(bestPlacement, placement);
-      if (placement === 1) winCount += 1;
     }
   }
 

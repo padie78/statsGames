@@ -28,6 +28,10 @@ export interface CommunityComparisonInput {
   kdNumeric: number | null;
   kills: number;
   matchCount: number;
+  /** Etiqueta K/D vs KDA según juego. */
+  kdLabel?: string;
+  /** Etiqueta kills vs goles vs elims. */
+  killsLabel?: string;
 }
 
 export interface CommunityComparisonSummary {
@@ -134,7 +138,7 @@ export function buildCommunityComparison(input: CommunityComparisonInput): Commu
     const betterThanPct = estimateBetterThanPct(input.kdNumeric, benchmarks.avgKd, benchmarks.kdStd);
     items.push({
       id: 'kd',
-      label: 'K/D',
+      label: input.kdLabel ?? 'K/D',
       playerValue: input.kd,
       communityAvg: benchmarks.avgKd.toFixed(2),
       betterThanPct,
@@ -155,7 +159,7 @@ export function buildCommunityComparison(input: CommunityComparisonInput): Commu
     );
     items.push({
       id: 'kills',
-      label: 'Kills / semana',
+      label: input.killsLabel ?? 'Kills / semana',
       playerValue: String(input.kills),
       communityAvg: String(Math.round(benchmarks.avgKillsPerWeek)),
       betterThanPct,

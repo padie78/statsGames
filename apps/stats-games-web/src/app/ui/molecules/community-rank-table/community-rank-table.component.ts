@@ -39,9 +39,9 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
               <tr>
                 <th scope="col">#</th>
                 <th scope="col">Jugador</th>
-                <th scope="col" class="sg-community-rank__col--optional">KD</th>
+                <th scope="col" class="sg-community-rank__col--optional">{{ kdColumnLabel }}</th>
                 <th scope="col" class="sg-community-rank__col--optional">WR</th>
-                <th scope="col" class="sg-community-rank__col--optional">Kills</th>
+                <th scope="col" class="sg-community-rank__col--optional">{{ killsColumnLabel }}</th>
                 <th scope="col" class="sg-community-rank__col--optional">Partidas</th>
                 <th scope="col">Score</th>
                 <th scope="col" class="sg-community-rank__col--delta">Δ</th>
@@ -94,9 +94,9 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
                   <tr class="sg-community-rank__detail-row" [class.sg-community-rank__row--you]="row.isYou">
                     <td colspan="8">
                       <div class="sg-community-rank__detail">
-                        <span><strong>KD</strong> {{ formatKd(row.kd) }}</span>
+                        <span><strong>{{ kdColumnLabel }}</strong> {{ formatKd(row.kd) }}</span>
                         <span><strong>WR</strong> {{ row.winRate }}%</span>
-                        <span><strong>Kills</strong> {{ row.kills }}</span>
+                        <span><strong>{{ killsColumnLabel }}</strong> {{ row.kills }}</span>
                         <span><strong>Partidas</strong> {{ row.matches }}</span>
                         <span><strong>Δ</strong> {{ row.delta }}</span>
                       </div>
@@ -110,7 +110,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
 
         <p class="sg-community-rank__footnote u-m-0">
           Mostramos jugadores cerca de tu puesto ({{ rows.length }} de {{ totalPlayers }} en el board).
-          Score = KD + win rate + kills + volumen de partidas.
+          Score = {{ kdColumnLabel }} + win rate + {{ killsColumnLabel.toLowerCase() }} + volumen de partidas.
         </p>
       }
     </section>
@@ -123,8 +123,23 @@ export class CommunityRankTableComponent {
   @Input() rows: CommunityRankRow[] = [];
   @Input() yourRank = 0;
   @Input() totalPlayers = 0;
+  /** Plataforma activa para etiquetas (KDA vs KD, Goles vs Kills). */
+  @Input() platform = '';
 
   expandedTag: string | null = null;
+
+  get kdColumnLabel(): string {
+    const p = this.platform?.toLowerCase();
+    if (p === 'valorant' || p === 'league_of_legends') return 'KDA';
+    return 'KD';
+  }
+
+  get killsColumnLabel(): string {
+    const p = this.platform?.toLowerCase();
+    if (p === 'rocket_league') return 'Goles';
+    if (p === 'fortnite') return 'Elims';
+    return 'Kills';
+  }
 
   toggleRow(tag: string): void {
     this.expandedTag = this.expandedTag === tag ? null : tag;

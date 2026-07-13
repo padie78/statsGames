@@ -139,16 +139,45 @@ const body = {
     ...(values.assists != null ? { assists: Number(values.assists) } : {}),
     source: 'send-match-cli',
     ...(platform === 'rocket_league'
-      ? { goals: Number(values.kills) || 0, saves: 2, shots: 8 }
+      ? {
+          goals: Number(values.kills) || 0,
+          saves: 2,
+          shots: 8,
+          shotPct: Number(values['shot-pct'] || 42),
+          won: true,
+          placement: 1,
+        }
       : {}),
     ...(platform === 'league_of_legends'
-      ? { champion: values.champion || 'Jinx', role: values.role || 'BOTTOM', cs: Number(values.cs || 180), visionScore: Number(values.vision || 24), won: true }
+      ? {
+          champion: values.champion || 'Jinx',
+          role: values.role || 'BOTTOM',
+          cs: Number(values.cs || 180),
+          visionScore: Number(values.vision || 24),
+          won: true,
+          placement: 1,
+        }
       : {}),
     ...(platform === 'cs2'
-      ? { map: values.map || 'de_mirage', adr: Number(values.adr || 85), hsPct: Number(values.hs || 38), won: true }
+      ? {
+          map: values.map || 'de_mirage',
+          adr: Number(values.adr || 85),
+          hsPct: Number(values.hs || 38),
+          headshotPct: Number(values.hs || 38),
+          won: true,
+          placement: 1,
+        }
       : {}),
     ...(platform === 'valorant'
-      ? { headshotPct: 24, agent: 'Jett', roundsWon: 13 }
+      ? {
+          headshotPct: Number(values.hs || 24),
+          agent: values.agent || 'Jett',
+          roundsWon: Number(values['rounds-won'] || 13),
+          roundsLost: Number(values['rounds-lost'] || 9),
+          score: Number(values.score || 4400),
+          won: true,
+          placement: 1,
+        }
       : {}),
     ...(platform === 'roblox'
       ? {

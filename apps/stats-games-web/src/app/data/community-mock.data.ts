@@ -120,15 +120,32 @@ const PEERS_ROBLOX: PeerSeed[] = [
 const PEERS_VALORANT: PeerSeed[] = PEERS_FORTNITE.map((p, i) => ({
   ...p,
   gamerTag: ['AceHunter', 'JettMain', 'CypherWatch', 'ClutchSage', 'ReynaFlash', 'OmenSmoke'][i % 6] + (i + 1),
+  kd: Math.round((p.kd * 0.95 + 0.35) * 100) / 100,
+}));
+
+const PEERS_LOL: PeerSeed[] = PEERS_FORTNITE.map((p, i) => ({
+  ...p,
+  gamerTag: ['JinxCarry', 'AhriOneShot', 'LeeSinInsec', 'ThreshHook', 'DariusDunk', 'ThreshHook'][i % 6] + (i + 1),
+  kd: Math.round((p.kd * 1.4 + 0.8) * 100) / 100,
+  kills: Math.round(p.kills * 0.45),
+}));
+
+const PEERS_CS2: PeerSeed[] = PEERS_FORTNITE.map((p, i) => ({
+  ...p,
+  gamerTag: ['AWPGod', 'EntryFrag', 'EcoForce', 'SmokeStack', 'FlashBang', 'NadeKing'][i % 6] + (i + 1),
+  kd: Math.round((p.kd * 0.9 + 0.15) * 100) / 100,
 }));
 
 const PEERS_RL: PeerSeed[] = PEERS_FORTNITE.map((p, i) => ({
   ...p,
   gamerTag: ['OctanePro', 'AerialKing', 'SaveGod', 'DemoLord', 'BoostStarve', 'FlipReset'][i % 6] + (i + 1),
+  kills: Math.round(p.kills * 0.35),
 }));
 
 function peersFor(platform: SelectedGame): PeerSeed[] {
   if (platform === 'valorant') return PEERS_VALORANT;
+  if (platform === 'league_of_legends') return PEERS_LOL;
+  if (platform === 'cs2') return PEERS_CS2;
   if (platform === 'rocket_league') return PEERS_RL;
   if (isRobloxExperienceGame(platform)) return PEERS_ROBLOX;
   return PEERS_FORTNITE;

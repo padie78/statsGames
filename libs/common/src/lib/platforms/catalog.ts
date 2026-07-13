@@ -52,7 +52,18 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     profileField: 'valorantId',
     externalIdHint: 'Riot ID (Nombre#TAG)',
     externalIdPlaceholder: 'ej. Player#NA1',
-    statHints: ['kills', 'deaths', 'assists', 'headshotPct', 'roundsWon', 'map', 'agent'],
+    statHints: [
+      'kills',
+      'deaths',
+      'assists',
+      'headshotPct',
+      'score',
+      'acs',
+      'roundsWon',
+      'map',
+      'agent',
+      'won',
+    ],
   },
   league_of_legends: {
     id: 'league_of_legends',
@@ -63,7 +74,7 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     profileField: 'leagueOfLegendsId',
     externalIdHint: 'Riot ID (Nombre#TAG)',
     externalIdPlaceholder: 'ej. Summoner#EUW',
-    statHints: ['kills', 'deaths', 'assists', 'champion', 'role', 'cs', 'vision', 'won'],
+    statHints: ['kills', 'deaths', 'assists', 'champion', 'role', 'cs', 'visionScore', 'won'],
   },
   cs2: {
     id: 'cs2',
@@ -74,7 +85,7 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     profileField: 'cs2Id',
     externalIdHint: 'SteamID64 (17 dígitos)',
     externalIdPlaceholder: 'ej. 76561198000000000',
-    statHints: ['kills', 'deaths', 'assists', 'adr', 'hsPct', 'map', 'won'],
+    statHints: ['kills', 'deaths', 'assists', 'adr', 'headshotPct', 'map', 'won'],
   },
   rocket_league: {
     id: 'rocket_league',
@@ -85,7 +96,7 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     profileField: 'rocketLeagueId',
     externalIdHint: 'Epic display name / platform id',
     externalIdPlaceholder: 'ej. TuEpicName',
-    statHints: ['goals', 'assists', 'saves', 'shots', 'score', 'playlist', 'mmrDelta'],
+    statHints: ['goals', 'assists', 'saves', 'shots', 'shotPct', 'score', 'won'],
   },
   fortnite: {
     id: 'fortnite',
@@ -96,7 +107,7 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     profileField: 'fortniteId',
     externalIdHint: 'Epic account id (32 hex) o display name',
     externalIdPlaceholder: 'ej. TuDisplayName',
-    statHints: ['kills', 'deaths', 'wins', 'placement', 'mode'],
+    statHints: ['kills', 'deaths', 'placement', 'mode', 'won'],
   },
   roblox: {
     id: 'roblox',
@@ -107,10 +118,9 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     profileField: 'robloxId',
     externalIdHint: 'Roblox UserId (número)',
     externalIdPlaceholder: 'ej. 123456789',
-    statHints: ['bedwarsBadges', 'arsenalBadges', 'experienceName', 'avatar'],
+    statHints: ['kills', 'deaths', 'placement', 'mode', 'experienceName'],
   },
 };
-
 export function isGamePlatform(value: string): value is GamePlatform {
   return (GAME_PLATFORMS as readonly string[]).includes(value.toLowerCase());
 }

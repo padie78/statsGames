@@ -52,6 +52,8 @@ interface ValorantMatchSummary {
   agent?: string;
   agentId?: string;
   won?: boolean;
+  /** Average Combat Score (score / rounds). */
+  acs?: number;
 }
 
 const PLATFORM: GamePlatform = 'valorant';
@@ -173,6 +175,7 @@ export const handler: Handler = async () => {
             deaths: detail.deaths,
             assists: detail.assists,
             score: detail.score ?? null,
+            acs: detail.acs ?? null,
             headshotPct: detail.headshotPct ?? null,
             roundsWon: detail.roundsWon ?? null,
             roundsLost: detail.roundsLost ?? null,
@@ -364,6 +367,13 @@ async function fetchMatchForPlayer(
     agent,
     agentId,
     won: won == null ? undefined : !!won,
+    acs:
+      player.stats.score != null
+        ? Math.round(
+            Number(player.stats.score) /
+              Math.max(1, (roundsWon ?? 0) + (roundsLost ?? 0)),
+          )
+        : undefined,
   };
 }
 

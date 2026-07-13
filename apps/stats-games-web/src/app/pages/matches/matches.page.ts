@@ -15,13 +15,16 @@ import {
   type MatchPlatformFilter,
 } from '../../ui';
 import {
-  aggregateMatchStats,
   formatMatchRelativeTime,
   groupMatchesByDay,
   sortMatches,
   toMatchCardStats,
   type MatchSortKey,
 } from '../../utils/match-stats.util';
+import {
+  aggregatePlatformMatchStats,
+  buildPlatformKpiItems,
+} from '../../utils/platform-stats.util';
 import { resolveMatchHistory } from '../../data/match-mock.data';
 
 @Component({
@@ -143,18 +146,10 @@ export class MatchesPageComponent implements OnInit {
   });
 
   readonly summaryKpis = computed<KpiStripItem[]>(() => {
-    const summary = aggregateMatchStats(this.filteredMatches());
-    return [
-      { label: 'Partidas', value: summary.matchCount, icon: 'matches' },
-      { label: 'Victorias', value: summary.winCount, icon: 'placement', accent: 'lime' },
-      { label: 'Win rate', value: summary.winRate, icon: 'kd', accent: 'cyan' },
-      {
-        label: 'Mejor lugar',
-        value: summary.bestPlacement != null ? `#${summary.bestPlacement}` : '—',
-        icon: 'placement',
-        accent: 'lime',
-      },
-    ];
+    const matches = this.filteredMatches();
+    const platform = this.gameContext.activeGame() ?? matches[0]?.platform ?? 'fortnite';
+    const summary = aggregatePlatformMatchStats(matches);
+    return buildPlatformKpiItems(platform, summary);
   });
 
   readonly highlightMatch = computed(() => {

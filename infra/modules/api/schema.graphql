@@ -93,6 +93,17 @@ input MatchStatsInput {
   agent: String
   mode: String
   won: Boolean
+  score: Int
+  adr: Float
+  champion: String
+  role: String
+  cs: Int
+  visionScore: Int
+  goals: Int
+  saves: Int
+  shots: Int
+  shotPct: Float
+  durationSec: Int
 }
 
 input MatchUpdateInput {
@@ -180,6 +191,17 @@ type MatchStats @aws_api_key @aws_cognito_user_pools {
   agent: String
   mode: String
   won: Boolean
+  score: Int
+  adr: Float
+  champion: String
+  role: String
+  cs: Int
+  visionScore: Int
+  goals: Int
+  saves: Int
+  shots: Int
+  shotPct: Float
+  durationSec: Int
 }
 
 type MatchUpdate @aws_api_key @aws_cognito_user_pools {

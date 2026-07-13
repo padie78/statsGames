@@ -16,6 +16,17 @@ export interface MatchStatsView {
   agent?: string | null;
   mode?: string | null;
   won?: boolean | null;
+  score?: number | null;
+  adr?: number | null;
+  champion?: string | null;
+  role?: string | null;
+  cs?: number | null;
+  visionScore?: number | null;
+  goals?: number | null;
+  saves?: number | null;
+  shots?: number | null;
+  shotPct?: number | null;
+  durationSec?: number | null;
 }
 
 export interface MatchUpdateView {
@@ -44,6 +55,17 @@ const MATCH_STATS_FIELDS = /* GraphQL */ `
     agent
     mode
     won
+    score
+    adr
+    champion
+    role
+    cs
+    visionScore
+    goals
+    saves
+    shots
+    shotPct
+    durationSec
   }
 `;
 
