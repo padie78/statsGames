@@ -388,11 +388,11 @@ resource "aws_lambda_function" "match_ai_analyzer" {
 
   environment {
     variables = {
-      TABLE_NAME         = var.table_name
-      APPSYNC_ENDPOINT   = "https://placeholder-will-be-patched"
-      APPSYNC_API_KEY    = "placeholder-will-be-patched"
-      BEDROCK_MODEL_ID   = var.bedrock_model_id
-      LOG_LEVEL          = "INFO"
+      TABLE_NAME       = var.table_name
+      APPSYNC_ENDPOINT = "https://placeholder-will-be-patched"
+      APPSYNC_API_KEY  = "placeholder-will-be-patched"
+      BEDROCK_MODEL_ID = var.bedrock_model_id
+      LOG_LEVEL        = "INFO"
     }
   }
 }

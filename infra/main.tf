@@ -32,20 +32,20 @@ module "lambdas" {
   source      = "./modules/lambdas"
   name_prefix = local.name_prefix
 
-  table_name                    = module.database.table_name
-  table_arn                     = module.database.table_arn
-  game_ingestion_queue_url      = module.queues.game_ingestion_queue_url
-  game_ingestion_queue_arn      = module.queues.game_ingestion_queue_arn
-  game_ingestion_dlq_arn        = module.queues.dlq_arns["game_ingestion"]
-  match_ai_analysis_queue_url   = module.queues.match_ai_analysis_queue_url
-  match_ai_analysis_queue_arn   = module.queues.match_ai_analysis_queue_arn
-  match_ai_analysis_dlq_arn     = module.queues.dlq_arns["match_ai_analysis"]
-  webhook_secret                = var.webhook_secret
-  fortnite_api_key              = var.fortnite_api_key
-  riot_api_key                  = var.riot_api_key
-  valorant_region               = var.valorant_region
-  valorant_shard                = var.valorant_shard
-  ballchasing_api_key           = var.ballchasing_api_key
+  table_name                  = module.database.table_name
+  table_arn                   = module.database.table_arn
+  game_ingestion_queue_url    = module.queues.game_ingestion_queue_url
+  game_ingestion_queue_arn    = module.queues.game_ingestion_queue_arn
+  game_ingestion_dlq_arn      = module.queues.dlq_arns["game_ingestion"]
+  match_ai_analysis_queue_url = module.queues.match_ai_analysis_queue_url
+  match_ai_analysis_queue_arn = module.queues.match_ai_analysis_queue_arn
+  match_ai_analysis_dlq_arn   = module.queues.dlq_arns["match_ai_analysis"]
+  webhook_secret              = var.webhook_secret
+  fortnite_api_key            = var.fortnite_api_key
+  riot_api_key                = var.riot_api_key
+  valorant_region             = var.valorant_region
+  valorant_shard              = var.valorant_shard
+  ballchasing_api_key         = var.ballchasing_api_key
 }
 
 module "api" {
