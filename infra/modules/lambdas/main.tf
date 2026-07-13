@@ -186,6 +186,11 @@ resource "aws_lambda_function" "game_processor" {
       LOG_LEVEL                   = "INFO"
     }
   }
+
+  # CI patea APPSYNC_* reales post-deploy; no pisarlos en apply de infra.
+  lifecycle {
+    ignore_changes = [environment]
+  }
 }
 
 resource "aws_lambda_event_source_mapping" "game_processor" {
@@ -482,6 +487,11 @@ resource "aws_lambda_function" "match_ai_analyzer" {
       BEDROCK_MODEL_ID = var.bedrock_model_id
       LOG_LEVEL        = "INFO"
     }
+  }
+
+  # CI patea APPSYNC_* reales post-deploy; no pisarlos en apply de infra.
+  lifecycle {
+    ignore_changes = [environment]
   }
 }
 
