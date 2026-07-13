@@ -29,8 +29,10 @@ env:
   TF_VAR_fortnite_api_key: ${{ secrets.FORTNITE_API_KEY }}
   TF_VAR_riot_api_key: ${{ secrets.RIOT_API_KEY }}
   TF_VAR_ballchasing_api_key: ${{ secrets.BALLCHASING_API_KEY }}
+  TF_VAR_steam_web_api_key: ${{ secrets.STEAM_WEB_API_KEY }}
   TF_VAR_valorant_region: ${{ vars.VALORANT_REGION || 'americas' }}
   TF_VAR_valorant_shard: ${{ vars.VALORANT_SHARD || 'na' }}
+  TF_VAR_lol_region: ${{ vars.LOL_REGION || 'europe' }}
 
 jobs:
   terraform:

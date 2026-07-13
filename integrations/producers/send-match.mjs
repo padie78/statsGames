@@ -6,6 +6,8 @@
  *
  * Uso:
  *   npm run send:match -- --platform valorant --kills 18 --deaths 14 --assists 6
+ *   npm run send:match -- --platform league_of_legends --kills 8 --deaths 3 --assists 12
+ *   npm run send:match -- --platform cs2 --kills 22 --deaths 14 --assists 5
  *   npm run send:match -- --platform rocket_league --kills 5
  *   npm run send:match -- --platform fortnite --kills 8 --placement 1
  *   npm run send:match -- --platform roblox --kills 8 --deaths 2 --placement 3
@@ -20,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 loadDotEnv(resolve(dirname(fileURLToPath(import.meta.url)), '../../.env'));
 
-const PLATFORMS = new Set(['valorant', 'rocket_league', 'fortnite', 'roblox']);
+const PLATFORMS = new Set(['valorant', 'league_of_legends', 'cs2', 'rocket_league', 'fortnite', 'roblox']);
 
 const { values } = parseArgs({
   options: {
@@ -99,6 +101,8 @@ const map =
 const label =
   {
     valorant: 'Valorant',
+    league_of_legends: 'League of Legends',
+    cs2: 'CS2',
     rocket_league: 'Rocket League',
     fortnite: 'Fortnite',
     roblox: mode === 'Arsenal' ? 'Arsenal' : 'BedWars',
@@ -136,6 +140,12 @@ const body = {
     source: 'send-match-cli',
     ...(platform === 'rocket_league'
       ? { goals: Number(values.kills) || 0, saves: 2, shots: 8 }
+      : {}),
+    ...(platform === 'league_of_legends'
+      ? { champion: values.champion || 'Jinx', role: values.role || 'BOTTOM', cs: Number(values.cs || 180), visionScore: Number(values.vision || 24), won: true }
+      : {}),
+    ...(platform === 'cs2'
+      ? { map: values.map || 'de_mirage', adr: Number(values.adr || 85), hsPct: Number(values.hs || 38), won: true }
       : {}),
     ...(platform === 'valorant'
       ? { headshotPct: 24, agent: 'Jett', roundsWon: 13 }

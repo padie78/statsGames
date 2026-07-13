@@ -4,6 +4,8 @@
  */
 export const SELECTED_GAMES = [
   'valorant',
+  'league_of_legends',
+  'cs2',
   'rocket_league',
   'fortnite',
   'blox_fruits',
@@ -22,15 +24,31 @@ export function normalizeSelectedGame(raw: string | null | undefined): SelectedG
   if (!raw) return null;
   const v = raw.toLowerCase();
   if (isSelectedGame(v)) return v;
+  if (v === 'lol') return 'league_of_legends';
+  if (v === 'counter_strike_2' || v === 'counter-strike-2') return 'cs2';
   if (v === 'roblox') return 'blox_fruits';
   return null;
 }
 
 /** Plataforma de backend / perfil para upsert y queries. */
-export type BackendPlatform = 'valorant' | 'rocket_league' | 'fortnite' | 'roblox';
+export type BackendPlatform =
+  | 'valorant'
+  | 'league_of_legends'
+  | 'cs2'
+  | 'rocket_league'
+  | 'fortnite'
+  | 'roblox';
 
 export function backendPlatformForGame(game: SelectedGame): BackendPlatform {
-  if (game === 'valorant' || game === 'rocket_league' || game === 'fortnite') return game;
+  if (
+    game === 'valorant' ||
+    game === 'league_of_legends' ||
+    game === 'cs2' ||
+    game === 'rocket_league' ||
+    game === 'fortnite'
+  ) {
+    return game;
+  }
   return 'roblox';
 }
 
@@ -43,7 +61,14 @@ export function matchBackendPlatform(
   game: SelectedGame | BackendPlatform | null | undefined,
 ): BackendPlatform | undefined {
   if (!game) return undefined;
-  if (game === 'roblox' || game === 'valorant' || game === 'rocket_league' || game === 'fortnite') {
+  if (
+    game === 'roblox' ||
+    game === 'valorant' ||
+    game === 'league_of_legends' ||
+    game === 'cs2' ||
+    game === 'rocket_league' ||
+    game === 'fortnite'
+  ) {
     return game;
   }
   return backendPlatformForGame(game);
@@ -65,6 +90,8 @@ export function selectedGameFromBackend(
 export function isBackendPlatform(value: string | null | undefined): value is BackendPlatform {
   return (
     value === 'valorant' ||
+    value === 'league_of_legends' ||
+    value === 'cs2' ||
     value === 'rocket_league' ||
     value === 'fortnite' ||
     value === 'roblox'

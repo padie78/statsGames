@@ -7,6 +7,8 @@ export interface PlayerProfileProps {
   fortniteId?: string;
   robloxId?: string;
   valorantId?: string;
+  leagueOfLegendsId?: string;
+  cs2Id?: string;
   rocketLeagueId?: string;
   avatarUrl?: string;
   createdAtIso: string;
@@ -24,6 +26,8 @@ export class PlayerProfile {
     fortniteId?: string;
     robloxId?: string;
     valorantId?: string;
+    leagueOfLegendsId?: string;
+    cs2Id?: string;
     rocketLeagueId?: string;
     avatarUrl?: string;
     nowIso?: string;
@@ -36,6 +40,8 @@ export class PlayerProfile {
       fortniteId: input.fortniteId,
       robloxId: input.robloxId,
       valorantId: input.valorantId,
+      leagueOfLegendsId: input.leagueOfLegendsId,
+      cs2Id: input.cs2Id,
       rocketLeagueId: input.rocketLeagueId,
       avatarUrl: input.avatarUrl,
       createdAtIso: now,
@@ -72,6 +78,14 @@ export class PlayerProfile {
     return this.props.valorantId;
   }
 
+  get leagueOfLegendsId(): string | undefined {
+    return this.props.leagueOfLegendsId;
+  }
+
+  get cs2Id(): string | undefined {
+    return this.props.cs2Id;
+  }
+
   get rocketLeagueId(): string | undefined {
     return this.props.rocketLeagueId;
   }
@@ -98,6 +112,8 @@ export class PlayerProfile {
     fortniteId?: string;
     robloxId?: string;
     valorantId?: string;
+    leagueOfLegendsId?: string;
+    cs2Id?: string;
     rocketLeagueId?: string;
     avatarUrl?: string;
     nowIso?: string;
@@ -109,6 +125,8 @@ export class PlayerProfile {
       fortniteId: input.fortniteId ?? this.props.fortniteId,
       robloxId: input.robloxId ?? this.props.robloxId,
       valorantId: input.valorantId ?? this.props.valorantId,
+      leagueOfLegendsId: input.leagueOfLegendsId ?? this.props.leagueOfLegendsId,
+      cs2Id: input.cs2Id ?? this.props.cs2Id,
       rocketLeagueId: input.rocketLeagueId ?? this.props.rocketLeagueId,
       avatarUrl: input.avatarUrl ?? this.props.avatarUrl,
       updatedAtIso: input.nowIso ?? new Date().toISOString(),
@@ -124,6 +142,10 @@ export class PlayerProfile {
         return this.update({ robloxId: externalId, primaryPlatform: platform });
       case 'valorant':
         return this.update({ valorantId: externalId, primaryPlatform: platform });
+      case 'league_of_legends':
+        return this.update({ leagueOfLegendsId: externalId, primaryPlatform: platform });
+      case 'cs2':
+        return this.update({ cs2Id: externalId, primaryPlatform: platform });
       case 'rocket_league':
         return this.update({ rocketLeagueId: externalId, primaryPlatform: platform });
       default: {

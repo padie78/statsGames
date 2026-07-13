@@ -87,9 +87,13 @@ export class Match {
           ? 'Roblox'
           : this.props.platform === 'valorant'
             ? 'Valorant'
-            : this.props.platform === 'rocket_league'
-              ? 'Rocket League'
-              : this.props.platform;
+            : this.props.platform === 'league_of_legends'
+              ? 'League of Legends'
+              : this.props.platform === 'cs2'
+                ? 'CS2'
+                : this.props.platform === 'rocket_league'
+                  ? 'Rocket League'
+                  : this.props.platform;
 
     const bits: string[] = [experience || platformLabel];
     if (mode && mode !== experience) bits.push(mode);

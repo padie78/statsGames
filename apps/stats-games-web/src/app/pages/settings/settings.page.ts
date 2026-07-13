@@ -328,6 +328,8 @@ export class SettingsPageComponent {
           fortniteId: current?.fortniteId ?? undefined,
           robloxId: current?.robloxId ?? undefined,
           valorantId: current?.valorantId ?? undefined,
+          leagueOfLegendsId: current?.leagueOfLegendsId ?? undefined,
+          cs2Id: current?.cs2Id ?? undefined,
           rocketLeagueId: current?.rocketLeagueId ?? undefined,
           avatarUrl: current?.avatarUrl ?? undefined,
         }),

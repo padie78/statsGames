@@ -55,6 +55,14 @@ output "roblox_experience_poller_name" {
   value = aws_lambda_function.roblox_experience_poller.function_name
 }
 
+output "league_of_legends_match_poller_name" {
+  value = aws_lambda_function.league_of_legends_match_poller.function_name
+}
+
+output "cs2_match_poller_name" {
+  value = aws_lambda_function.cs2_match_poller.function_name
+}
+
 output "match_ai_analyzer_name" {
   value = aws_lambda_function.match_ai_analyzer.function_name
 }

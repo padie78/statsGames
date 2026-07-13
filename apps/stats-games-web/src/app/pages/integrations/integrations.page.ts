@@ -16,7 +16,13 @@ import { extractGraphqlErrorMessage, mapLinkPlatformError } from '../../utils/gr
 import { robloxAvatarUrl } from '../../utils/roblox-avatar.util';
 import { NeonBadgeComponent, SelectComponent, type SelectOption } from '../../ui';
 
-type LinkablePlatform = 'valorant' | 'rocket_league' | 'fortnite' | 'roblox';
+type LinkablePlatform =
+  | 'valorant'
+  | 'rocket_league'
+  | 'fortnite'
+  | 'roblox'
+  | 'league_of_legends'
+  | 'cs2';
 
 @Component({
   standalone: true,
@@ -66,6 +72,17 @@ type LinkablePlatform = 'valorant' | 'rocket_league' | 'fortnite' | 'roblox';
               Roblox experiences
               {{ profile()?.robloxId ? '✓ ' + profile()!.robloxId : 'sin vincular' }}
             </sg-neon-badge>
+            <sg-neon-badge [tone]="profile()?.leagueOfLegendsId ? 'lime' : 'muted'">
+              League of Legends
+              {{
+                profile()?.leagueOfLegendsId
+                  ? '✓ ' + profile()!.leagueOfLegendsId
+                  : 'sin vincular'
+              }}
+            </sg-neon-badge>
+            <sg-neon-badge [tone]="profile()?.cs2Id ? 'lime' : 'muted'">
+              CS2 {{ profile()?.cs2Id ? '✓ ' + profile()!.cs2Id : 'sin vincular' }}
+            </sg-neon-badge>
           </div>
           @if (profile()?.robloxId && robloxAvatar()) {
             <div class="u-flex u-items-center u-gap-3 u-mt-4">
@@ -99,6 +116,13 @@ type LinkablePlatform = 'valorant' | 'rocket_league' | 'fortnite' | 'roblox';
             <li>
               <strong>Roblox:</strong> Blox Fruits, Adopt Me!, Brookhaven RP (+ BedWars/Arsenal
               badges). Un UserId vincula todas.
+            </li>
+            <li>
+              <strong>League of Legends:</strong> Riot ID (<code>Nombre#TAG</code>) → partidas
+              ranked / normales vía Riot API.
+            </li>
+            <li>
+              <strong>CS2:</strong> SteamID64 (<code>7656119…</code>) → stats vía Steam Web API.
             </li>
           </ul>
         </section>
@@ -204,6 +228,8 @@ export class IntegrationsPageComponent implements OnInit {
     { value: 'rocket_league', label: 'Rocket League (Fase 1)' },
     { value: 'fortnite', label: 'Fortnite (Fase 2)' },
     { value: 'roblox', label: 'Roblox (Blox Fruits / Adopt Me / Brookhaven)' },
+    { value: 'league_of_legends', label: 'League of Legends' },
+    { value: 'cs2', label: 'Counter-Strike 2' },
   ];
 
   readonly robloxAvatar = computed(() => {
@@ -214,11 +240,14 @@ export class IntegrationsPageComponent implements OnInit {
   readonly externalIdLabel = computed(() => {
     switch (this.linkForm.controls.platform.value) {
       case 'valorant':
+      case 'league_of_legends':
         return 'Riot ID (Nombre#TAG)';
       case 'rocket_league':
         return 'Epic / player name';
       case 'fortnite':
         return 'Epic account id / display name';
+      case 'cs2':
+        return 'SteamID64';
       default:
         return 'Roblox UserId (número)';
     }
@@ -227,11 +256,14 @@ export class IntegrationsPageComponent implements OnInit {
   readonly externalIdPlaceholder = computed(() => {
     switch (this.linkForm.controls.platform.value) {
       case 'valorant':
+      case 'league_of_legends':
         return 'ej. Player#NA1';
       case 'rocket_league':
         return 'ej. TuEpicName';
       case 'fortnite':
         return 'ej. TuDisplayName';
+      case 'cs2':
+        return 'ej. 76561198000000000';
       default:
         return 'ej. 123456789';
     }
@@ -245,6 +277,10 @@ export class IntegrationsPageComponent implements OnInit {
         return 'Rocket League';
       case 'fortnite':
         return 'Fortnite';
+      case 'league_of_legends':
+        return 'League of Legends / Riot';
+      case 'cs2':
+        return 'Counter-Strike 2 / Steam';
       default:
         return 'BedWars & Arsenal';
     }
@@ -258,6 +294,10 @@ export class IntegrationsPageComponent implements OnInit {
         return 'Nombre visible en replays/ballchasing o companion. API oficial Psyonix no está abierta: webhook o ballchasing.';
       case 'fortnite':
         return 'Stats públicas en Epic. Preferí account id 32-hex. Poller cada ~3 min.';
+      case 'league_of_legends':
+        return 'Formato obligatorio: Nombre#TAG (mismo Riot ID que Valorant). Tras vincular, el poller captura partidas ranked/normales.';
+      case 'cs2':
+        return 'SteamID64 de 17 dígitos que empieza con 7656119. Perfil Steam → Account details, o steamid.io.';
       default:
         return 'UserId numérico. Trackea Blox Fruits, Adopt Me!, Brookhaven RP, BedWars y Arsenal vía badges.';
     }
@@ -305,9 +345,19 @@ export class IntegrationsPageComponent implements OnInit {
       const { platform, externalId } = this.linkForm.getRawValue();
       const trimmedId = externalId.trim();
 
-      if (platform === 'valorant' && !isValidRiotId(trimmedId)) {
+      if (
+        (platform === 'valorant' || platform === 'league_of_legends') &&
+        !isValidRiotId(trimmedId)
+      ) {
         this.linkError.set(
           'Riot ID inválido. Usá el formato exacto Nombre#TAG (ej. Player#NA1).',
+        );
+        return;
+      }
+
+      if (platform === 'cs2' && !/^7656119\d{10}$/.test(trimmedId)) {
+        this.linkError.set(
+          'SteamID64 inválido. Debe ser 17 dígitos y empezar con 7656119.',
         );
         return;
       }
@@ -326,7 +376,11 @@ export class IntegrationsPageComponent implements OnInit {
       this.linkSuccess.set(
         platform === 'valorant'
           ? `Valorant vinculado: ${trimmedId}. Si RIOT_API_KEY está activa, en ≤3 min deberían aparecer partidas en /tabs/matches.`
-          : `${this.platformLabel(platform)} vinculado: ${trimmedId}`,
+          : platform === 'league_of_legends'
+            ? `League of Legends vinculado: ${trimmedId}. El poller capturará partidas ranked/normales.`
+            : platform === 'cs2'
+              ? `CS2 vinculado: ${trimmedId}. Stats vía Steam Web API.`
+              : `${this.platformLabel(platform)} vinculado: ${trimmedId}`,
       );
       this.prefillExternalId(platform);
     } catch (err) {
@@ -338,8 +392,10 @@ export class IntegrationsPageComponent implements OnInit {
 
   private applyExternalIdValidators(platform: LinkablePlatform): void {
     const control = this.linkForm.controls.externalId;
-    if (platform === 'valorant') {
+    if (platform === 'valorant' || platform === 'league_of_legends') {
       control.setValidators([Validators.required, riotIdValidator]);
+    } else if (platform === 'cs2') {
+      control.setValidators([Validators.required, Validators.pattern(/^7656119\d{10}$/)]);
     } else if (platform === 'roblox') {
       control.setValidators([Validators.required, Validators.pattern(/^\d+$/)]);
     } else {
@@ -416,6 +472,8 @@ export class IntegrationsPageComponent implements OnInit {
     if (!profile.rocketLeagueId) return 'rocket_league';
     if (!profile.fortniteId) return 'fortnite';
     if (!profile.robloxId) return 'roblox';
+    if (!profile.leagueOfLegendsId) return 'league_of_legends';
+    if (!profile.cs2Id) return 'cs2';
     return 'valorant';
   }
 
@@ -430,6 +488,10 @@ export class IntegrationsPageComponent implements OnInit {
         return p?.fortniteId;
       case 'roblox':
         return p?.robloxId;
+      case 'league_of_legends':
+        return p?.leagueOfLegendsId;
+      case 'cs2':
+        return p?.cs2Id;
     }
   }
 
@@ -450,6 +512,10 @@ export class IntegrationsPageComponent implements OnInit {
         return 'Fortnite';
       case 'roblox':
         return 'BedWars / Arsenal';
+      case 'league_of_legends':
+        return 'League of Legends';
+      case 'cs2':
+        return 'CS2';
     }
   }
 }

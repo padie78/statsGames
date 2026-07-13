@@ -366,6 +366,8 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 <h3 class="sg-dashboard__rail-label">Cuenta</h3>
                 <sg-integration-status-card
                   [valorantConnected]="!!profile()?.valorantId"
+                  [leagueOfLegendsConnected]="!!profile()?.leagueOfLegendsId"
+                  [cs2Connected]="!!profile()?.cs2Id"
                   [rocketLeagueConnected]="!!profile()?.rocketLeagueId"
                   [fortniteConnected]="!!profile()?.fortniteId"
                   [robloxConnected]="!!profile()?.robloxId"
@@ -643,7 +645,14 @@ export class DashboardPageComponent implements OnInit {
 
   readonly accountsConnected = computed(() => {
     const p = this.profile();
-    return !!(p?.fortniteId || p?.robloxId || p?.valorantId || p?.rocketLeagueId);
+    return !!(
+      p?.fortniteId ||
+      p?.robloxId ||
+      p?.valorantId ||
+      p?.leagueOfLegendsId ||
+      p?.cs2Id ||
+      p?.rocketLeagueId
+    );
   });
 
   readonly heroPrimaryCta = computed(() =>

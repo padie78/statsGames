@@ -5154,6 +5154,8 @@ sg-animated-value.sg-dashboard-hero__stat-value {
 }
 
 .sg-games-bar__item--active[data-game='valorant'],
+.sg-games-bar__item--active[data-game='league_of_legends'],
+.sg-games-bar__item--active[data-game='cs2'],
 .sg-games-bar__item--active[data-game='rocket_league'],
 .sg-games-bar__item--active[data-game='fortnite'],
 .sg-games-bar__item--active[data-game='blox_fruits'],
@@ -5545,6 +5547,16 @@ sg-animated-value.sg-dashboard-hero__stat-value {
 .sg-dual-platform__card--active[data-game='valorant'] {
   border-color: rgba(255, 70, 85, 0.55);
   box-shadow: 0 0 28px rgba(255, 70, 85, 0.28), 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.sg-dual-platform__card--active[data-game='league_of_legends'] {
+  border-color: rgba(200, 155, 60, 0.55);
+  box-shadow: 0 0 28px rgba(200, 155, 60, 0.28), 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.sg-dual-platform__card--active[data-game='cs2'] {
+  border-color: rgba(222, 155, 45, 0.55);
+  box-shadow: 0 0 28px rgba(222, 155, 45, 0.28), 0 16px 40px rgba(0, 0, 0, 0.35);
 }
 
 .sg-dual-platform__card--active[data-game='rocket_league'] {

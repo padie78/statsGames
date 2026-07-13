@@ -11,6 +11,8 @@ export interface PlayerProfileView {
   fortniteId?: string | null;
   robloxId?: string | null;
   valorantId?: string | null;
+  leagueOfLegendsId?: string | null;
+  cs2Id?: string | null;
   rocketLeagueId?: string | null;
   avatarUrl?: string | null;
 }
@@ -33,17 +35,31 @@ export interface PlayerSearchHitView {
 export interface UpsertPlayerProfileInput {
   userId: string;
   gamerTag: string;
-  primaryPlatform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
+  primaryPlatform:
+    | 'fortnite'
+    | 'roblox'
+    | 'valorant'
+    | 'league_of_legends'
+    | 'cs2'
+    | 'rocket_league';
   fortniteId?: string;
   robloxId?: string;
   valorantId?: string;
+  leagueOfLegendsId?: string;
+  cs2Id?: string;
   rocketLeagueId?: string;
   avatarUrl?: string;
 }
 
 export interface LinkPlatformAccountInput {
   userId: string;
-  platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
+  platform:
+    | 'fortnite'
+    | 'roblox'
+    | 'valorant'
+    | 'league_of_legends'
+    | 'cs2'
+    | 'rocket_league';
   externalId: string;
 }
 
@@ -74,6 +90,8 @@ const PROFILE_FIELDS = /* GraphQL */ `
   fortniteId
   robloxId
   valorantId
+  leagueOfLegendsId
+  cs2Id
   rocketLeagueId
   avatarUrl
 `;

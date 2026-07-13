@@ -8,6 +8,8 @@ export const PlayerProfileDtoSchema = z.object({
   fortniteId: z.string().optional(),
   robloxId: z.string().optional(),
   valorantId: z.string().optional(),
+  leagueOfLegendsId: z.string().optional(),
+  cs2Id: z.string().optional(),
   rocketLeagueId: z.string().optional(),
   avatarUrl: z.string().url().optional(),
   createdAtIso: z.string().min(1),
@@ -24,6 +26,8 @@ export const UpsertPlayerProfileInputSchema = z.object({
   fortniteId: z.string().optional(),
   robloxId: z.string().optional(),
   valorantId: z.string().optional(),
+  leagueOfLegendsId: z.string().optional(),
+  cs2Id: z.string().optional(),
   rocketLeagueId: z.string().optional(),
   avatarUrl: z.string().url().optional(),
 });

@@ -107,6 +107,8 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
           fortniteId: profile.fortniteId,
           robloxId: profile.robloxId,
           valorantId: profile.valorantId,
+          leagueOfLegendsId: profile.leagueOfLegendsId,
+          cs2Id: profile.cs2Id,
           rocketLeagueId: profile.rocketLeagueId,
           avatarUrl: profile.avatarUrl,
           createdAtIso: profile.createdAtIso,
@@ -172,6 +174,10 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
       fortniteId: item['fortniteId'] ? String(item['fortniteId']) : undefined,
       robloxId: item['robloxId'] ? String(item['robloxId']) : undefined,
       valorantId: item['valorantId'] ? String(item['valorantId']) : undefined,
+      leagueOfLegendsId: item['leagueOfLegendsId']
+        ? String(item['leagueOfLegendsId'])
+        : undefined,
+      cs2Id: item['cs2Id'] ? String(item['cs2Id']) : undefined,
       rocketLeagueId: item['rocketLeagueId'] ? String(item['rocketLeagueId']) : undefined,
       avatarUrl: item['avatarUrl'] ? String(item['avatarUrl']) : undefined,
       createdAtIso: String(item['createdAtIso']),
@@ -192,6 +198,12 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
     }
     if (profile.valorantId) {
       links.push({ platform: 'valorant', externalId: profile.valorantId });
+    }
+    if (profile.leagueOfLegendsId) {
+      links.push({ platform: 'league_of_legends', externalId: profile.leagueOfLegendsId });
+    }
+    if (profile.cs2Id) {
+      links.push({ platform: 'cs2', externalId: profile.cs2Id });
     }
     if (profile.rocketLeagueId) {
       links.push({ platform: 'rocket_league', externalId: profile.rocketLeagueId });

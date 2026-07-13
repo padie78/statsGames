@@ -63,6 +63,8 @@ export class DualPlatformStripComponent {
 
   @Input() activePlatform: SelectedGame = 'fortnite';
   @Input() valorantConnected = false;
+  @Input() leagueOfLegendsConnected = false;
+  @Input() cs2Connected = false;
   @Input() rocketLeagueConnected = false;
   @Input() fortniteConnected = false;
   @Input() robloxConnected = false;
@@ -71,6 +73,8 @@ export class DualPlatformStripComponent {
 
   isConnected(platform: SelectedGame): boolean {
     if (platform === 'valorant') return this.valorantConnected;
+    if (platform === 'league_of_legends') return this.leagueOfLegendsConnected;
+    if (platform === 'cs2') return this.cs2Connected;
     if (platform === 'rocket_league') return this.rocketLeagueConnected;
     if (platform === 'fortnite') return this.fortniteConnected;
     if (isRobloxExperienceGame(platform)) return this.robloxConnected;

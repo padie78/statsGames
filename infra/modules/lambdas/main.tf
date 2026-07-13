@@ -373,6 +373,94 @@ resource "aws_lambda_permission" "roblox_experience_poller_events" {
   source_arn    = aws_cloudwatch_event_rule.roblox_experience_poller.arn
 }
 
+# ─────────── League of Legends: Riot match-v5 → SQS ───────────
+
+resource "aws_lambda_function" "league_of_legends_match_poller" {
+  function_name    = "${var.name_prefix}-league-of-legends-match-poller"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = 120
+  memory_size      = 512
+  architectures    = ["arm64"]
+
+  environment {
+    variables = {
+      TABLE_NAME               = var.table_name
+      GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+      RIOT_API_KEY             = var.riot_api_key
+      LOL_REGION               = var.lol_region
+      LOG_LEVEL                = "INFO"
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "league_of_legends_match_poller" {
+  name                = "${var.name_prefix}-lol-match-poller"
+  description         = "Poll League of Legends match history via Riot API"
+  schedule_expression = var.lol_poll_schedule
+  state               = var.riot_api_key != "" ? "ENABLED" : "DISABLED"
+}
+
+resource "aws_cloudwatch_event_target" "league_of_legends_match_poller" {
+  rule      = aws_cloudwatch_event_rule.league_of_legends_match_poller.name
+  target_id = "lol-match-poller"
+  arn       = aws_lambda_function.league_of_legends_match_poller.arn
+}
+
+resource "aws_lambda_permission" "league_of_legends_match_poller_events" {
+  statement_id  = "AllowEventBridgeInvokeLolMatchPoller"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.league_of_legends_match_poller.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.league_of_legends_match_poller.arn
+}
+
+# ─────────── CS2: Steam profile validation (matches vía webhook) ───────────
+
+resource "aws_lambda_function" "cs2_match_poller" {
+  function_name    = "${var.name_prefix}-cs2-match-poller"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = 60
+  memory_size      = 256
+  architectures    = ["arm64"]
+
+  environment {
+    variables = {
+      TABLE_NAME        = var.table_name
+      STEAM_WEB_API_KEY = var.steam_web_api_key
+      LOG_LEVEL         = "INFO"
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "cs2_match_poller" {
+  name                = "${var.name_prefix}-cs2-match-poller"
+  description         = "Validate CS2 SteamID64 links via Steam Web API"
+  schedule_expression = var.cs2_poll_schedule
+  state               = var.steam_web_api_key != "" ? "ENABLED" : "DISABLED"
+}
+
+resource "aws_cloudwatch_event_target" "cs2_match_poller" {
+  rule      = aws_cloudwatch_event_rule.cs2_match_poller.name
+  target_id = "cs2-match-poller"
+  arn       = aws_lambda_function.cs2_match_poller.arn
+}
+
+resource "aws_lambda_permission" "cs2_match_poller_events" {
+  statement_id  = "AllowEventBridgeInvokeCs2MatchPoller"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cs2_match_poller.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.cs2_match_poller.arn
+}
+
 # ─────────── Match AI (Bedrock) post-partida ───────────
 
 resource "aws_lambda_function" "match_ai_analyzer" {

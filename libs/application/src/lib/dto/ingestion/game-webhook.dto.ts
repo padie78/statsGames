@@ -4,6 +4,8 @@ export const GamePlatformSchema = z.enum([
   'fortnite',
   'roblox',
   'valorant',
+  'league_of_legends',
+  'cs2',
   'rocket_league',
 ]);
 

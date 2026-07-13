@@ -38,13 +38,22 @@ export function asStatsGranularity(value: string): StatsGranularity {
 
 export function asPlatform(
   value?: string | null,
-): 'fortnite' | 'roblox' | 'valorant' | 'rocket_league' | undefined {
+):
+  | 'fortnite'
+  | 'roblox'
+  | 'valorant'
+  | 'league_of_legends'
+  | 'cs2'
+  | 'rocket_league'
+  | undefined {
   if (!value) return undefined;
   const normalized = value.toLowerCase();
   if (
     normalized === 'fortnite' ||
     normalized === 'roblox' ||
     normalized === 'valorant' ||
+    normalized === 'league_of_legends' ||
+    normalized === 'cs2' ||
     normalized === 'rocket_league'
   ) {
     return normalized;

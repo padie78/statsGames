@@ -66,6 +66,12 @@ jobs:
           - path: ingestion/roblox_experience_poller
             artifact: roblox_experience_poller
             tf_output: roblox_experience_poller_name
+          - path: ingestion/league_of_legends_match_poller
+            artifact: league_of_legends_match_poller
+            tf_output: league_of_legends_match_poller_name
+          - path: ingestion/cs2_match_poller
+            artifact: cs2_match_poller
+            tf_output: cs2_match_poller_name
           - path: ingestion/match_ai_analyzer
             artifact: match_ai_analyzer
             tf_output: match_ai_analyzer_name
@@ -136,6 +142,12 @@ jobs:
           - path: ingestion/roblox_experience_poller
             artifact: roblox_experience_poller
             tf_output: roblox_experience_poller_name
+          - path: ingestion/league_of_legends_match_poller
+            artifact: league_of_legends_match_poller
+            tf_output: league_of_legends_match_poller_name
+          - path: ingestion/cs2_match_poller
+            artifact: cs2_match_poller
+            tf_output: cs2_match_poller_name
           - path: ingestion/match_ai_analyzer
             artifact: match_ai_analyzer
             tf_output: match_ai_analyzer_name

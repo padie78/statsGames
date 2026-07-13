@@ -23,6 +23,8 @@ export class UpsertPlayerProfileUseCase {
           fortniteId: parsed.fortniteId,
           robloxId: parsed.robloxId,
           valorantId: parsed.valorantId,
+          leagueOfLegendsId: parsed.leagueOfLegendsId,
+          cs2Id: parsed.cs2Id,
           rocketLeagueId: parsed.rocketLeagueId,
           avatarUrl: parsed.avatarUrl,
         })
@@ -33,6 +35,8 @@ export class UpsertPlayerProfileUseCase {
           fortniteId: parsed.fortniteId,
           robloxId: parsed.robloxId,
           valorantId: parsed.valorantId,
+          leagueOfLegendsId: parsed.leagueOfLegendsId,
+          cs2Id: parsed.cs2Id,
           rocketLeagueId: parsed.rocketLeagueId,
           avatarUrl: parsed.avatarUrl,
         });

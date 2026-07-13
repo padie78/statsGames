@@ -45,6 +45,8 @@ export class GameContextService {
             fortniteId: profile.fortniteId ?? undefined,
             robloxId: profile.robloxId ?? undefined,
             valorantId: profile.valorantId ?? undefined,
+            leagueOfLegendsId: profile.leagueOfLegendsId ?? undefined,
+            cs2Id: profile.cs2Id ?? undefined,
             rocketLeagueId: profile.rocketLeagueId ?? undefined,
           }),
         ).catch(() => undefined);

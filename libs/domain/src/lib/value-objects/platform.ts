@@ -1,11 +1,19 @@
 import { InvalidPlatformError } from '../errors/domain-errors';
 
-export type GamePlatform = 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
+export type GamePlatform =
+  | 'fortnite'
+  | 'roblox'
+  | 'valorant'
+  | 'league_of_legends'
+  | 'cs2'
+  | 'rocket_league';
 
 const PLATFORMS: ReadonlySet<string> = new Set([
   'fortnite',
   'roblox',
   'valorant',
+  'league_of_legends',
+  'cs2',
   'rocket_league',
 ]);
 
@@ -21,7 +29,7 @@ export class Platform {
   }
 
   static all(): readonly GamePlatform[] {
-    return ['valorant', 'rocket_league', 'fortnite', 'roblox'];
+    return ['valorant', 'league_of_legends', 'cs2', 'rocket_league', 'fortnite', 'roblox'];
   }
 
   toString(): string {

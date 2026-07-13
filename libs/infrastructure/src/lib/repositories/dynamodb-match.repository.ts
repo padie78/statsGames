@@ -41,7 +41,14 @@ export class DynamoDbMatchRepository implements IMatchWriter, IMatchReader {
 
   async getByUserAndMatchId(userId: string, matchId: string): Promise<Match | null> {
     const client = getDocumentClient();
-    const platforms = ['valorant', 'fortnite', 'roblox', 'rocket_league'] as const;
+    const platforms = [
+      'valorant',
+      'league_of_legends',
+      'cs2',
+      'fortnite',
+      'roblox',
+      'rocket_league',
+    ] as const;
 
     for (const platform of platforms) {
       const result = await client.send(
@@ -70,7 +77,16 @@ export class DynamoDbMatchRepository implements IMatchWriter, IMatchReader {
 
   async listByUser(
     userId: string,
-    options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league'; limit?: number },
+    options?: {
+      platform?:
+        | 'fortnite'
+        | 'roblox'
+        | 'valorant'
+        | 'league_of_legends'
+        | 'cs2'
+        | 'rocket_league';
+      limit?: number;
+    },
   ): Promise<Match[]> {
     const client = getDocumentClient();
     const limit = options?.limit ?? 50;
@@ -95,7 +111,13 @@ export class DynamoDbMatchRepository implements IMatchWriter, IMatchReader {
       Match.reconstitute({
         userId: String(item['userId']),
         matchId: String(item['matchId']),
-        platform: item['platform'] as 'fortnite' | 'roblox' | 'valorant' | 'rocket_league',
+        platform: item['platform'] as
+          | 'fortnite'
+          | 'roblox'
+          | 'valorant'
+          | 'league_of_legends'
+          | 'cs2'
+          | 'rocket_league',
         stats: MatchStats.fromRecord(JSON.parse(String(item['statsJson'] ?? '{}'))),
         occurredAtIso: String(item['occurredAtIso']),
         correlationId: String(item['correlationId']),

@@ -1,5 +1,5 @@
 export interface CommunityBenchmarksDto {
-  platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
+  platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league';
   periodId: string;
   sampleSize: number;
   avgWinRate: number;
@@ -16,7 +16,7 @@ export interface LeaderboardEntryDto {
   rank: number;
   userId: string;
   gamerTag: string;
-  platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
+  platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league';
   score: number;
   totalKills: number;
   matchCount: number;
@@ -26,7 +26,7 @@ export interface LeaderboardEntryDto {
 
 export interface SyncWeeklyCommunityInput {
   userId: string;
-  platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
+  platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league';
   periodId: string;
   matchCount: number;
   totalKills: number;

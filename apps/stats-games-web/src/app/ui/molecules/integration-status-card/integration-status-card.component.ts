@@ -46,6 +46,8 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
 })
 export class IntegrationStatusCardComponent {
   @Input() valorantConnected = false;
+  @Input() leagueOfLegendsConnected = false;
+  @Input() cs2Connected = false;
   @Input() rocketLeagueConnected = false;
   @Input() fortniteConnected = false;
   @Input() robloxConnected = false;
@@ -58,6 +60,18 @@ export class IntegrationStatusCardComponent {
         label: 'Valorant',
         iconUrl: GAME_PLATFORMS.valorant.iconUrl,
         connected: this.valorantConnected,
+      },
+      {
+        id: 'league_of_legends',
+        label: 'League of Legends',
+        iconUrl: GAME_PLATFORMS.league_of_legends.iconUrl,
+        connected: this.leagueOfLegendsConnected,
+      },
+      {
+        id: 'cs2',
+        label: 'Counter-Strike 2',
+        iconUrl: GAME_PLATFORMS.cs2.iconUrl,
+        connected: this.cs2Connected,
       },
       {
         id: 'rocket_league',
@@ -86,12 +100,16 @@ export function isGameAccountConnected(
   game: SelectedGame,
   ids: {
     valorantId?: string | null;
+    leagueOfLegendsId?: string | null;
+    cs2Id?: string | null;
     rocketLeagueId?: string | null;
     fortniteId?: string | null;
     robloxId?: string | null;
   },
 ): boolean {
   if (game === 'valorant') return !!ids.valorantId;
+  if (game === 'league_of_legends') return !!ids.leagueOfLegendsId;
+  if (game === 'cs2') return !!ids.cs2Id;
   if (game === 'rocket_league') return !!ids.rocketLeagueId;
   if (game === 'fortnite') return !!ids.fortniteId;
   if (isRobloxExperienceGame(game)) return !!ids.robloxId;

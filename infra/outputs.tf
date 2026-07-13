@@ -95,6 +95,14 @@ output "roblox_experience_poller_name" {
   value = module.lambdas.roblox_experience_poller_name
 }
 
+output "league_of_legends_match_poller_name" {
+  value = module.lambdas.league_of_legends_match_poller_name
+}
+
+output "cs2_match_poller_name" {
+  value = module.lambdas.cs2_match_poller_name
+}
+
 output "game_processor_name" {
   value = module.lambdas.game_processor_name
 }

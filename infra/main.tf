@@ -46,6 +46,8 @@ module "lambdas" {
   valorant_region             = var.valorant_region
   valorant_shard              = var.valorant_shard
   ballchasing_api_key         = var.ballchasing_api_key
+  lol_region                  = var.lol_region
+  steam_web_api_key           = var.steam_web_api_key
 }
 
 module "api" {

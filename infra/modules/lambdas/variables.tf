@@ -107,3 +107,28 @@ variable "roblox_experience_poll_schedule" {
   default     = "rate(10 minutes)"
   description = "Schedule EventBridge del poller BedWars/Arsenal (badges)."
 }
+
+variable "lol_region" {
+  type        = string
+  default     = "europe"
+  description = "Routing region Riot for LoL match-v5 (americas|europe|asia|sea)."
+}
+
+variable "lol_poll_schedule" {
+  type        = string
+  default     = "rate(3 minutes)"
+  description = "Schedule EventBridge del poller League of Legends."
+}
+
+variable "steam_web_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Steam Web API key (CS2 account validation poller)."
+}
+
+variable "cs2_poll_schedule" {
+  type        = string
+  default     = "rate(15 minutes)"
+  description = "Schedule EventBridge del poller CS2 (validación Steam)."
+}

@@ -70,6 +70,14 @@ const BENCHMARK_ROBLOX: Omit<CommunityBenchmarks, 'platform'> = {
 
 export const MOCK_COMMUNITY_BENCHMARKS: Record<SelectedGame, CommunityBenchmarks> = {
   valorant: { platform: 'valorant', ...BENCHMARK_FPS, sampleSize: 22_100, avgKd: 1.05 },
+  league_of_legends: {
+    platform: 'league_of_legends',
+    ...BENCHMARK_FPS,
+    sampleSize: 31_400,
+    avgKd: 2.8,
+    avgKillsPerWeek: 42,
+  },
+  cs2: { platform: 'cs2', ...BENCHMARK_FPS, sampleSize: 18_600, avgKd: 1.12 },
   rocket_league: { platform: 'rocket_league', ...BENCHMARK_FPS, sampleSize: 15_200, avgKd: 0.92 },
   fortnite: { platform: 'fortnite', ...BENCHMARK_FPS },
   blox_fruits: { platform: 'blox_fruits', ...BENCHMARK_ROBLOX, sampleSize: 14_800 },

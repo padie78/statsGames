@@ -1,12 +1,14 @@
 /**
  * Catálogo de plataformas StatsGames (MVP multi-juego).
  *
- * Fase 1 — APIs estables: valorant, rocket_league
- * Fase 2 — tracción: fortnite (poller), roblox BedWars + Arsenal (badges)
+ * Fase 1 — APIs estables: valorant, rocket_league, league_of_legends, cs2
+ * Fase 2 — tracción: fortnite (poller), roblox experiences (badges)
  */
 
 export const GAME_PLATFORMS = [
   'valorant',
+  'league_of_legends',
+  'cs2',
   'rocket_league',
   'fortnite',
   'roblox',
@@ -27,7 +29,13 @@ export interface PlatformCatalogEntry {
   phase: 1 | 2;
   integrationMode: PlatformIntegrationMode;
   /** Campo en PlayerProfile Dynamo/GraphQL */
-  profileField: 'valorantId' | 'rocketLeagueId' | 'fortniteId' | 'robloxId';
+  profileField:
+    | 'valorantId'
+    | 'leagueOfLegendsId'
+    | 'cs2Id'
+    | 'rocketLeagueId'
+    | 'fortniteId'
+    | 'robloxId';
   externalIdHint: string;
   externalIdPlaceholder: string;
   /** Qué stats típicas viajan en Match.stats (además de kills/deaths/assists). */
@@ -45,6 +53,28 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     externalIdHint: 'Riot ID (Nombre#TAG)',
     externalIdPlaceholder: 'ej. Player#NA1',
     statHints: ['kills', 'deaths', 'assists', 'headshotPct', 'roundsWon', 'map', 'agent'],
+  },
+  league_of_legends: {
+    id: 'league_of_legends',
+    label: 'League of Legends',
+    shortLabel: 'LoL',
+    phase: 1,
+    integrationMode: 'official_api_poll',
+    profileField: 'leagueOfLegendsId',
+    externalIdHint: 'Riot ID (Nombre#TAG)',
+    externalIdPlaceholder: 'ej. Summoner#EUW',
+    statHints: ['kills', 'deaths', 'assists', 'champion', 'role', 'cs', 'vision', 'won'],
+  },
+  cs2: {
+    id: 'cs2',
+    label: 'Counter-Strike 2',
+    shortLabel: 'CS2',
+    phase: 1,
+    integrationMode: 'webhook_partner',
+    profileField: 'cs2Id',
+    externalIdHint: 'SteamID64 (17 dígitos)',
+    externalIdPlaceholder: 'ej. 76561198000000000',
+    statHints: ['kills', 'deaths', 'assists', 'adr', 'hsPct', 'map', 'won'],
   },
   rocket_league: {
     id: 'rocket_league',

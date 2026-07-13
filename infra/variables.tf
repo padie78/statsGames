@@ -59,6 +59,18 @@ variable "ballchasing_api_key" {
   description = "API key ballchasing.com (poller Rocket League)."
 }
 
+variable "lol_region" {
+  type    = string
+  default = "europe"
+}
+
+variable "steam_web_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Steam Web API key (poller CS2)."
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags adicionales propagados a todos los recursos."
