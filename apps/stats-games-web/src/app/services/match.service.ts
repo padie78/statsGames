@@ -9,6 +9,13 @@ export interface MatchStatsView {
   deaths?: number | null;
   placement?: number | null;
   assists?: number | null;
+  headshotPct?: number | null;
+  roundsWon?: number | null;
+  roundsLost?: number | null;
+  map?: string | null;
+  agent?: string | null;
+  mode?: string | null;
+  won?: boolean | null;
 }
 
 export interface MatchUpdateView {
@@ -30,6 +37,13 @@ const MATCH_STATS_FIELDS = /* GraphQL */ `
     deaths
     placement
     assists
+    headshotPct
+    roundsWon
+    roundsLost
+    map
+    agent
+    mode
+    won
   }
 `;
 

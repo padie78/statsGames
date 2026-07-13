@@ -9,7 +9,7 @@ import {
   IonToggle,
 } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
-import { AuthService, type SelectedGame, type UserRole } from '../../core/services/auth.service';
+import { AuthService, type SelectedGame } from '../../core/services/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import { GAME_PLATFORM_LIST } from '../../core/game/game-platform.config';
 import { backendPlatformForGame, normalizeSelectedGame } from '../../core/game/selected-game';
@@ -17,7 +17,6 @@ import {
   UserPreferencesService,
   type StatsDisplayMode,
 } from '../../core/preferences/user-preferences.service';
-import { defaultHomeRouteForRole } from '../../core/auth/user-role';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
 import {
@@ -160,42 +159,6 @@ const GAMER_TAG_PATTERN = /^[a-zA-Z0-9_-]{3,32}$/;
 
         <section class="u-surface-card u-p-5">
           <div class="sg-settings-section__head">
-            <sg-neon-badge tone="purple">Portal</sg-neon-badge>
-            <h2 class="sg-settings-section__title">Rol de la cuenta</h2>
-            <p class="sg-settings-section__hint u-m-0">
-              Cambia la matriz de navegación: Jugador (rendimiento) o Scout (captación).
-            </p>
-          </div>
-
-          <div class="sg-settings-mode u-mt-4">
-            <button
-              type="button"
-              class="sg-settings-mode__btn"
-              [class.sg-settings-mode__btn--active]="auth.userRole() === 'player'"
-              [disabled]="switchingRole()"
-              (click)="setRole('player')"
-            >
-              <span class="sg-settings-mode__title">Jugador</span>
-              <span class="sg-settings-mode__desc">Inicio, historial, evolución y perfil público</span>
-            </button>
-            <button
-              type="button"
-              class="sg-settings-mode__btn"
-              [class.sg-settings-mode__btn--active]="auth.userRole() === 'scout'"
-              [disabled]="switchingRole()"
-              (click)="setRole('scout')"
-            >
-              <span class="sg-settings-mode__title">Scout</span>
-              <span class="sg-settings-mode__desc">Talento, radar, reportes y gestión de equipo</span>
-            </button>
-          </div>
-          @if (roleError()) {
-            <p class="u-error u-mt-3 u-m-0">{{ roleError() }}</p>
-          }
-        </section>
-
-        <section class="u-surface-card u-p-5">
-          <div class="sg-settings-section__head">
             <sg-neon-badge tone="lime">Preferencias</sg-neon-badge>
             <h2 class="sg-settings-section__title">Experiencia</h2>
           </div>
@@ -293,8 +256,6 @@ export class SettingsPageComponent {
   readonly advancedOpen = signal(false);
   readonly urlCopied = signal(false);
   readonly userIdCopied = signal(false);
-  readonly switchingRole = signal(false);
-  readonly roleError = signal<string | null>(null);
   readonly gamePlatforms = GAME_PLATFORM_LIST;
 
   readonly profileForm = this.fb.nonNullable.group({
@@ -333,20 +294,6 @@ export class SettingsPageComponent {
     const userId = this.auth.userId();
     if (!userId) return;
     this.prefs.update(userId, { statsMode: mode });
-  }
-
-  async setRole(role: UserRole): Promise<void> {
-    if (this.auth.userRole() === role || this.switchingRole()) return;
-    this.switchingRole.set(true);
-    this.roleError.set(null);
-    try {
-      await this.auth.updateUserRole(role);
-      await this.router.navigateByUrl(defaultHomeRouteForRole(role));
-    } catch (err) {
-      this.roleError.set(err instanceof Error ? err.message : 'No se pudo cambiar el rol.');
-    } finally {
-      this.switchingRole.set(false);
-    }
   }
 
   async saveProfile(): Promise<void> {

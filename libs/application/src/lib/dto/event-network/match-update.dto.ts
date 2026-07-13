@@ -6,6 +6,13 @@ export const MatchStatsDtoSchema = z.object({
   deaths: z.number().int().nonnegative().optional(),
   placement: z.number().int().nonnegative().optional(),
   assists: z.number().int().nonnegative().optional(),
+  headshotPct: z.number().nonnegative().optional(),
+  roundsWon: z.number().int().nonnegative().optional(),
+  roundsLost: z.number().int().nonnegative().optional(),
+  map: z.string().min(1).optional(),
+  agent: z.string().min(1).optional(),
+  mode: z.string().min(1).optional(),
+  won: z.boolean().optional(),
 });
 
 export type MatchStatsDto = z.infer<typeof MatchStatsDtoSchema>;

@@ -28,16 +28,20 @@ export class AuthService {
   private readonly _userId = signal<string | null>(null);
   private readonly _email = signal<string | null>(null);
   private readonly _selectedGame = signal<SelectedGame | null>(null);
-  private readonly _userRole = signal<UserRole>('player');
+  /** null = aún no elegido en el alta */
+  private readonly _userRole = signal<UserRole | null>(null);
 
   readonly userId = computed(() => this._userId());
   readonly email = computed(() => this._email());
   readonly selectedGame = computed(() => this._selectedGame());
-  readonly userRole = computed(() => this._userRole());
+  readonly userRole = computed((): UserRole => this._userRole() ?? 'player');
+  readonly hasUserRole = computed(() => this._userRole() !== null);
   readonly isScout = computed(() => this._userRole() === 'scout');
   readonly isPlayer = computed(() => this._userRole() === 'player');
   readonly isAuthenticated = computed(() => !!this._userId());
-  readonly needsOnboarding = computed(() => this.isAuthenticated() && !this._selectedGame());
+  readonly needsOnboarding = computed(
+    () => this.isAuthenticated() && (!this._selectedGame() || this._userRole() === null),
+  );
 
   async restoreSession(): Promise<boolean> {
     try {
@@ -196,7 +200,7 @@ export class AuthService {
     this._userId.set(null);
     this._email.set(null);
     this._selectedGame.set(null);
-    this._userRole.set('player');
+    this._userRole.set(null);
   }
 
   private applyRoleFromSources(cognitoRole: unknown): void {
@@ -205,9 +209,19 @@ export class AuthService {
       userId != null ? localStorage.getItem(roleStorageKey(userId)) : null;
     const fromCognito =
       typeof cognitoRole === 'string' && cognitoRole.trim()
-        ? cognitoRole
+        ? cognitoRole.trim().toLowerCase()
         : null;
-    this._userRole.set(normalizeUserRole(fromLocal ?? fromCognito ?? 'player'));
+    // Cognito manda si existe; localStorage solo como fallback offline / pre-deploy.
+    const raw = fromCognito ?? fromLocal;
+    if (!raw) {
+      this._userRole.set(null);
+      return;
+    }
+    const role = normalizeUserRole(raw);
+    this._userRole.set(role);
+    if (userId) {
+      localStorage.setItem(roleStorageKey(userId), role);
+    }
   }
 
   private async handleIncompleteSignIn(

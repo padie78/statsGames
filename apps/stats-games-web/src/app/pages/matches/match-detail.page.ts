@@ -4,6 +4,7 @@ import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { resolveMatchHistory } from '../../data/match-mock.data';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
+import { MatchAiService, type MatchAiReportView } from '../../services/match-ai.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { FortniteOfficialMediaService } from '../../services/fortnite-official-media.service';
 import { MatchNotificationsStore } from '../../stores/match-notifications.store';
@@ -11,6 +12,7 @@ import { MatchAnalysisPanelComponent, MatchMapPanelComponent, MatchStatCardCompo
 import {
   buildMatchAnalysisReport,
   formatMatchDetailMeta,
+  matchAiReportToAnalysisReport,
 } from '../../utils/match-analysis.util';
 import { resolveMatchMapTelemetry } from '../../utils/match-map-telemetry.mock';
 import { toMatchCardStats } from '../../utils/match-stats.util';
@@ -50,12 +52,13 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
             <p class="u-error u-m-0">{{ error() }}</p>
             <a routerLink="/tabs/matches" class="u-btn u-btn--ghost u-mt-3">Volver al historial</a>
           </section>
-        }         @else if (match()) {
+        } @else if (match()) {
           @if (aiPending()) {
             <section class="u-surface-card u-p-5 sg-match-detail__ai-pending">
               <p class="sg-match-detail__ai-pending-title u-m-0">La IA todavía está analizando</p>
               <p class="u-hint u-m-0">
-                Ya podés ver las stats básicas. El reporte completo se habilita cuando la notificación pase a “IA lista”.
+                Ya podés ver las stats básicas. El reporte Bedrock se habilita cuando llegue
+                “IA lista”.
               </p>
             </section>
           }
@@ -88,6 +91,7 @@ export class MatchDetailPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly matchService = inject(MatchService);
+  private readonly matchAi = inject(MatchAiService);
   private readonly fortniteOfficial = inject(FortniteOfficialMediaService);
   private readonly realtime = inject(AppSyncRealtimeService);
   private readonly notifications = inject(MatchNotificationsStore);
@@ -96,12 +100,16 @@ export class MatchDetailPageComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly match = signal<MatchUpdateView | null>(null);
   readonly recentMatches = signal<MatchUpdateView[]>([]);
+  readonly aiReport = signal<MatchAiReportView | null>(null);
 
   readonly cardStats = computed(() => toMatchCardStats(this.match()?.stats));
 
   readonly aiPending = computed(() => {
     const current = this.match();
     if (!current) return false;
+    if (this.aiReport()?.status === 'ready' || this.aiReport()?.status === 'failed') {
+      return false;
+    }
     return this.notifications.getByMatchId(current.matchId)?.aiStatus === 'pending';
   });
 
@@ -118,6 +126,12 @@ export class MatchDetailPageComponent implements OnInit {
         },
       });
     }
+
+    const bedrock = this.aiReport();
+    if (bedrock && bedrock.status !== 'failed') {
+      return matchAiReportToAnalysisReport(bedrock, current, this.recentMatches());
+    }
+
     return buildMatchAnalysisReport({
       match: current,
       recentMatches: this.recentMatches(),
@@ -188,6 +202,13 @@ export class MatchDetailPageComponent implements OnInit {
       }
 
       this.match.set(found);
+
+      try {
+        const ai = await this.matchAi.getMatchAiReport(userId, matchId);
+        this.aiReport.set(ai);
+      } catch {
+        this.aiReport.set(null);
+      }
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Error cargando la partida');
     } finally {

@@ -23,6 +23,27 @@ variable "game_ingestion_dlq_arn" {
   default = ""
 }
 
+variable "match_ai_analysis_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "match_ai_analysis_queue_arn" {
+  type    = string
+  default = ""
+}
+
+variable "match_ai_analysis_dlq_arn" {
+  type    = string
+  default = ""
+}
+
+variable "bedrock_model_id" {
+  type        = string
+  default     = "anthropic.claude-3-haiku-20240307-v1:0"
+  description = "Bedrock model ID for post-match AI analysis."
+}
+
 variable "webhook_secret" {
   type        = string
   sensitive   = true

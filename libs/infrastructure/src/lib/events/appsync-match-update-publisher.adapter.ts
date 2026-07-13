@@ -14,6 +14,13 @@ const MATCH_UPDATE_FRAGMENT = /* GraphQL */ `
       deaths
       placement
       assists
+      headshotPct
+      roundsWon
+      roundsLost
+      map
+      agent
+      mode
+      won
     }
   }
 `;

@@ -2,9 +2,11 @@ import type { AppSyncResolverEvent, AppSyncResolverHandler } from 'aws-lambda';
 import type { MatchStatsRollupDto, MatchUpdateDto } from '@stats-games/application';
 import {
   getCommunityBenchmarks,
+  getMatchAiReport,
   getPlayerProfile,
   getProfileByGamerTag,
   linkPlatformAccount,
+  listMatchAiReports,
   listPlayerDailyTrend,
   listPlayerMatches,
   listPlayerStatsRollups,
@@ -20,6 +22,14 @@ type ResolverArgs =
   | { fieldName: 'searchPlayers'; args: { query: string; limit?: number | null } }
   | {
       fieldName: 'listPlayerMatches';
+      args: { userId: string; platform?: string | null; limit?: number | null };
+    }
+  | {
+      fieldName: 'getMatchAiReport';
+      args: { userId: string; matchId: string };
+    }
+  | {
+      fieldName: 'listMatchAiReports';
       args: { userId: string; platform?: string | null; limit?: number | null };
     }
   | {
@@ -96,6 +106,19 @@ async function dispatch(op: ResolverArgs): Promise<unknown> {
       });
       return rows.map(mapMatchUpdate);
     }
+
+    case 'getMatchAiReport':
+      return getMatchAiReport.execute({
+        userId: op.args.userId,
+        matchId: op.args.matchId,
+      });
+
+    case 'listMatchAiReports':
+      return listMatchAiReports.execute({
+        userId: op.args.userId,
+        platform: asPlatform(op.args.platform),
+        limit: op.args.limit ?? undefined,
+      });
 
     case 'listPlayerStatsRollups': {
       const rows = await listPlayerStatsRollups.execute({

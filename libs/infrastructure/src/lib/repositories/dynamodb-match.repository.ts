@@ -39,6 +39,35 @@ export class DynamoDbMatchRepository implements IMatchWriter, IMatchReader {
     );
   }
 
+  async getByUserAndMatchId(userId: string, matchId: string): Promise<Match | null> {
+    const client = getDocumentClient();
+    const platforms = ['valorant', 'fortnite', 'roblox', 'rocket_league'] as const;
+
+    for (const platform of platforms) {
+      const result = await client.send(
+        new GetCommand({
+          TableName: this.tableName,
+          Key: {
+            PK: DynamoKeys.userPk(userId),
+            SK: DynamoKeys.matchSk(platform, matchId),
+          },
+        }),
+      );
+      if (!result.Item) continue;
+      return Match.reconstitute({
+        userId: String(result.Item['userId']),
+        matchId: String(result.Item['matchId']),
+        platform: result.Item['platform'] as (typeof platforms)[number],
+        stats: MatchStats.fromRecord(JSON.parse(String(result.Item['statsJson'] ?? '{}'))),
+        occurredAtIso: String(result.Item['occurredAtIso']),
+        correlationId: String(result.Item['correlationId']),
+        versionId: Number(result.Item['versionId'] ?? 1),
+      });
+    }
+
+    return null;
+  }
+
   async listByUser(
     userId: string,
     options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league'; limit?: number },

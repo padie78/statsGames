@@ -179,10 +179,11 @@ resource "aws_lambda_function" "game_processor" {
 
   environment {
     variables = {
-      TABLE_NAME       = var.table_name
-      APPSYNC_ENDPOINT = "https://placeholder-will-be-patched"
-      APPSYNC_API_KEY  = "placeholder-will-be-patched"
-      LOG_LEVEL        = "INFO"
+      TABLE_NAME                  = var.table_name
+      APPSYNC_ENDPOINT            = "https://placeholder-will-be-patched"
+      APPSYNC_API_KEY             = "placeholder-will-be-patched"
+      MATCH_AI_ANALYSIS_QUEUE_URL = var.match_ai_analysis_queue_url
+      LOG_LEVEL                   = "INFO"
     }
   }
 }
@@ -370,4 +371,37 @@ resource "aws_lambda_permission" "roblox_experience_poller_events" {
   function_name = aws_lambda_function.roblox_experience_poller.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.roblox_experience_poller.arn
+}
+
+# ─────────── Match AI (Bedrock) post-partida ───────────
+
+resource "aws_lambda_function" "match_ai_analyzer" {
+  function_name    = "${var.name_prefix}-match-ai-analyzer"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = 120
+  memory_size      = 512
+  architectures    = ["arm64"]
+
+  environment {
+    variables = {
+      TABLE_NAME         = var.table_name
+      APPSYNC_ENDPOINT   = "https://placeholder-will-be-patched"
+      APPSYNC_API_KEY    = "placeholder-will-be-patched"
+      BEDROCK_MODEL_ID   = var.bedrock_model_id
+      LOG_LEVEL          = "INFO"
+    }
+  }
+}
+
+resource "aws_lambda_event_source_mapping" "match_ai_analyzer" {
+  count                              = var.match_ai_analysis_queue_arn != "" ? 1 : 0
+  event_source_arn                   = var.match_ai_analysis_queue_arn
+  function_name                      = aws_lambda_function.match_ai_analyzer.arn
+  batch_size                         = 3
+  maximum_batching_window_in_seconds = 5
+  function_response_types            = ["ReportBatchItemFailures"]
 }

@@ -68,6 +68,14 @@ export const DynamoKeys = {
     return 'LATEST';
   },
 
+  matchAiReportSk(matchId: string): string {
+    return `MATCH_AI_REPORT#${matchId}`;
+  },
+
+  matchAiReportSkPrefix(): string {
+    return 'MATCH_AI_REPORT#';
+  },
+
   gamerTagPk(normalizedTag: string): string {
     return `${KeyPrefix.GamerTag}${normalizedTag}`;
   },

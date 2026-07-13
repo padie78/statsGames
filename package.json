@@ -27,6 +27,7 @@
     "@angular/platform-browser": "^17.3.0",
     "@angular/platform-browser-dynamic": "^17.3.0",
     "@angular/router": "^17.3.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1085.0",
     "@aws-sdk/client-dynamodb": "^3.620.0",
     "@aws-sdk/client-sqs": "^3.620.0",
     "@aws-sdk/lib-dynamodb": "^3.620.0",

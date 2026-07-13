@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { defaultHomeRouteForRole } from './user-role';
 
 export const onboardingGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
@@ -16,7 +17,7 @@ export const onboardingGuard: CanActivateFn = async () => {
   await auth.refreshUserAttributes();
 
   if (!auth.needsOnboarding()) {
-    return router.createUrlTree(['/tabs/dashboard']);
+    return router.createUrlTree([defaultHomeRouteForRole(auth.userRole())]);
   }
 
   return true;

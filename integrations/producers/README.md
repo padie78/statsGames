@@ -18,11 +18,14 @@ Webhook POST /webhooks/{platform}
 ## Fase 1 — Valorant
 
 1. Key en [developer.riotgames.com](https://developer.riotgames.com/).
-2. GitHub secret `RIOT_API_KEY` (+ vars `VALORANT_REGION` / `VALORANT_SHARD`).
-3. Vincular Riot ID `Nombre#TAG` en Integraciones.
-4. Deploy infra + lambda `valorant-match-poller`.
+2. GitHub secret `RIOT_API_KEY` (+ repo vars `VALORANT_REGION` / `VALORANT_SHARD`, default `americas` / `na`).
+3. Redeploy **Deploy Infrastructure** → EventBridge rule `*-valorant-match-poller` pasa a **ENABLED** solo si la key no está vacía.
+4. En Integraciones vincular Riot ID exacto `Nombre#TAG` (validado en UI).
+5. Smoke: jugar / esperar partida cerrada → ≤1 ciclo (~3 min) → match en `/tabs/matches` → análisis Bedrock en detalle / AI Coach.
 
-Datos: KDA, assists, % headshots, rondas, mapa, agente.
+Sin `RIOT_API_KEY` el poller es no-op (log `missing_api_key`) y la rule queda DISABLED.
+
+Datos: KDA, assists, HS%, rounds won/lost, mapa, agente, mode/queue, won.
 
 ## Fase 1 — Rocket League
 

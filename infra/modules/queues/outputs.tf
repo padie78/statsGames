@@ -17,3 +17,11 @@ output "game_ingestion_queue_url" {
 output "game_ingestion_queue_arn" {
   value = aws_sqs_queue.main["game_ingestion"].arn
 }
+
+output "match_ai_analysis_queue_url" {
+  value = aws_sqs_queue.main["match_ai_analysis"].url
+}
+
+output "match_ai_analysis_queue_arn" {
+  value = aws_sqs_queue.main["match_ai_analysis"].arn
+}

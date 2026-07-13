@@ -5,4 +5,6 @@ export * from './list-player-stats-rollups.use-case';
 export * from './list-player-daily-trend.use-case';
 export * from './get-community-benchmarks.use-case';
 export * from './list-weekly-leaderboard.use-case';
+export * from './match-ai-report.use-case';
+export * from './analyze-match-with-ai.use-case';
 export * from './stats-period.util';

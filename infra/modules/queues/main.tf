@@ -4,6 +4,10 @@ locals {
       description        = "Game_Ingestion_Queue — webhooks de Fortnite/Roblox desacoplados."
       visibility_timeout = 60
     }
+    match_ai_analysis = {
+      description        = "MATCH_AI_ANALYSIS — post-match Bedrock coaching (Valorant)."
+      visibility_timeout = 120
+    }
   }
 }
 

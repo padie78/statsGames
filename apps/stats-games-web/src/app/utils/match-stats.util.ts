@@ -8,6 +8,13 @@ export interface MatchStatsView {
   deaths?: number | null;
   placement?: number | null;
   assists?: number | null;
+  headshotPct?: number | null;
+  roundsWon?: number | null;
+  roundsLost?: number | null;
+  map?: string | null;
+  agent?: string | null;
+  mode?: string | null;
+  won?: boolean | null;
 }
 
 export interface MatchOutcome {
@@ -42,6 +49,13 @@ export function toMatchCardStats(stats?: MatchStatsView | null): MatchCardStats 
     deaths: stats.deaths ?? undefined,
     placement: stats.placement ?? undefined,
     assists: stats.assists ?? undefined,
+    headshotPct: stats.headshotPct ?? undefined,
+    roundsWon: stats.roundsWon ?? undefined,
+    roundsLost: stats.roundsLost ?? undefined,
+    map: stats.map ?? undefined,
+    agent: stats.agent ?? undefined,
+    mode: stats.mode ?? undefined,
+    won: stats.won ?? undefined,
   };
 }
 

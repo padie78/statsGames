@@ -55,7 +55,22 @@ data "aws_iam_policy_document" "lambda_inline" {
     resources = compact([
       var.game_ingestion_queue_arn,
       var.game_ingestion_dlq_arn,
+      var.match_ai_analysis_queue_arn,
+      var.match_ai_analysis_dlq_arn,
     ])
+  }
+
+  statement {
+    sid    = "BedrockInvokeMatchAi"
+    effect = "Allow"
+    actions = [
+      "bedrock:InvokeModel",
+    ]
+    resources = [
+      "arn:aws:bedrock:*::foundation-model/${var.bedrock_model_id}",
+      "arn:aws:bedrock:*:*:inference-profile/*",
+      "arn:aws:bedrock:*:*:foundation-model/${var.bedrock_model_id}",
+    ]
   }
 
   statement {

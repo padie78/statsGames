@@ -18,6 +18,13 @@ export interface MatchCardStats {
   deaths?: number | null;
   placement?: number | null;
   assists?: number | null;
+  headshotPct?: number | null;
+  roundsWon?: number | null;
+  roundsLost?: number | null;
+  map?: string | null;
+  agent?: string | null;
+  mode?: string | null;
+  won?: boolean | null;
 }
 
 @Component({

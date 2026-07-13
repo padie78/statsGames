@@ -66,6 +66,9 @@ jobs:
           - path: ingestion/roblox_experience_poller
             artifact: roblox_experience_poller
             tf_output: roblox_experience_poller_name
+          - path: ingestion/match_ai_analyzer
+            artifact: match_ai_analyzer
+            tf_output: match_ai_analyzer_name
 
     steps:
       - name: Checkout
@@ -133,6 +136,9 @@ jobs:
           - path: ingestion/roblox_experience_poller
             artifact: roblox_experience_poller
             tf_output: roblox_experience_poller_name
+          - path: ingestion/match_ai_analyzer
+            artifact: match_ai_analyzer
+            tf_output: match_ai_analyzer_name
 
     steps:
       - name: Checkout
@@ -200,11 +206,13 @@ jobs:
 
           APPSYNC_ENDPOINT=$(jq -r '.appsync_endpoint.value // empty' tf-outputs.json)
           APPSYNC_API_KEY=$(jq -r '.appsync_api_key.value // empty' tf-outputs.json)
+          MATCH_AI_QUEUE_URL=$(jq -r '.match_ai_analysis_queue_url.value // empty' tf-outputs.json)
 
           echo "function_name=$FN_NAME" >> "$GITHUB_OUTPUT"
           echo "appsync_endpoint=$APPSYNC_ENDPOINT" >> "$GITHUB_OUTPUT"
           echo "::add-mask::$APPSYNC_API_KEY"
           echo "appsync_api_key=$APPSYNC_API_KEY" >> "$GITHUB_OUTPUT"
+          echo "match_ai_queue_url=$MATCH_AI_QUEUE_URL" >> "$GITHUB_OUTPUT"
 
       - name: Wait until Lambda is fully provisioned
         if: steps.tf.outputs.skip != 'true'
@@ -228,11 +236,13 @@ jobs:
             --function-name "${{ steps.tf.outputs.function_name }}"
 
       - name: Patch AppSync publisher environment
-        if: steps.tf.outputs.skip != 'true' && matrix.artifact == 'game_processor'
+        if: steps.tf.outputs.skip != 'true' && (matrix.artifact == 'game_processor' || matrix.artifact == 'match_ai_analyzer')
         env:
           FUNCTION_NAME: ${{ steps.tf.outputs.function_name }}
           APPSYNC_ENDPOINT: ${{ steps.tf.outputs.appsync_endpoint }}
           APPSYNC_API_KEY: ${{ steps.tf.outputs.appsync_api_key }}
+          MATCH_AI_QUEUE_URL: ${{ steps.tf.outputs.match_ai_queue_url }}
+          ARTIFACT: ${{ matrix.artifact }}
         run: |
           set -euo pipefail
 
@@ -246,11 +256,24 @@ jobs:
             --query 'Environment.Variables' \
             --output json > current-env.json
 
-          jq \
-            --arg endpoint "$APPSYNC_ENDPOINT" \
-            --arg apiKey "$APPSYNC_API_KEY" \
-            '{Variables: (. + {APPSYNC_ENDPOINT: $endpoint, APPSYNC_API_KEY: $apiKey})}' \
-            current-env.json > env-payload.json
+          if [ "$ARTIFACT" = "game_processor" ]; then
+            jq \
+              --arg endpoint "$APPSYNC_ENDPOINT" \
+              --arg apiKey "$APPSYNC_API_KEY" \
+              --arg matchAiQueue "$MATCH_AI_QUEUE_URL" \
+              '{Variables: (. + {
+                APPSYNC_ENDPOINT: $endpoint,
+                APPSYNC_API_KEY: $apiKey,
+                MATCH_AI_ANALYSIS_QUEUE_URL: $matchAiQueue
+              })}' \
+              current-env.json > env-payload.json
+          else
+            jq \
+              --arg endpoint "$APPSYNC_ENDPOINT" \
+              --arg apiKey "$APPSYNC_API_KEY" \
+              '{Variables: (. + {APPSYNC_ENDPOINT: $endpoint, APPSYNC_API_KEY: $apiKey})}' \
+              current-env.json > env-payload.json
+          fi
 
           aws lambda update-function-configuration \
             --function-name "$FUNCTION_NAME" \

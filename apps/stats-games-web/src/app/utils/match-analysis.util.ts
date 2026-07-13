@@ -54,6 +54,61 @@ export function matchDetailRoute(matchId: string): string {
   return `/tabs/matches/${encodeURIComponent(matchId)}`;
 }
 
+export function matchAiReportToAnalysisReport(
+  ai: {
+    headline: string;
+    summary: string;
+    markdown: string;
+    performanceScore: number;
+    gradeLabel: string;
+    verdict: string;
+    pros: string[];
+    cons: string[];
+    actionPlan: string[];
+  },
+  match: MatchUpdateView,
+  recentMatches: MatchUpdateView[] = [],
+): MatchAnalysisReport {
+  const heuristic = buildMatchAnalysisReport({ match, recentMatches });
+  const verdict = normalizeVerdict(ai.verdict);
+  const narrative = markdownToParagraphs(ai.markdown);
+
+  return {
+    ...heuristic,
+    headline: ai.headline || heuristic.headline,
+    summary: ai.summary || heuristic.summary,
+    narrative: narrative.length > 0 ? narrative : heuristic.narrative,
+    verdict,
+    performanceScore: ai.performanceScore || heuristic.performanceScore,
+    gradeLabel: ai.gradeLabel || heuristic.gradeLabel,
+    pros: ai.pros.length > 0 ? ai.pros : heuristic.pros,
+    cons: ai.cons.length > 0 ? ai.cons : heuristic.cons,
+    actionPlan: ai.actionPlan.length > 0 ? ai.actionPlan : heuristic.actionPlan,
+    focusNext: ai.actionPlan[0] ?? heuristic.focusNext,
+    isPreview: false,
+  };
+}
+
+function normalizeVerdict(raw: string): MatchAnalysisReport['verdict'] {
+  const v = (raw ?? '').toLowerCase();
+  if (v === 'victory' || v === 'podium' || v === 'solid' || v === 'rough') return v;
+  return 'solid';
+}
+
+function markdownToParagraphs(markdown: string): string[] {
+  return markdown
+    .split(/\n{2,}/)
+    .map((block) =>
+      block
+        .replace(/^#+\s*/gm, '')
+        .replace(/^\s*[-*]\s+/gm, '')
+        .replace(/\*\*/g, '')
+        .trim(),
+    )
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
 export function buildMatchAnalysisReport(input: BuildMatchAnalysisInput): MatchAnalysisReport {
   const { match } = input;
   const stats = match.stats ?? {};

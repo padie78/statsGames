@@ -44,7 +44,7 @@ import { StatValueComponent } from '../../atoms/stat-value/stat-value.component'
 
         @if (report.isPreview) {
           <p class="sg-match-analysis__preview u-m-0">
-            Preview enriquecido local — el reporte LLM (Bedrock) ampliará narrativa y contexto de lobby.
+            Preview enriquecido local — el reporte Bedrock reemplaza esta vista cuando está listo.
           </p>
         }
 

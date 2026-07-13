@@ -1,7 +1,11 @@
 import { Match } from '@stats-games/domain';
 import { GameQueueMessageSchema } from '../../dto/ingestion/game-queue-message.dto';
 import { MatchMapper } from '../../mappers/match.mapper';
-import type { IMatchEventNotifier, IMatchWriter } from '../../ports/event-network/match.port';
+import type {
+  IMatchAiAnalysisQueuePublisher,
+  IMatchEventNotifier,
+  IMatchWriter,
+} from '../../ports/event-network/match.port';
 import type { IStatsSummaryRepository } from '../../ports/event-network/stats-summary.repository.port';
 import type { ILogger } from '../../ports/shared/logger.port';
 
@@ -9,6 +13,7 @@ export interface ProcessMatchFromQueueDeps {
   matchWriter: IMatchWriter;
   matchEventNotifier: IMatchEventNotifier;
   statsSummaryRepository?: IStatsSummaryRepository;
+  matchAiAnalysisPublisher?: IMatchAiAnalysisQueuePublisher;
   logger?: ILogger;
 }
 
@@ -50,6 +55,18 @@ export class ProcessMatchFromQueueUseCase {
     }
 
     await this.deps.matchEventNotifier.publishMatchUpdate(match);
+
+    if (
+      !skippedDuplicate &&
+      message.platform === 'valorant' &&
+      this.deps.matchAiAnalysisPublisher
+    ) {
+      await this.deps.matchAiAnalysisPublisher.enqueue({
+        userId: message.userId,
+        matchId: message.matchId,
+        platform: message.platform,
+      });
+    }
 
     this.deps.logger?.info('Partida procesada', {
       userId: message.userId,

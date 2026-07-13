@@ -1,8 +1,10 @@
 import {
   GetCommunityBenchmarksUseCase,
+  GetMatchAiReportUseCase,
   GetPlayerProfileUseCase,
   GetProfileByGamerTagUseCase,
   LinkPlatformAccountUseCase,
+  ListMatchAiReportsUseCase,
   ListPlayerDailyTrendUseCase,
   ListPlayerMatchesUseCase,
   ListPlayerStatsRollupsUseCase,
@@ -13,6 +15,7 @@ import {
 import {
   ConsoleLogger,
   DynamoDbCommunityStatsRepository,
+  DynamoDbMatchAiReportRepository,
   DynamoDbMatchRepository,
   DynamoDbPlayerProfileRepository,
   DynamoDbStatsSummaryRepository,
@@ -22,6 +25,7 @@ const logger = new ConsoleLogger({ source: 'appsync_api' });
 
 const playerProfiles = new DynamoDbPlayerProfileRepository();
 const matchRepository = new DynamoDbMatchRepository();
+const matchAiReports = new DynamoDbMatchAiReportRepository();
 const statsRepository = new DynamoDbStatsSummaryRepository();
 const communityStatsRepository = new DynamoDbCommunityStatsRepository();
 
@@ -37,6 +41,8 @@ export const linkPlatformAccount = new LinkPlatformAccountUseCase({
   logger,
 });
 export const listPlayerMatches = new ListPlayerMatchesUseCase(matchRepository);
+export const getMatchAiReport = new GetMatchAiReportUseCase(matchAiReports);
+export const listMatchAiReports = new ListMatchAiReportsUseCase(matchAiReports);
 export const listPlayerStatsRollups = new ListPlayerStatsRollupsUseCase(statsRepository);
 export const listPlayerDailyTrend = new ListPlayerDailyTrendUseCase(statsRepository);
 export const getCommunityBenchmarks = new GetCommunityBenchmarksUseCase(communityStatsRepository);

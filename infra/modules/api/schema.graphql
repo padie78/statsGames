@@ -8,6 +8,12 @@ type Query {
   listPlayerMatches(userId: ID!, platform: String, limit: Int): [MatchUpdate!]!
     @aws_api_key
     @aws_cognito_user_pools
+  getMatchAiReport(userId: ID!, matchId: ID!): MatchAiReport
+    @aws_api_key
+    @aws_cognito_user_pools
+  listMatchAiReports(userId: ID!, platform: String, limit: Int): [MatchAiReport!]!
+    @aws_api_key
+    @aws_cognito_user_pools
   listPlayerStatsRollups(
     userId: ID!
     granularity: String!
@@ -76,6 +82,13 @@ input MatchStatsInput {
   deaths: Int
   placement: Int
   assists: Int
+  headshotPct: Float
+  roundsWon: Int
+  roundsLost: Int
+  map: String
+  agent: String
+  mode: String
+  won: Boolean
 }
 
 input MatchUpdateInput {
@@ -87,6 +100,49 @@ input MatchUpdateInput {
   stats: MatchStatsInput
 }
 
+input MatchAiReadyInput {
+  userId: ID!
+  matchId: ID!
+  platform: String!
+  headline: String!
+  summary: String!
+  performanceScore: Int
+  gradeLabel: String
+  verdict: String
+  status: String!
+  createdAt: AWSDateTime!
+}
+
+type MatchAiReady @aws_api_key @aws_cognito_user_pools {
+  userId: ID!
+  matchId: ID!
+  platform: String!
+  headline: String!
+  summary: String!
+  performanceScore: Int
+  gradeLabel: String
+  verdict: String
+  status: String!
+  createdAt: AWSDateTime!
+}
+
+type MatchAiReport @aws_api_key @aws_cognito_user_pools {
+  userId: ID!
+  matchId: ID!
+  platform: String!
+  headline: String!
+  summary: String!
+  markdown: String!
+  performanceScore: Int!
+  gradeLabel: String!
+  verdict: String!
+  pros: [String!]!
+  cons: [String!]!
+  actionPlan: [String!]!
+  status: String!
+  createdAt: AWSDateTime!
+}
+
 type Mutation {
   ping(message: String!): String! @aws_api_key @aws_cognito_user_pools
   upsertPlayerProfile(input: UpsertPlayerProfileInput!): PlayerProfile!
@@ -96,11 +152,15 @@ type Mutation {
     @aws_api_key
     @aws_cognito_user_pools
   publishMatchUpdate(input: MatchUpdateInput!): MatchUpdate @aws_api_key
+  publishMatchAiReady(input: MatchAiReadyInput!): MatchAiReady @aws_api_key
 }
 
 type Subscription {
   onMatchUpdate(userId: ID!): MatchUpdate
     @aws_subscribe(mutations: ["publishMatchUpdate"])
+    @aws_cognito_user_pools
+  onMatchAiReady(userId: ID!): MatchAiReady
+    @aws_subscribe(mutations: ["publishMatchAiReady"])
     @aws_cognito_user_pools
 }
 
@@ -109,6 +169,13 @@ type MatchStats @aws_api_key @aws_cognito_user_pools {
   deaths: Int
   placement: Int
   assists: Int
+  headshotPct: Float
+  roundsWon: Int
+  roundsLost: Int
+  map: String
+  agent: String
+  mode: String
+  won: Boolean
 }
 
 type MatchUpdate @aws_api_key @aws_cognito_user_pools {

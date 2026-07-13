@@ -85,8 +85,9 @@ type LinkablePlatform = 'valorant' | 'rocket_league' | 'fortnite' | 'roblox';
           <h2 class="sg-page-header__title u-text-md u-mb-0">Roadmap de datos</h2>
           <ul class="sg-integrations__list u-m-0">
             <li>
-              <strong>Valorant:</strong> Riot API → KDA, headshots, rondas, mapa, agente. Secret
-              <code>RIOT_API_KEY</code>.
+              <strong>Valorant:</strong> Riot API Key + Riot ID (<code>Nombre#TAG</code>) → partidas al
+              cerrar (poll ≤3 min) → KDA, HS%, rondas, mapa, agente + análisis Bedrock. Requiere
+              secret GitHub <code>RIOT_API_KEY</code> (sin key el poller queda DISABLED).
             </li>
             <li>
               <strong>Rocket League:</strong> webhook/companion + opcional ballchasing
@@ -252,7 +253,7 @@ export class IntegrationsPageComponent implements OnInit {
   readonly helpBody = computed(() => {
     switch (this.linkForm.controls.platform.value) {
       case 'valorant':
-        return 'Usá tu Riot ID exacto (Nombre#TAG). Stats vía Riot match-v1 tras configurar RIOT_API_KEY.';
+        return 'Formato obligatorio: Nombre#TAG (ej. Player#NA1). Tras vincular, el poller (EventBridge ~3 min) captura partidas al cerrar si RIOT_API_KEY está en infra. Región/shard: VALORANT_REGION / VALORANT_SHARD.';
       case 'rocket_league':
         return 'Nombre visible en replays/ballchasing o companion. API oficial Psyonix no está abierta: webhook o ballchasing.';
       case 'fortnite':
@@ -276,10 +277,12 @@ export class IntegrationsPageComponent implements OnInit {
     this.linkForm.controls.platform.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((platform) => {
+        this.applyExternalIdValidators(platform);
         this.prefillExternalId(platform);
         this.linkSuccess.set(null);
         this.linkError.set(null);
       });
+    this.applyExternalIdValidators(this.linkForm.controls.platform.value);
   }
 
   ngOnInit(): void {
@@ -302,6 +305,13 @@ export class IntegrationsPageComponent implements OnInit {
       const { platform, externalId } = this.linkForm.getRawValue();
       const trimmedId = externalId.trim();
 
+      if (platform === 'valorant' && !isValidRiotId(trimmedId)) {
+        this.linkError.set(
+          'Riot ID inválido. Usá el formato exacto Nombre#TAG (ej. Player#NA1).',
+        );
+        return;
+      }
+
       await this.ensurePlayerProfile(userId, platform);
 
       const updated = await firstValueFrom(
@@ -313,13 +323,29 @@ export class IntegrationsPageComponent implements OnInit {
       );
       this.profile.set(updated);
       this.loadError.set(null);
-      this.linkSuccess.set(`${this.platformLabel(platform)} vinculado: ${trimmedId}`);
+      this.linkSuccess.set(
+        platform === 'valorant'
+          ? `Valorant vinculado: ${trimmedId}. Si RIOT_API_KEY está activa, en ≤3 min deberían aparecer partidas en /tabs/matches.`
+          : `${this.platformLabel(platform)} vinculado: ${trimmedId}`,
+      );
       this.prefillExternalId(platform);
     } catch (err) {
       this.linkError.set(mapLinkPlatformError(err));
     } finally {
       this.linking.set(false);
     }
+  }
+
+  private applyExternalIdValidators(platform: LinkablePlatform): void {
+    const control = this.linkForm.controls.externalId;
+    if (platform === 'valorant') {
+      control.setValidators([Validators.required, riotIdValidator]);
+    } else if (platform === 'roblox') {
+      control.setValidators([Validators.required, Validators.pattern(/^\d+$/)]);
+    } else {
+      control.setValidators([Validators.required, Validators.minLength(1)]);
+    }
+    control.updateValueAndValidity({ emitEvent: false });
   }
 
   private async ensurePlayerProfile(
@@ -426,4 +452,22 @@ export class IntegrationsPageComponent implements OnInit {
         return 'BedWars / Arsenal';
     }
   }
+}
+
+/** Riot ID: gameName#tagLine (tag alfanumérico, 2–5 chars típico). */
+function isValidRiotId(raw: string): boolean {
+  const trimmed = raw.trim();
+  const hash = trimmed.lastIndexOf('#');
+  if (hash <= 0 || hash === trimmed.length - 1) return false;
+  const gameName = trimmed.slice(0, hash).trim();
+  const tagLine = trimmed.slice(hash + 1).trim();
+  if (!gameName || gameName.length > 16) return false;
+  if (!/^[A-Za-z0-9]{2,5}$/.test(tagLine)) return false;
+  return true;
+}
+
+function riotIdValidator(control: { value: unknown }): { riotId: true } | null {
+  const value = typeof control.value === 'string' ? control.value : '';
+  if (!value.trim()) return null;
+  return isValidRiotId(value) ? null : { riotId: true };
 }

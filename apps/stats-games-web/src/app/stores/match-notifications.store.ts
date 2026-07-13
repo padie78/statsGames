@@ -1,5 +1,8 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { AuthService } from '../core/auth/auth.service';
 import { AppSyncRealtimeService } from '../services/appsync-realtime.service';
+import { MatchAiService, type MatchAiReadyView } from '../services/match-ai.service';
 import type { MatchUpdateView } from '../services/match.service';
 
 export type MatchAiStatus = 'pending' | 'ready' | 'failed';
@@ -19,18 +22,20 @@ export interface MatchNotification {
   match: MatchUpdateView;
 }
 
-const AI_DELAY_MS = 4500;
+const FALLBACK_AI_DELAY_MS = 90_000;
 const MAX_ITEMS = 30;
 
 /**
  * Inbox de partidas en vivo.
- * - Al llegar onMatchUpdate → notificación con IA pendiente.
- * - Tras un delay (preview local / futuro Bedrock) → IA ready.
- * - Click solo navega cuando aiStatus === 'ready'.
+ * - onMatchUpdate → notificación con IA pendiente.
+ * - onMatchAiReady (Bedrock) → IA ready / failed.
+ * - Fallback timeout solo si no llega el evento (p.ej. plataforma sin pipeline IA).
  */
 @Injectable({ providedIn: 'root' })
 export class MatchNotificationsStore {
   private readonly realtime = inject(AppSyncRealtimeService);
+  private readonly matchAi = inject(MatchAiService);
+  private readonly auth = inject(AuthService);
 
   private readonly _items = signal<MatchNotification[]>([]);
   private readonly _panelOpen = signal(false);
@@ -38,6 +43,8 @@ export class MatchNotificationsStore {
   private readonly seenIds = new Set<string>();
   private readonly aiTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private aiReadySub: Subscription | null = null;
+  private lastAiUserId: string | null = null;
 
   readonly items = computed(() => this._items());
   readonly panelOpen = computed(() => this._panelOpen());
@@ -59,6 +66,14 @@ export class MatchNotificationsStore {
       },
       { allowSignalWrites: true },
     );
+
+    effect(
+      () => {
+        const userId = this.auth.userId();
+        this.ensureAiReadySubscription(userId);
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   togglePanel(): void {
@@ -77,8 +92,8 @@ export class MatchNotificationsStore {
     this._toast.set(null);
     if (this.toastTimer) {
       clearTimeout(this.toastTimer);
-      this.toastTimer = null;
     }
+    this.toastTimer = null;
   }
 
   markRead(id: string): void {
@@ -98,7 +113,7 @@ export class MatchNotificationsStore {
   /** Solo permite abrir el detalle si la IA ya terminó. */
   canOpenMatch(id: string): boolean {
     const item = this._items().find((n) => n.id === id);
-    return item?.aiStatus === 'ready';
+    return item?.aiStatus === 'ready' || item?.aiStatus === 'failed';
   }
 
   /** Demo / tests: empuja una partida como si viniera de AppSync. */
@@ -120,8 +135,86 @@ export class MatchNotificationsStore {
     this.aiTimers.clear();
     this.seenIds.clear();
     this.dismissToast();
+    this.aiReadySub?.unsubscribe();
+    this.aiReadySub = null;
+    this.lastAiUserId = null;
     this._items.set([]);
     this._panelOpen.set(false);
+  }
+
+  markAiReadyFromEvent(event: MatchAiReadyView): void {
+    const id = `match-${event.matchId}`;
+    const existingTimer = this.aiTimers.get(id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.aiTimers.delete(id);
+    }
+
+    const status: MatchAiStatus = event.status === 'failed' ? 'failed' : 'ready';
+    const headline =
+      event.headline?.trim() ||
+      (status === 'failed' ? 'Análisis IA no disponible' : 'Análisis listo');
+
+    this._items.update((items) => {
+      const found = items.some((item) => item.matchId === event.matchId);
+      if (!found) {
+        return [
+          {
+            id,
+            matchId: event.matchId,
+            platform: event.platform,
+            summary: event.summary || headline,
+            updatedAt: event.createdAt,
+            aiStatus: status,
+            aiHeadline: headline,
+            read: false,
+            createdAt: new Date().toISOString(),
+            match: {
+              userId: event.userId,
+              matchId: event.matchId,
+              platform: event.platform,
+              summary: event.summary || headline,
+              updatedAt: event.createdAt,
+            },
+          },
+          ...items,
+        ].slice(0, MAX_ITEMS);
+      }
+
+      return items.map((item) =>
+        item.matchId === event.matchId
+          ? {
+              ...item,
+              aiStatus: status,
+              aiHeadline: headline,
+              summary: item.summary,
+            }
+          : item,
+      );
+    });
+
+    const updated = this._items().find((item) => item.matchId === event.matchId);
+    if (updated) this.showToast(updated);
+  }
+
+  private ensureAiReadySubscription(userId: string | null): void {
+    if (!userId) {
+      this.aiReadySub?.unsubscribe();
+      this.aiReadySub = null;
+      this.lastAiUserId = null;
+      return;
+    }
+    if (this.aiReadySub && this.lastAiUserId === userId) return;
+
+    this.aiReadySub?.unsubscribe();
+    this.lastAiUserId = userId;
+    this.aiReadySub = this.matchAi.onMatchAiReady(userId).subscribe({
+      next: (event) => this.markAiReadyFromEvent(event),
+      error: () => {
+        this.aiReadySub = null;
+        this.lastAiUserId = null;
+      },
+    });
   }
 
   private ingestLiveMatch(match: MatchUpdateView): void {
@@ -144,15 +237,19 @@ export class MatchNotificationsStore {
 
     this._items.update((items) => [notification, ...items].slice(0, MAX_ITEMS));
     this.showToast(notification);
-    this.scheduleAiReady(notification.id, match);
+    this.scheduleAiFallback(notification.id, match);
   }
 
-  private scheduleAiReady(id: string, match: MatchUpdateView): void {
+  private scheduleAiFallback(id: string, match: MatchUpdateView): void {
     const existing = this.aiTimers.get(id);
     if (existing) clearTimeout(existing);
 
+    // Solo fallback local si no llega Bedrock (otras plataformas / demo).
     const timer = setTimeout(() => {
       this.aiTimers.delete(id);
+      const current = this._items().find((item) => item.id === id);
+      if (!current || current.aiStatus !== 'pending') return;
+
       const headline = buildAiHeadline(match);
       this._items.update((items) =>
         items.map((item) =>
@@ -161,7 +258,6 @@ export class MatchNotificationsStore {
                 ...item,
                 aiStatus: 'ready' as const,
                 aiHeadline: headline,
-                summary: item.summary,
               }
             : item,
         ),
@@ -171,7 +267,7 @@ export class MatchNotificationsStore {
       if (updated && this._toast()?.id === id) {
         this.showToast(updated);
       }
-    }, AI_DELAY_MS);
+    }, FALLBACK_AI_DELAY_MS);
 
     this.aiTimers.set(id, timer);
   }
@@ -191,6 +287,7 @@ export class MatchNotificationsStore {
 function buildAiHeadline(match: MatchUpdateView): string {
   const kills = match.stats?.kills ?? 0;
   const placement = match.stats?.placement;
+  if (match.stats?.won === true) return `Victoria · ${kills} kills — análisis listo`;
   if (placement === 1) return `Victoria · ${kills} kills — análisis listo`;
   if (placement != null && placement <= 5) {
     return `Top ${placement} · ${kills} kills — análisis listo`;

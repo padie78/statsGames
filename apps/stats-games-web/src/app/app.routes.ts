@@ -100,11 +100,7 @@ export const APP_ROUTES: Routes = [
       {
         path: 'ai-coach',
         loadComponent: () =>
-          import('./pages/placeholder/placeholder.page').then((m) => m.PlaceholderPageComponent),
-        data: placeholder(
-          'AI Coach',
-          'Insights en tiempo real, recomendaciones post-partida y coaching premium.',
-        ),
+          import('./pages/ai-coach/ai-coach.page').then((m) => m.AiCoachPageComponent),
       },
       {
         path: 'settings',

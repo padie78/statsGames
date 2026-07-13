@@ -99,6 +99,14 @@ output "game_processor_name" {
   value = module.lambdas.game_processor_name
 }
 
+output "match_ai_analyzer_name" {
+  value = module.lambdas.match_ai_analyzer_name
+}
+
+output "match_ai_analysis_queue_url" {
+  value = module.queues.match_ai_analysis_queue_url
+}
+
 output "appsync_api_name" {
   value = module.lambdas.appsync_api_name
 }
