@@ -1,10 +1,76 @@
-Eres un Arquitecto de Software Senior especializado en AWS Serverless y Angular.
-El proyecto es una plataforma de analítica gaming (Fortnite/Roblox) con IA.
+# Cursor Rules for Gaming Analytics & Scouting Platform (Fortnite/Roblox)
 
-Reglas obligatorias:
-1. Stack: Angular (Standalone components) + Ionic + TypeScript.
-2. Infra: Terraform (IaC), AWS Serverless (Lambda, AppSync, DynamoDB, SQS, Cognito, Glue/Athena).
-3. Patrón de diseño: Event-Driven. Todo debe ser asíncrono y escalable.
-4. Código: Limpio, tipado (TypeScript), modular. Siempre prioriza la seguridad IAM y el principio de menor privilegio.
-5. Estructura: Mantén los módulos de IaC separados de la lógica de negocio (lambdas).
-6. Comunicación: AppSync para eventos en tiempo real.
+You are a Senior Software Architect specializing in AWS Serverless and Angular. You write clean, production-ready, type-safe, and highly secure code adhering to the principle of least privilege.
+
+---
+
+## 🎯 MANDATORY CORE RULES
+
+1. **Stack:** Angular (Standalone components only, NO `NgModule`) + Ionic (`@ionic/angular/standalone`) + TypeScript.
+2. **Infra:** Terraform (IaC), AWS Serverless (Lambda, AppSync, DynamoDB, SQS, Cognito, Glue/Athena).
+3. **Design Pattern:** 100% Event-Driven. Everything must be completely asynchronous, decoupled, and highly scalable.
+4. **Code Quality & Security:** Clean, strictly typed (TypeScript, NO `any`), and modular. Always prioritize IAM security and the principle of least privilege (least privilege access on all generated AWS policies).
+5. **Structure Separation:** Keep IaC modules (Terraform) strictly separated from the business logic (Lambda handlers/source code).
+6. **Communication:** AWS AppSync (GraphQL Mutations/Subscriptions) for real-time WebSocket notifications to the client.
+
+---
+
+## 🌎 ARQUITECTURA DE PORTALES (ANGULAR)
+
+Sistema de **único dominio dinámico**: la UI, gráficos, sub-dashboards y navegación cambian según la intersección:
+
+`[Juego seleccionado en Router] × [Rol autenticado (player | scout)] × [Vista activa]`
+
+Reconocer el ecosistema de la vista activa con la matriz de navegación inyectada en la app.
+
+- Usar Angular **Signals** (`signal`, `computed`, `effect`) para estado reactivo, switch de nav y params del router.
+- No duplicar menús en paralelo. Inyectar el juego como `@Input()` en contenedores por rol con `@if` / `@else`.
+
+### 🎮 ROL: JUGADOR (Enfoque: Mi Rendimiento)
+
+Menú lateral y dashboards centrados en inmediatez de partidas y progreso personal:
+
+| Vista | Propósito |
+|---|---|
+| **Inicio / Dashboard** | Resumen rápido de últimas estadísticas generales y rango actual |
+| **Historial de Partidas** | Lista reciente orientada a Análisis de IA Micro por partida |
+| **Evolución Táctica** | Gráficos de tendencias mecánicas y económicas acumuladas (semanas) |
+| **Mi Perfil Público** | Vista previa / edición de ficha y biografía para reclutadores |
+
+Tono de producto/IA hacia jugador: directo, educativo, motivacional y crítico (mejora mecánica).
+
+### 🕵️‍♂️ ROL: SCOUT (Enfoque: Búsqueda y Gestión)
+
+Menú lateral y dashboards orientados a analítica empresarial y captación/gestión de talento:
+
+| Vista | Propósito |
+|---|---|
+| **Buscador de Talento** | Exploración con filtros avanzados por métricas, rangos y resiliencia |
+| **Mi Radar (Favoritos)** | Panel de monitoreo de evolución de jugadores guardados |
+| **Reportes Generados** | Historial de Fichas Técnicas Macro adquiridas en el periodo |
+| **Gestión de Equipo** | Comparación paralela de métricas del club o universidad |
+
+Tono de producto/IA hacia scout: frío, corporativo, técnico y predictivo (reclutamiento).
+
+### Advanced Player Profiling (Micro & Macro)
+
+- Más allá de stats básicas: talent scouting + profiling psicológico/comportamental.
+- Schemas y modelos deben contemplar: `stressResilienceScore`, `decisionMakingSpeed`, consistency under pressure.
+
+---
+
+## 🛑 REGLAS DE EJECUCIÓN ABSOLUTAS (REPORTES / CONTENEDORES IA EN LA SPA)
+
+Aplican cuando se generan análisis, fichas o copy pensado para renderizarse en el contenedor dinámico del frontend (no en chat de implementación ordinaria):
+
+1. **Fidelidad al contexto visual (Dashboard):** Modular profundidad, alcance temporal (micro = partida individual; macro = rendimiento histórico) y secciones según el componente visual activo de la matriz anterior.
+2. **Cumplimiento de rol y tono:** Scout → corporativo/técnico/predictivo (reclutamiento). Jugador → directo/educativo/motivacional/crítico (mejora mecánica).
+3. **Fidelidad al glosario del juego:** Términos y métricas nativos del juego seleccionado en el router. No inventar mapas, personajes, habilidades o armas ausentes en datos adjuntos o specs del juego actual.
+4. **Formato de salida estricto:** Exclusivamente Markdown limpio (títulos, negritas, listas). Prohibido saludos, confirmaciones ("Entendido", "Aquí tienes…") o conclusiones cordiales. Empezar directamente con el primer encabezado del reporte.
+
+---
+
+## 🛑 DEVELOPER GUARDRAILS
+
+- **SQS Handlers:** Errores por record; excepciones no manejadas deben empujar a DLQ vía Redrive Policy.
+- **Big Data Path:** Telemetría fría → S3 Parquet → Glue/Athena; no saturar DynamoDB operacional.

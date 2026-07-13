@@ -16,6 +16,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
 import { UserPreferencesService } from '../../../core/preferences/user-preferences.service';
 import { APP_ACCOUNT_MENU_ITEMS } from '../../../core/navigation/app-nav.config';
+import { roleLabel as formatRoleLabel } from '../../../core/auth/user-role';
 import { PlayerService } from '../../../services/player.service';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 import { NotificationsBellComponent } from '../../molecules/notifications-bell/notifications-bell.component';
@@ -81,7 +82,7 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
                 <span class="sg-game-nav__user-email u-truncate">
                   {{ gamerTag() || auth.email() || 'Gamer' }}
                 </span>
-                <span class="sg-game-nav__user-role">Cuenta</span>
+                <span class="sg-game-nav__user-role">{{ roleLabel() }}</span>
               </span>
               <span class="sg-game-nav__account-caret" aria-hidden="true"></span>
             </button>
@@ -99,7 +100,7 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
                     <span class="sg-game-nav__user-email u-truncate">
                       {{ gamerTag() || auth.email() || 'Gamer' }}
                     </span>
-                    <span class="sg-game-nav__user-role">Pro</span>
+                    <span class="sg-game-nav__user-role">{{ roleLabel() }}</span>
                   </div>
                 </div>
 
@@ -209,6 +210,7 @@ export class AppSubnavComponent {
 
   readonly items = this.prefs.visibleNavItems;
   readonly accountMenuItems = APP_ACCOUNT_MENU_ITEMS;
+  readonly roleLabel = computed(() => formatRoleLabel(this.auth.userRole()));
   readonly game = computed(() => {
     const id = this.auth.selectedGame();
     return id ? gamePlatformMeta(id) : gamePlatformMeta('fortnite');

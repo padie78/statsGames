@@ -1,0 +1,145 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type CommunityBenchmarks @aws_api_key {
+  avgKd: Float!
+  avgKillsPerWeek: Float!
+  avgMatchesPerWeek: Float!
+  avgWinRate: Float!
+  kdStd: Float!
+  killsStd: Float!
+  lastUpdatedIso: AWSDateTime!
+  periodId: String!
+  platform: String!
+  sampleSize: Int!
+  winRateStd: Float!
+}
+
+type LeaderboardEntry @aws_api_key {
+  delta: String!
+  gamerTag: String!
+  matchCount: Int!
+  platform: String!
+  rank: Int!
+  score: Int!
+  totalKills: Int!
+  trend: String!
+  userId: ID!
+}
+
+type MatchStats @aws_api_key @aws_cognito_user_pools {
+  assists: Int
+  deaths: Int
+  kills: Int
+  placement: Int
+}
+
+type MatchUpdate @aws_api_key @aws_cognito_user_pools {
+  matchId: ID!
+  platform: String!
+  stats: MatchStats
+  summary: String!
+  updatedAt: AWSDateTime!
+  userId: ID!
+}
+
+type Mutation {
+  linkPlatformAccount(input: LinkPlatformAccountInput!): PlayerProfile! @aws_api_key @aws_cognito_user_pools
+  ping(message: String!): String! @aws_api_key @aws_cognito_user_pools
+  publishMatchUpdate(input: MatchUpdateInput!): MatchUpdate @aws_api_key
+  upsertPlayerProfile(input: UpsertPlayerProfileInput!): PlayerProfile! @aws_api_key @aws_cognito_user_pools
+}
+
+type PlayerProfile @aws_api_key @aws_cognito_user_pools {
+  avatarUrl: String
+  createdAtIso: AWSDateTime!
+  fortniteId: String
+  gamerTag: String!
+  primaryPlatform: String!
+  robloxId: String
+  rocketLeagueId: String
+  updatedAtIso: AWSDateTime!
+  userId: ID!
+  valorantId: String
+  versionId: Int!
+}
+
+type PlayerSearchHit @aws_api_key {
+  avatarUrl: String
+  gamerTag: String!
+  primaryPlatform: String!
+  userId: ID!
+}
+
+type PlayerStatsRollup @aws_api_key @aws_cognito_user_pools {
+  avgPlacement: Float!
+  granularity: String!
+  lastUpdatedIso: AWSDateTime!
+  matchCount: Int!
+  periodId: String!
+  platform: String!
+  totalDeaths: Int!
+  totalKills: Int!
+  userId: ID!
+  versionId: Int!
+}
+
+type PublicPlayerProfile @aws_api_key {
+  avatarUrl: String
+  createdAtIso: AWSDateTime!
+  gamerTag: String!
+  primaryPlatform: String!
+  userId: ID!
+}
+
+type Query {
+  getCommunityBenchmarks(periodId: String!, platform: String!): CommunityBenchmarks! @aws_api_key
+  getPlayerProfile(userId: ID!): PlayerProfile! @aws_api_key @aws_cognito_user_pools
+  getProfileByGamerTag(gamerTag: String!): PublicPlayerProfile! @aws_api_key
+  health: String! @aws_api_key
+  listPlayerDailyTrend(days: Int, platform: String, userId: ID!): [PlayerStatsRollup!]! @aws_api_key @aws_cognito_user_pools
+  listPlayerMatches(limit: Int, platform: String, userId: ID!): [MatchUpdate!]! @aws_api_key @aws_cognito_user_pools
+  listPlayerStatsRollups(granularity: String!, limit: Int, periodId: String!, platform: String, userId: ID!): [PlayerStatsRollup!]! @aws_api_key @aws_cognito_user_pools
+  listWeeklyLeaderboard(limit: Int, periodId: String!, platform: String!): [LeaderboardEntry!]! @aws_api_key
+  searchPlayers(limit: Int, query: String!): [PlayerSearchHit!]! @aws_api_key
+}
+
+type Subscription {
+  onMatchUpdate(userId: ID!): MatchUpdate @aws_cognito_user_pools @aws_subscribe(mutations : ["publishMatchUpdate"])
+}
+
+input LinkPlatformAccountInput {
+  externalId: String!
+  platform: String!
+  userId: ID!
+}
+
+input MatchStatsInput {
+  assists: Int
+  deaths: Int
+  kills: Int
+  placement: Int
+}
+
+input MatchUpdateInput {
+  matchId: ID!
+  platform: String!
+  stats: MatchStatsInput
+  summary: String!
+  updatedAt: AWSDateTime!
+  userId: ID!
+}
+
+input UpsertPlayerProfileInput {
+  avatarUrl: String
+  fortniteId: String
+  gamerTag: String!
+  primaryPlatform: String!
+  robloxId: String
+  rocketLeagueId: String
+  userId: ID!
+  valorantId: String
+}

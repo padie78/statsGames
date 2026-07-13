@@ -7734,3 +7734,231 @@ sg-animated-value.sg-dashboard-hero__stat-value {
     align-items: start;
   }
 }
+
+// —— Portal role pages (player profile + scout) ——
+.sg-portal-card {
+  padding: var(--sg-space-5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--sg-radius-lg);
+  background: rgba(8, 12, 22, 0.72);
+}
+
+.sg-portal-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sg-space-3);
+  margin-bottom: var(--sg-space-4);
+}
+
+.sg-portal-card__title {
+  margin: 0;
+  font-family: var(--sg-font-display);
+  font-size: var(--sg-fs-md);
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-portal-card__meta {
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sg-profile-preview__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sg-space-4);
+  margin-bottom: var(--sg-space-4);
+}
+
+.sg-profile-preview__avatar {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0.85rem;
+  background: rgba(var(--sg-accent-primary-rgb), 0.14);
+  border: 1px solid rgba(var(--sg-accent-primary-rgb), 0.35);
+  color: var(--sg-accent-primary);
+  font-weight: var(--sg-fw-bold);
+  flex-shrink: 0;
+}
+
+.sg-profile-preview__name {
+  margin: 0.35rem 0 0.15rem;
+  font-size: 1.25rem;
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-profile-preview__meta {
+  color: var(--sg-text-muted);
+  font-size: var(--sg-fs-sm);
+}
+
+.sg-profile-preview__bio {
+  margin: 0 0 var(--sg-space-4);
+  color: var(--sg-text-secondary);
+  line-height: 1.5;
+}
+
+.sg-profile-preview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sg-space-2);
+}
+
+.sg-talent-filters__grid {
+  display: grid;
+  gap: var(--sg-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.sg-talent-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: var(--sg-fs-xs);
+  color: var(--sg-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sg-talent-filters__field input {
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--sg-radius-md);
+  background: rgba(4, 7, 14, 0.75);
+  color: var(--sg-text-primary);
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.sg-talent-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow-x: auto;
+}
+
+.sg-talent-table__row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1.4fr) repeat(4, minmax(3.5rem, 0.7fr)) auto;
+  gap: var(--sg-space-2);
+  align-items: center;
+  padding: 0.7rem 0.55rem;
+  border-radius: var(--sg-radius-md);
+  color: var(--sg-text-secondary);
+  font-size: 0.86rem;
+}
+
+.sg-talent-table__row small {
+  display: block;
+  color: var(--sg-text-muted);
+  font-size: 0.7rem;
+}
+
+.sg-talent-table__row--head {
+  color: var(--sg-text-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: var(--sg-fw-semibold);
+}
+
+.sg-talent-table__row:not(.sg-talent-table__row--head):hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sg-talent-table--team .sg-talent-table__row {
+  grid-template-columns: minmax(7rem, 1.2fr) repeat(5, minmax(3.2rem, 0.65fr)) auto;
+}
+
+.sg-radar-grid {
+  display: grid;
+  gap: var(--sg-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.sg-radar-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sg-space-2);
+  margin-bottom: var(--sg-space-3);
+}
+
+.sg-radar-card__name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: var(--sg-fw-bold);
+}
+
+.sg-radar-card__note {
+  margin: 0 0 var(--sg-space-3);
+  color: var(--sg-text-secondary);
+  font-size: var(--sg-fs-sm);
+  line-height: 1.45;
+}
+
+.sg-radar-card__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sg-space-3);
+  margin: 0 0 var(--sg-space-4);
+}
+
+.sg-radar-card__meta dt {
+  margin: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sg-text-muted);
+}
+
+.sg-radar-card__meta dd {
+  margin: 0.2rem 0 0;
+  font-weight: var(--sg-fw-bold);
+  color: var(--sg-text-primary);
+}
+
+.sg-reports-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.sg-reports-list__item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sg-space-3);
+  align-items: center;
+  padding: 0.85rem 0.7rem;
+  border-radius: var(--sg-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sg-reports-list__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.sg-reports-list__score {
+  font-family: var(--sg-font-display);
+  font-size: 1.15rem;
+  font-weight: var(--sg-fw-bold);
+  color: var(--sg-neon-lime);
+}
+
+.sg-reports-list__side time {
+  font-size: 0.7rem;
+  color: var(--sg-text-muted);
+}

@@ -34,6 +34,7 @@ import {
     <div
       class="sg-app-shell sg-app-shell--trn"
       [attr.data-game]="activeGame() ?? 'fortnite'"
+      [attr.data-role]="auth.userRole()"
       [class.sg-app-shell--scrolled]="chromeScroll.isScrolled()"
       [style.--sg-chrome-scroll]="chromeScroll.scrollProgress()"
       [style.--sg-shell-glow]="shellGlow()"
@@ -54,7 +55,7 @@ import {
   `,
 })
 export class ShellPageComponent implements OnInit {
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly realtime = inject(AppSyncRealtimeService);

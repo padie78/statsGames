@@ -1,5 +1,6 @@
-import { Injectable, computed, signal } from '@angular/core';
-import { APP_SUBNAV_ITEMS, type AppSubnavItem } from '../navigation/app-nav.config';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../services/auth.service';
+import { navItemsForRole, type AppSubnavItem } from '../navigation/app-nav.config';
 
 export type StatsDisplayMode = 'simple' | 'advanced';
 
@@ -17,6 +18,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 
 @Injectable({ providedIn: 'root' })
 export class UserPreferencesService {
+  private readonly auth = inject(AuthService);
   private readonly prefs = signal<UserPreferences>({ ...DEFAULT_PREFERENCES });
   private loadedForUserId: string | null = null;
 
@@ -24,8 +26,10 @@ export class UserPreferencesService {
   readonly appearInSearch = computed(() => this.prefs().appearInSearch);
   readonly statsMode = computed(() => this.prefs().statsMode);
 
-  /** Game nav siempre: Overview, Partidas, Estadísticas, AI Coach. */
-  readonly visibleNavItems = computed((): AppSubnavItem[] => APP_SUBNAV_ITEMS);
+  /** Nav del portal activo según rol (player | scout). */
+  readonly visibleNavItems = computed((): AppSubnavItem[] =>
+    navItemsForRole(this.auth.userRole()),
+  );
 
   load(userId: string): void {
     if (this.loadedForUserId === userId) return;

@@ -1,1 +1,6 @@
-export { AuthService, type SelectedGame, type SocialProvider } from '../services/auth.service';
+export {
+  AuthService,
+  type SelectedGame,
+  type SocialProvider,
+  type UserRole,
+} from '../services/auth.service';

@@ -12,14 +12,15 @@ import {
 } from 'aws-amplify/auth';
 import { isOAuthConfigured } from '../../amplify.config';
 import { environment } from '../../../environments/environment';
-import { AuthPendingConfirmationError, isAlreadyAuthenticatedError, mapAuthErrorMessage } from '../auth/auth.errors';
+import { AuthPendingConfirmationError, isAlreadyAuthenticatedError } from '../auth/auth.errors';
 import { decodeJwtPayload } from '../auth/appsync-auth.util';
 import {
   normalizeSelectedGame,
   type SelectedGame,
 } from '../game/selected-game';
+import { normalizeUserRole, type UserRole } from '../auth/user-role';
 
-export type { SelectedGame };
+export type { SelectedGame, UserRole };
 export type SocialProvider = 'Google' | 'Apple' | 'Discord';
 
 @Injectable({ providedIn: 'root' })
@@ -27,10 +28,14 @@ export class AuthService {
   private readonly _userId = signal<string | null>(null);
   private readonly _email = signal<string | null>(null);
   private readonly _selectedGame = signal<SelectedGame | null>(null);
+  private readonly _userRole = signal<UserRole>('player');
 
   readonly userId = computed(() => this._userId());
   readonly email = computed(() => this._email());
   readonly selectedGame = computed(() => this._selectedGame());
+  readonly userRole = computed(() => this._userRole());
+  readonly isScout = computed(() => this._userRole() === 'scout');
+  readonly isPlayer = computed(() => this._userRole() === 'player');
   readonly isAuthenticated = computed(() => !!this._userId());
   readonly needsOnboarding = computed(() => this.isAuthenticated() && !this._selectedGame());
 
@@ -103,7 +108,6 @@ export class AuthService {
     }
   }
 
-  /** Restaura tokens en memoria si Amplify ya tiene sesión persistida. */
   async resumeExistingSession(): Promise<boolean> {
     return this.restoreSession();
   }
@@ -145,6 +149,27 @@ export class AuthService {
     }
   }
 
+  async updateUserRole(role: UserRole): Promise<void> {
+    const previous = this._userRole();
+    this._userRole.set(role);
+    const userId = this._userId();
+    if (userId) {
+      localStorage.setItem(roleStorageKey(userId), role);
+    }
+
+    try {
+      await updateUserAttributes({
+        userAttributes: {
+          'custom:user_role': role,
+        },
+      });
+    } catch {
+      if (!userId) {
+        this._userRole.set(previous);
+      }
+    }
+  }
+
   async refreshUserAttributes(): Promise<void> {
     try {
       const attrs = await fetchUserAttributes();
@@ -154,8 +179,11 @@ export class AuthService {
       if (attrs.email) {
         this._email.set(attrs.email);
       }
+
+      this.applyRoleFromSources(attrs['custom:user_role']);
     } catch {
       this._selectedGame.set(null);
+      this.applyRoleFromSources(null);
     }
   }
 
@@ -168,6 +196,18 @@ export class AuthService {
     this._userId.set(null);
     this._email.set(null);
     this._selectedGame.set(null);
+    this._userRole.set('player');
+  }
+
+  private applyRoleFromSources(cognitoRole: unknown): void {
+    const userId = this._userId();
+    const fromLocal =
+      userId != null ? localStorage.getItem(roleStorageKey(userId)) : null;
+    const fromCognito =
+      typeof cognitoRole === 'string' && cognitoRole.trim()
+        ? cognitoRole
+        : null;
+    this._userRole.set(normalizeUserRole(fromLocal ?? fromCognito ?? 'player'));
   }
 
   private async handleIncompleteSignIn(
@@ -220,5 +260,11 @@ export class AuthService {
     if (normalized) {
       this._selectedGame.set(normalized);
     }
+
+    this.applyRoleFromSources(claims['custom:user_role']);
   }
+}
+
+function roleStorageKey(userId: string): string {
+  return `sg-user-role:${userId}`;
 }

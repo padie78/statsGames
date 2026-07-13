@@ -44,7 +44,9 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, profileGuard],
     loadComponent: () => import('./pages/shell/shell.page').then((m) => m.ShellPageComponent),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: '', pathMatch: 'full', loadComponent: () =>
+          import('./pages/role-home-redirect.page').then((m) => m.RoleHomeRedirectPageComponent),
+      },
       {
         path: 'dashboard',
         loadComponent: () =>
@@ -64,6 +66,31 @@ export const APP_ROUTES: Routes = [
         path: 'analytics',
         loadComponent: () =>
           import('./pages/analytics/analytics.page').then((m) => m.AnalyticsPageComponent),
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./pages/profile/profile.page').then((m) => m.ProfilePageComponent),
+      },
+      {
+        path: 'talent',
+        loadComponent: () =>
+          import('./pages/scout/talent-search.page').then((m) => m.TalentSearchPageComponent),
+      },
+      {
+        path: 'radar',
+        loadComponent: () =>
+          import('./pages/scout/radar.page').then((m) => m.RadarPageComponent),
+      },
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./pages/scout/reports.page').then((m) => m.ReportsPageComponent),
+      },
+      {
+        path: 'team',
+        loadComponent: () =>
+          import('./pages/scout/team.page').then((m) => m.TeamPageComponent),
       },
       {
         path: 'integrations',

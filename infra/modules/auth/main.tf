@@ -74,6 +74,18 @@ resource "aws_cognito_user_pool" "this" {
     }
   }
 
+  schema {
+    name                = "user_role"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 16
+    }
+  }
+
   password_policy {
     minimum_length                   = 12
     require_lowercase                = true
@@ -136,6 +148,7 @@ resource "aws_cognito_user_pool_client" "web" {
     "custom:selected_game",
     "custom:fortnite_id",
     "custom:roblox_id",
+    "custom:user_role",
   ]
 
   write_attributes = [
@@ -147,5 +160,6 @@ resource "aws_cognito_user_pool_client" "web" {
     "custom:selected_game",
     "custom:fortnite_id",
     "custom:roblox_id",
+    "custom:user_role",
   ]
 }

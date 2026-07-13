@@ -1,0 +1,44 @@
+---
+description: Matriz de portales Angular por juego × rol (player|scout) y reglas de reportes IA
+alwaysApply: true
+---
+
+# Portales dinámicos (juego × rol)
+
+Un único dominio: UI, gráficos, sub-dashboards y navegación cambian por:
+
+`[Juego en Router] × [Rol autenticado: player | scout] × [Vista activa]`
+
+- Estado reactivo con Signals (`signal` / `computed` / `effect`).
+- No duplicar menús en paralelo; inyectar juego en contenedores por rol con `@if` / `@else`.
+
+## Rol: Jugador (Mi Rendimiento)
+
+| Vista | Propósito |
+|---|---|
+| Inicio / Dashboard | Resumen rápido de stats y rango actual |
+| Historial de Partidas | Lista reciente → Análisis IA **micro** por partida |
+| Evolución Táctica | Tendencias mecánicas/económicas (semanas) |
+| Mi Perfil Público | Preview/edición de ficha para reclutadores |
+
+Tono producto/IA: directo, educativo, motivacional, crítico (mejora mecánica).
+
+## Rol: Scout (Búsqueda y Gestión)
+
+| Vista | Propósito |
+|---|---|
+| Buscador de Talento | Filtros por métricas, rangos, resiliencia |
+| Mi Radar (Favoritos) | Monitoreo de jugadores guardados |
+| Reportes Generados | Historial de Fichas Técnicas **macro** |
+| Gestión de Equipo | Comparación paralela club/universidad |
+
+Tono producto/IA: frío, corporativo, técnico, predictivo (reclutamiento).
+
+## Reportes IA en el contenedor SPA
+
+Cuando el output es un análisis/ficha para renderizar en la SPA:
+
+1. Fidelidad a la vista activa (micro = partida; macro = histórico).
+2. Tono según rol (player vs scout).
+3. Glosario nativo del juego del router; no inventar mapas/agentes/armas/modos.
+4. Solo Markdown limpio; sin saludos ni cierres. Empezar en el primer encabezado.
