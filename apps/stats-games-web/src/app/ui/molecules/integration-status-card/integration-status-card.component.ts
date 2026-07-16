@@ -48,8 +48,12 @@ export class IntegrationStatusCardComponent {
   @Input() valorantConnected = false;
   @Input() leagueOfLegendsConnected = false;
   @Input() cs2Connected = false;
+  @Input() dota2Connected = false;
+  @Input() overwatch2Connected = false;
   @Input() rocketLeagueConnected = false;
   @Input() fortniteConnected = false;
+  @Input() clashRoyaleConnected = false;
+  @Input() brawlStarsConnected = false;
   @Input() robloxConnected = false;
   @Input() liveActive = false;
 
@@ -74,6 +78,18 @@ export class IntegrationStatusCardComponent {
         connected: this.cs2Connected,
       },
       {
+        id: 'dota2',
+        label: 'Dota 2',
+        iconUrl: GAME_PLATFORMS.dota2.iconUrl,
+        connected: this.dota2Connected,
+      },
+      {
+        id: 'overwatch2',
+        label: 'Overwatch 2',
+        iconUrl: GAME_PLATFORMS.overwatch2.iconUrl,
+        connected: this.overwatch2Connected,
+      },
+      {
         id: 'rocket_league',
         label: 'Rocket League',
         iconUrl: GAME_PLATFORMS.rocket_league.iconUrl,
@@ -84,6 +100,18 @@ export class IntegrationStatusCardComponent {
         label: 'Fortnite',
         iconUrl: GAME_PLATFORMS.fortnite.iconUrl,
         connected: this.fortniteConnected,
+      },
+      {
+        id: 'clash_royale',
+        label: 'Clash Royale',
+        iconUrl: GAME_PLATFORMS.clash_royale.iconUrl,
+        connected: this.clashRoyaleConnected,
+      },
+      {
+        id: 'brawl_stars',
+        label: 'Brawl Stars',
+        iconUrl: GAME_PLATFORMS.brawl_stars.iconUrl,
+        connected: this.brawlStarsConnected,
       },
       {
         id: 'roblox',
@@ -102,16 +130,24 @@ export function isGameAccountConnected(
     valorantId?: string | null;
     leagueOfLegendsId?: string | null;
     cs2Id?: string | null;
+    dota2Id?: string | null;
+    overwatch2Id?: string | null;
     rocketLeagueId?: string | null;
     fortniteId?: string | null;
+    clashRoyaleId?: string | null;
+    brawlStarsId?: string | null;
     robloxId?: string | null;
   },
 ): boolean {
   if (game === 'valorant') return !!ids.valorantId;
   if (game === 'league_of_legends') return !!ids.leagueOfLegendsId;
   if (game === 'cs2') return !!ids.cs2Id;
+  if (game === 'dota2') return !!ids.dota2Id;
+  if (game === 'overwatch2') return !!ids.overwatch2Id;
   if (game === 'rocket_league') return !!ids.rocketLeagueId;
   if (game === 'fortnite') return !!ids.fortniteId;
+  if (game === 'clash_royale') return !!ids.clashRoyaleId;
+  if (game === 'brawl_stars') return !!ids.brawlStarsId;
   if (isRobloxExperienceGame(game)) return !!ids.robloxId;
   return false;
 }

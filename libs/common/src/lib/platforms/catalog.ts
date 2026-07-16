@@ -1,16 +1,20 @@
 /**
  * Catálogo de plataformas StatsGames (MVP multi-juego).
  *
- * Fase 1 — APIs estables: valorant, rocket_league, league_of_legends, cs2
- * Fase 2 — tracción: fortnite (poller), roblox experiences (badges)
+ * Fase 1 — APIs estables: valorant, rocket_league, league_of_legends, cs2, dota2
+ * Fase 2 — tracción: fortnite, overwatch2, clash_royale, brawl_stars, roblox
  */
 
 export const GAME_PLATFORMS = [
   'valorant',
   'league_of_legends',
   'cs2',
+  'dota2',
+  'overwatch2',
   'rocket_league',
   'fortnite',
+  'clash_royale',
+  'brawl_stars',
   'roblox',
 ] as const;
 
@@ -22,6 +26,18 @@ export type PlatformIntegrationMode =
   | 'webhook_partner'
   | 'presence_badges';
 
+export type PlatformProfileField =
+  | 'valorantId'
+  | 'leagueOfLegendsId'
+  | 'cs2Id'
+  | 'dota2Id'
+  | 'overwatch2Id'
+  | 'rocketLeagueId'
+  | 'fortniteId'
+  | 'clashRoyaleId'
+  | 'brawlStarsId'
+  | 'robloxId';
+
 export interface PlatformCatalogEntry {
   id: GamePlatform;
   label: string;
@@ -29,13 +45,7 @@ export interface PlatformCatalogEntry {
   phase: 1 | 2;
   integrationMode: PlatformIntegrationMode;
   /** Campo en PlayerProfile Dynamo/GraphQL */
-  profileField:
-    | 'valorantId'
-    | 'leagueOfLegendsId'
-    | 'cs2Id'
-    | 'rocketLeagueId'
-    | 'fortniteId'
-    | 'robloxId';
+  profileField: PlatformProfileField;
   externalIdHint: string;
   externalIdPlaceholder: string;
   /** Qué stats típicas viajan en Match.stats (además de kills/deaths/assists). */
@@ -87,6 +97,28 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     externalIdPlaceholder: 'ej. 76561198000000000',
     statHints: ['kills', 'deaths', 'assists', 'adr', 'headshotPct', 'map', 'won'],
   },
+  dota2: {
+    id: 'dota2',
+    label: 'Dota 2',
+    shortLabel: 'Dota',
+    phase: 1,
+    integrationMode: 'official_api_poll',
+    profileField: 'dota2Id',
+    externalIdHint: 'SteamID64 (17 dígitos)',
+    externalIdPlaceholder: 'ej. 76561198000000000',
+    statHints: ['kills', 'deaths', 'assists', 'hero', 'gpm', 'xpm', 'won'],
+  },
+  overwatch2: {
+    id: 'overwatch2',
+    label: 'Overwatch 2',
+    shortLabel: 'OW2',
+    phase: 2,
+    integrationMode: 'ecosystem_api_poll',
+    profileField: 'overwatch2Id',
+    externalIdHint: 'BattleTag (Nombre#1234)',
+    externalIdPlaceholder: 'ej. Player#1234',
+    statHints: ['kills', 'deaths', 'assists', 'damage', 'healing', 'hero', 'role', 'won'],
+  },
   rocket_league: {
     id: 'rocket_league',
     label: 'Rocket League',
@@ -109,6 +141,28 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     externalIdPlaceholder: 'ej. TuDisplayName',
     statHints: ['kills', 'deaths', 'placement', 'mode', 'won'],
   },
+  clash_royale: {
+    id: 'clash_royale',
+    label: 'Clash Royale',
+    shortLabel: 'CR',
+    phase: 2,
+    integrationMode: 'official_api_poll',
+    profileField: 'clashRoyaleId',
+    externalIdHint: 'Player tag (#ABC123)',
+    externalIdPlaceholder: 'ej. #2PP',
+    statHints: ['won', 'crowns', 'trophies', 'mode', 'score'],
+  },
+  brawl_stars: {
+    id: 'brawl_stars',
+    label: 'Brawl Stars',
+    shortLabel: 'BS',
+    phase: 2,
+    integrationMode: 'official_api_poll',
+    profileField: 'brawlStarsId',
+    externalIdHint: 'Player tag (#ABC123)',
+    externalIdPlaceholder: 'ej. #2PP',
+    statHints: ['kills', 'deaths', 'won', 'trophies', 'brawler', 'mode'],
+  },
   roblox: {
     id: 'roblox',
     label: 'Roblox · BedWars & Arsenal',
@@ -121,6 +175,7 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     statHints: ['kills', 'deaths', 'placement', 'mode', 'experienceName'],
   },
 };
+
 export function isGamePlatform(value: string): value is GamePlatform {
   return (GAME_PLATFORMS as readonly string[]).includes(value.toLowerCase());
 }

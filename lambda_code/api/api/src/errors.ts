@@ -44,7 +44,11 @@ export function asPlatform(
   | 'valorant'
   | 'league_of_legends'
   | 'cs2'
+  | 'dota2'
+  | 'overwatch2'
   | 'rocket_league'
+  | 'clash_royale'
+  | 'brawl_stars'
   | undefined {
   if (!value) return undefined;
   const normalized = value.toLowerCase();
@@ -54,7 +58,11 @@ export function asPlatform(
     normalized === 'valorant' ||
     normalized === 'league_of_legends' ||
     normalized === 'cs2' ||
-    normalized === 'rocket_league'
+    normalized === 'dota2' ||
+    normalized === 'overwatch2' ||
+    normalized === 'rocket_league' ||
+    normalized === 'clash_royale' ||
+    normalized === 'brawl_stars'
   ) {
     return normalized;
   }

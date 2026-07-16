@@ -68,7 +68,7 @@ export class DynamoDbStatsSummaryRepository
     userId: string,
     granularity: Parameters<IStatsRollupReader['listByPlayerGranularity']>[1],
     periodId: string,
-    options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league'; limit?: number },
+    options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars'; limit?: number },
   ): Promise<MatchStatsRollupDto[]> {
     const client = getDocumentClient();
     const platform = options?.platform ?? 'fortnite';
@@ -89,7 +89,7 @@ export class DynamoDbStatsSummaryRepository
 
   async listRecentDailyRollups(
     userId: string,
-    options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league'; days?: number },
+    options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars'; days?: number },
   ): Promise<MatchStatsRollupDto[]> {
     const client = getDocumentClient();
     const platform = options?.platform ?? 'fortnite';
@@ -136,7 +136,7 @@ export class DynamoDbStatsSummaryRepository
 
   private itemToRollupDto(
     userId: string,
-    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars',
     granularity: Parameters<IStatsRollupReader['listByPlayerGranularity']>[1],
     periodId: string,
     item: Record<string, unknown>,
@@ -241,7 +241,7 @@ export class DynamoDbStatsSummaryRepository
 
   private async syncWeeklyCommunityFromRollup(
     userId: string,
-    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars',
     periodId: string,
   ): Promise<void> {
     const client = getDocumentClient();

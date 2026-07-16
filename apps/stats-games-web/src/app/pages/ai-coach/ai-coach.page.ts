@@ -19,7 +19,7 @@ import { formatMatchRelativeTime } from '../../utils/match-stats.util';
         <header class="sg-page-header">
           <h1 class="sg-page-header__title">AI Coach</h1>
           <p class="sg-page-header__subtitle">
-            Análisis Bedrock post-partida (Valorant). Abrí el detalle para el reporte completo.
+            Qué entrenar según tu telemetría. Abrí el detalle de cada partida para el reporte completo.
           </p>
         </header>
 

@@ -40,7 +40,11 @@ type PlayerProfile @aws_api_key @aws_cognito_user_pools {
   valorantId: String
   leagueOfLegendsId: String
   cs2Id: String
+  dota2Id: String
+  overwatch2Id: String
   rocketLeagueId: String
+  clashRoyaleId: String
+  brawlStarsId: String
   avatarUrl: String
   createdAtIso: AWSDateTime!
   updatedAtIso: AWSDateTime!
@@ -71,7 +75,11 @@ input UpsertPlayerProfileInput {
   valorantId: String
   leagueOfLegendsId: String
   cs2Id: String
+  dota2Id: String
+  overwatch2Id: String
   rocketLeagueId: String
+  clashRoyaleId: String
+  brawlStarsId: String
   avatarUrl: String
 }
 

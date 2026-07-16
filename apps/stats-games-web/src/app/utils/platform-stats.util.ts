@@ -15,8 +15,12 @@ export type StatsPlatform =
   | 'valorant'
   | 'league_of_legends'
   | 'cs2'
+  | 'dota2'
+  | 'overwatch2'
   | 'rocket_league'
   | 'fortnite'
+  | 'clash_royale'
+  | 'brawl_stars'
   | 'roblox'
   | 'blox_fruits'
   | 'adopt_me'
@@ -274,6 +278,7 @@ export function buildPlatformKpiItems(
         partidas,
       ];
     case 'league_of_legends':
+    case 'dota2':
       return [
         victorias,
         winRate,
@@ -289,6 +294,15 @@ export function buildPlatformKpiItems(
         kd,
         { label: 'ADR', value: summary.avgAdr, accent: 'cyan', icon: 'kills' },
         { label: 'HS%', value: summary.avgHeadshotPct, accent: 'lime', icon: 'kills' },
+        partidas,
+      ];
+    case 'overwatch2':
+      return [
+        victorias,
+        winRate,
+        kda,
+        { label: 'Score', value: summary.avgScore, accent: 'cyan', icon: 'kd' },
+        kills,
         partidas,
       ];
     case 'rocket_league':
@@ -312,6 +326,15 @@ export function buildPlatformKpiItems(
           accent: 'lime',
           icon: 'placement',
         },
+        partidas,
+      ];
+    case 'clash_royale':
+    case 'brawl_stars':
+      return [
+        victorias,
+        winRate,
+        { label: 'Score', value: summary.avgScore, accent: 'cyan', icon: 'kd' },
+        kills,
         partidas,
       ];
     default:

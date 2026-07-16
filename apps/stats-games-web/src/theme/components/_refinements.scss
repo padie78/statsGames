@@ -29,6 +29,7 @@
   box-shadow: 0 0 0 1px rgba(184, 255, 60, 0.22), var(--sg-glow-lime);
   color: var(--sg-text-inverse);
   font-weight: var(--sg-fw-black);
+  line-height: 1;
 }
 
 .sg-games-bar__brand-name {
@@ -36,7 +37,8 @@
   letter-spacing: var(--sg-tracking-display);
   text-transform: none;
   font-weight: var(--sg-fw-bold);
-  font-size: var(--sg-fs-lg);
+  font-size: 1.02rem;
+  line-height: 1;
 }
 
 .sg-topbar__avatar {

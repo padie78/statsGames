@@ -2,8 +2,10 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  EventEmitter,
   HostListener,
   OnDestroy,
+  Output,
   ViewChild,
   ViewEncapsulation,
   computed,
@@ -18,16 +20,18 @@ import {
   GAME_PLATFORM_LIST,
   type GamePlatformMeta,
 } from '../../../core/game/game-platform.config';
+import { ChromeAccountComponent } from '../chrome-account/chrome-account.component';
+import { NotificationsBellComponent } from '../notifications-bell/notifications-bell.component';
 
 /**
- * Línea 1 del chrome:
- * Logo + juegos visibles; si no caben, dropdown “Más” con el resto.
+ * Línea 1 del chrome (estilo OP.GG):
+ * Logo + juegos | notificaciones + cuenta (derecha).
  */
 @Component({
   standalone: true,
   selector: 'sg-game-platform-switcher',
   encapsulation: ViewEncapsulation.None,
-  imports: [RouterLink],
+  imports: [RouterLink, NotificationsBellComponent, ChromeAccountComponent],
   template: `
     <nav
       class="sg-games-bar"
@@ -36,8 +40,10 @@ import {
     >
       <div class="sg-games-bar__inner">
         <a routerLink="/" class="sg-games-bar__brand" aria-label="StatsGames home">
-          <span class="sg-games-bar__logo">SG</span>
-          <span class="sg-games-bar__brand-name">StatsGames</span>
+          <span class="sg-games-bar__brand-body">
+            <span class="sg-games-bar__logo">SG</span>
+            <span class="sg-games-bar__brand-name">StatsGames</span>
+          </span>
         </a>
 
         <div class="sg-games-bar__games" #gamesHost role="tablist" aria-label="Juegos">
@@ -54,15 +60,17 @@ import {
               [disabled]="gameContext.switching()"
               (click)="select(platform.id)"
             >
-              <img
-                class="sg-games-bar__icon"
-                [src]="platform.iconUrl"
-                [alt]=""
-                width="26"
-                height="26"
-                aria-hidden="true"
-              />
-              <span class="sg-games-bar__name">{{ platform.label }}</span>
+              <span class="sg-games-bar__item-body">
+                <img
+                  class="sg-games-bar__icon"
+                  [src]="platform.iconUrl"
+                  [alt]=""
+                  width="26"
+                  height="26"
+                  aria-hidden="true"
+                />
+                <span class="sg-games-bar__name">{{ platform.label }}</span>
+              </span>
             </button>
           }
 
@@ -81,8 +89,10 @@ import {
                 [disabled]="gameContext.switching()"
                 (click)="toggleMore($event)"
               >
-                <span class="sg-games-bar__more-label">Más</span>
-                <span class="sg-games-bar__more-count">{{ overflowPlatforms().length }}</span>
+                <span class="sg-games-bar__item-body">
+                  <span class="sg-games-bar__more-label">Más</span>
+                  <span class="sg-games-bar__more-count">{{ overflowPlatforms().length }}</span>
+                </span>
               </button>
 
               @if (moreOpen()) {
@@ -120,19 +130,27 @@ import {
             </div>
           }
         </div>
+
+        <div class="sg-games-bar__end">
+          <sg-notifications-bell />
+          <sg-chrome-account (logout)="logout.emit()" />
+        </div>
       </div>
 
-      <!-- Fila oculta solo para medir anchos reales -->
       <div class="sg-games-bar__measure" aria-hidden="true" #measureHost>
         @for (platform of platforms; track platform.id) {
           <button type="button" class="sg-games-bar__item" tabindex="-1">
-            <img class="sg-games-bar__icon" [src]="platform.iconUrl" alt="" width="26" height="26" />
-            <span class="sg-games-bar__name">{{ platform.label }}</span>
+            <span class="sg-games-bar__item-body">
+              <img class="sg-games-bar__icon" [src]="platform.iconUrl" alt="" width="26" height="26" />
+              <span class="sg-games-bar__name">{{ platform.label }}</span>
+            </span>
           </button>
         }
         <button type="button" class="sg-games-bar__more-btn" tabindex="-1">
-          <span class="sg-games-bar__more-label">Más</span>
-          <span class="sg-games-bar__more-count">9</span>
+          <span class="sg-games-bar__item-body">
+            <span class="sg-games-bar__more-label">Más</span>
+            <span class="sg-games-bar__more-count">9</span>
+          </span>
         </button>
       </div>
     </nav>
@@ -142,6 +160,8 @@ export class GamePlatformSwitcherComponent implements AfterViewInit, OnDestroy {
   readonly auth = inject(AuthService);
   readonly gameContext = inject(GameContextService);
   readonly platforms = GAME_PLATFORM_LIST;
+
+  @Output() readonly logout = new EventEmitter<void>();
 
   @ViewChild('gamesHost') private readonly gamesHost?: ElementRef<HTMLElement>;
   @ViewChild('measureHost') private readonly measureHost?: ElementRef<HTMLElement>;
@@ -164,7 +184,6 @@ export class GamePlatformSwitcherComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      // Recalcular si cambia el juego activo (debe quedar visible)
       this.auth.selectedGame();
       this.queueRecalc();
     });
@@ -234,7 +253,6 @@ export class GamePlatformSwitcherComponent implements AfterViewInit, OnDestroy {
     );
 
     const visibleIdx = new Set<number>();
-    // Reservar slot para el juego activo
     visibleIdx.add(selectedIdx);
 
     for (let i = 0; i < list.length && visibleIdx.size < capped; i++) {

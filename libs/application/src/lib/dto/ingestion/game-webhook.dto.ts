@@ -6,7 +6,11 @@ export const GamePlatformSchema = z.enum([
   'valorant',
   'league_of_legends',
   'cs2',
+  'dota2',
+  'overwatch2',
   'rocket_league',
+  'clash_royale',
+  'brawl_stars',
 ]);
 
 export const GameWebhookPayloadSchema = z

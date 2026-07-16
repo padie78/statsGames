@@ -92,8 +92,8 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
       <div class="page-shell page-shell--fluid sg-analytics u-flex u-flex-col u-gap-6">
         <sg-platform-page-banner
           [platform]="activePlatform()"
-          title="Stats avanzadas"
-          subtitle="Tendencias, comparaciones vs comunidad, tablas diarias y ranking semanal."
+          title="Evolución"
+          subtitle="Tendencias, forma semanal y percentiles vs comunidad — no el historial de partidas."
         />
 
         @if (error()) {

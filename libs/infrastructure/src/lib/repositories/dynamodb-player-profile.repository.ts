@@ -109,7 +109,11 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
           valorantId: profile.valorantId,
           leagueOfLegendsId: profile.leagueOfLegendsId,
           cs2Id: profile.cs2Id,
+          dota2Id: profile.dota2Id,
+          overwatch2Id: profile.overwatch2Id,
           rocketLeagueId: profile.rocketLeagueId,
+          clashRoyaleId: profile.clashRoyaleId,
+          brawlStarsId: profile.brawlStarsId,
           avatarUrl: profile.avatarUrl,
           createdAtIso: profile.createdAtIso,
           updatedAtIso: profile.updatedAtIso,
@@ -178,7 +182,11 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
         ? String(item['leagueOfLegendsId'])
         : undefined,
       cs2Id: item['cs2Id'] ? String(item['cs2Id']) : undefined,
+      dota2Id: item['dota2Id'] ? String(item['dota2Id']) : undefined,
+      overwatch2Id: item['overwatch2Id'] ? String(item['overwatch2Id']) : undefined,
       rocketLeagueId: item['rocketLeagueId'] ? String(item['rocketLeagueId']) : undefined,
+      clashRoyaleId: item['clashRoyaleId'] ? String(item['clashRoyaleId']) : undefined,
+      brawlStarsId: item['brawlStarsId'] ? String(item['brawlStarsId']) : undefined,
       avatarUrl: item['avatarUrl'] ? String(item['avatarUrl']) : undefined,
       createdAtIso: String(item['createdAtIso']),
       updatedAtIso: String(item['updatedAtIso']),
@@ -205,8 +213,20 @@ export class DynamoDbPlayerProfileRepository implements IPlayerProfileRepository
     if (profile.cs2Id) {
       links.push({ platform: 'cs2', externalId: profile.cs2Id });
     }
+    if (profile.dota2Id) {
+      links.push({ platform: 'dota2', externalId: profile.dota2Id });
+    }
+    if (profile.overwatch2Id) {
+      links.push({ platform: 'overwatch2', externalId: profile.overwatch2Id });
+    }
     if (profile.rocketLeagueId) {
       links.push({ platform: 'rocket_league', externalId: profile.rocketLeagueId });
+    }
+    if (profile.clashRoyaleId) {
+      links.push({ platform: 'clash_royale', externalId: profile.clashRoyaleId });
+    }
+    if (profile.brawlStarsId) {
+      links.push({ platform: 'brawl_stars', externalId: profile.brawlStarsId });
     }
 
     for (const link of links) {

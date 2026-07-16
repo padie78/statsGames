@@ -94,7 +94,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
   }
 
   async getCommunityBenchmarks(
-    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars',
     periodId: string,
   ): Promise<CommunityBenchmarksDto | null> {
     const client = getDocumentClient();
@@ -137,7 +137,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
   }
 
   async listWeeklyLeaderboard(
-    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars',
     periodId: string,
     limit: number,
   ): Promise<LeaderboardEntryDto[]> {
@@ -179,7 +179,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
   }
 
   private async recomputeCommunityBenchmarkTotals(
-    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars',
     periodId: string,
   ): Promise<void> {
     const client = getDocumentClient();
@@ -234,7 +234,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
   private async markPlayerSeen(
     userId: string,
     periodId: string,
-    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'rocket_league',
+    platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars',
   ): Promise<boolean> {
     const client = getDocumentClient();
     try {

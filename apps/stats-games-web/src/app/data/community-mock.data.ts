@@ -78,8 +78,32 @@ export const MOCK_COMMUNITY_BENCHMARKS: Record<SelectedGame, CommunityBenchmarks
     avgKillsPerWeek: 42,
   },
   cs2: { platform: 'cs2', ...BENCHMARK_FPS, sampleSize: 18_600, avgKd: 1.12 },
+  dota2: {
+    platform: 'dota2',
+    ...BENCHMARK_FPS,
+    sampleSize: 27_800,
+    avgKd: 2.6,
+    avgKillsPerWeek: 38,
+  },
+  overwatch2: { platform: 'overwatch2', ...BENCHMARK_FPS, sampleSize: 16_900, avgKd: 1.18 },
   rocket_league: { platform: 'rocket_league', ...BENCHMARK_FPS, sampleSize: 15_200, avgKd: 0.92 },
   fortnite: { platform: 'fortnite', ...BENCHMARK_FPS },
+  clash_royale: {
+    platform: 'clash_royale',
+    ...BENCHMARK_FPS,
+    sampleSize: 21_500,
+    avgWinRate: 52,
+    avgKd: 1.0,
+    avgMatchesPerWeek: 40,
+  },
+  brawl_stars: {
+    platform: 'brawl_stars',
+    ...BENCHMARK_FPS,
+    sampleSize: 19_200,
+    avgWinRate: 54,
+    avgKd: 1.35,
+    avgMatchesPerWeek: 45,
+  },
   blox_fruits: { platform: 'blox_fruits', ...BENCHMARK_ROBLOX, sampleSize: 14_800 },
   adopt_me: { platform: 'adopt_me', ...BENCHMARK_ROBLOX, sampleSize: 11_200, avgKd: 0.7 },
   brookhaven: { platform: 'brookhaven', ...BENCHMARK_ROBLOX, sampleSize: 9_400, avgKd: 0.55 },
@@ -143,8 +167,8 @@ const PEERS_RL: PeerSeed[] = PEERS_FORTNITE.map((p, i) => ({
 }));
 
 function peersFor(platform: SelectedGame): PeerSeed[] {
-  if (platform === 'valorant') return PEERS_VALORANT;
-  if (platform === 'league_of_legends') return PEERS_LOL;
+  if (platform === 'valorant' || platform === 'overwatch2') return PEERS_VALORANT;
+  if (platform === 'league_of_legends' || platform === 'dota2') return PEERS_LOL;
   if (platform === 'cs2') return PEERS_CS2;
   if (platform === 'rocket_league') return PEERS_RL;
   if (isRobloxExperienceGame(platform)) return PEERS_ROBLOX;

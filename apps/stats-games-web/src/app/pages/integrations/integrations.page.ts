@@ -22,7 +22,11 @@ type LinkablePlatform =
   | 'fortnite'
   | 'roblox'
   | 'league_of_legends'
-  | 'cs2';
+  | 'cs2'
+  | 'dota2'
+  | 'overwatch2'
+  | 'clash_royale'
+  | 'brawl_stars';
 
 @Component({
   standalone: true,
@@ -43,8 +47,8 @@ type LinkablePlatform =
         <header class="sg-page-header">
           <h1 class="sg-page-header__title">Integraciones</h1>
           <p class="sg-page-header__subtitle">
-            Vinculá Valorant, LoL, CS2, Rocket League, Fortnite y Roblox. El poller captura
-            partidas al cerrar según cada API.
+            Vinculá Valorant, LoL, CS2, Dota 2, Overwatch 2, Rocket League, Fortnite, Clash
+            Royale, Brawl Stars y Roblox. El poller captura partidas al cerrar según cada API.
           </p>
         </header>
 
@@ -83,6 +87,21 @@ type LinkablePlatform =
             </sg-neon-badge>
             <sg-neon-badge [tone]="profile()?.cs2Id ? 'lime' : 'muted'">
               CS2 {{ profile()?.cs2Id ? '✓ ' + profile()!.cs2Id : 'sin vincular' }}
+            </sg-neon-badge>
+            <sg-neon-badge [tone]="profile()?.dota2Id ? 'lime' : 'muted'">
+              Dota 2 {{ profile()?.dota2Id ? '✓ ' + profile()!.dota2Id : 'sin vincular' }}
+            </sg-neon-badge>
+            <sg-neon-badge [tone]="profile()?.overwatch2Id ? 'lime' : 'muted'">
+              Overwatch 2
+              {{ profile()?.overwatch2Id ? '✓ ' + profile()!.overwatch2Id : 'sin vincular' }}
+            </sg-neon-badge>
+            <sg-neon-badge [tone]="profile()?.clashRoyaleId ? 'cyan' : 'muted'">
+              Clash Royale
+              {{ profile()?.clashRoyaleId ? '✓ ' + profile()!.clashRoyaleId : 'sin vincular' }}
+            </sg-neon-badge>
+            <sg-neon-badge [tone]="profile()?.brawlStarsId ? 'cyan' : 'muted'">
+              Brawl Stars
+              {{ profile()?.brawlStarsId ? '✓ ' + profile()!.brawlStarsId : 'sin vincular' }}
             </sg-neon-badge>
           </div>
           @if (profile()?.robloxId && robloxAvatar()) {
@@ -223,8 +242,12 @@ export class IntegrationsPageComponent implements OnInit {
     { value: 'valorant', label: 'Valorant' },
     { value: 'league_of_legends', label: 'League of Legends' },
     { value: 'cs2', label: 'Counter-Strike 2' },
+    { value: 'dota2', label: 'Dota 2' },
+    { value: 'overwatch2', label: 'Overwatch 2' },
     { value: 'rocket_league', label: 'Rocket League' },
     { value: 'fortnite', label: 'Fortnite' },
+    { value: 'clash_royale', label: 'Clash Royale' },
+    { value: 'brawl_stars', label: 'Brawl Stars' },
     { value: 'roblox', label: 'Roblox (Blox Fruits / Adopt Me / Brookhaven)' },
   ];
 
@@ -243,7 +266,13 @@ export class IntegrationsPageComponent implements OnInit {
       case 'fortnite':
         return 'Epic account id / display name';
       case 'cs2':
+      case 'dota2':
         return 'SteamID64';
+      case 'overwatch2':
+        return 'BattleTag (Nombre#1234)';
+      case 'clash_royale':
+      case 'brawl_stars':
+        return 'Player tag (#ABC123)';
       default:
         return 'Roblox UserId (número)';
     }
@@ -259,7 +288,13 @@ export class IntegrationsPageComponent implements OnInit {
       case 'fortnite':
         return 'ej. TuDisplayName';
       case 'cs2':
+      case 'dota2':
         return 'ej. 76561198000000000';
+      case 'overwatch2':
+        return 'ej. Player#1234';
+      case 'clash_royale':
+      case 'brawl_stars':
+        return 'ej. #2PP';
       default:
         return 'ej. 123456789';
     }
@@ -277,6 +312,14 @@ export class IntegrationsPageComponent implements OnInit {
         return 'League of Legends / Riot';
       case 'cs2':
         return 'Counter-Strike 2 / Steam';
+      case 'dota2':
+        return 'Dota 2 / Steam';
+      case 'overwatch2':
+        return 'Overwatch 2 / Battle.net';
+      case 'clash_royale':
+        return 'Clash Royale / Supercell';
+      case 'brawl_stars':
+        return 'Brawl Stars / Supercell';
       default:
         return 'BedWars & Arsenal';
     }
@@ -294,6 +337,14 @@ export class IntegrationsPageComponent implements OnInit {
         return 'Formato obligatorio: Nombre#TAG (mismo Riot ID que Valorant). Tras vincular, el poller captura partidas ranked/normales.';
       case 'cs2':
         return 'SteamID64 de 17 dígitos que empieza con 7656119. Perfil Steam → Account details, o steamid.io.';
+      case 'dota2':
+        return 'SteamID64 de 17 dígitos (mismo formato que CS2). El poller usa OpenDota / Steam Web API.';
+      case 'overwatch2':
+        return 'BattleTag con formato Nombre#1234. Stats públicas vía ecosystem API / webhook partner.';
+      case 'clash_royale':
+        return 'Player tag de Clash Royale (empieza con #). API oficial Supercell con token en infra.';
+      case 'brawl_stars':
+        return 'Player tag de Brawl Stars (empieza con #). API oficial Supercell con token en infra.';
       default:
         return 'UserId numérico. Trackea Blox Fruits, Adopt Me!, Brookhaven RP, BedWars y Arsenal vía badges.';
     }
@@ -351,10 +402,21 @@ export class IntegrationsPageComponent implements OnInit {
         return;
       }
 
-      if (platform === 'cs2' && !/^7656119\d{10}$/.test(trimmedId)) {
+      if (
+        (platform === 'cs2' || platform === 'dota2') &&
+        !/^7656119\d{10}$/.test(trimmedId)
+      ) {
         this.linkError.set(
           'SteamID64 inválido. Debe ser 17 dígitos y empezar con 7656119.',
         );
+        return;
+      }
+
+      if (
+        (platform === 'clash_royale' || platform === 'brawl_stars') &&
+        !/^#?[A-Za-z0-9]{3,15}$/.test(trimmedId)
+      ) {
+        this.linkError.set('Player tag inválido. Usá el formato #ABC123.');
         return;
       }
 
@@ -390,8 +452,10 @@ export class IntegrationsPageComponent implements OnInit {
     const control = this.linkForm.controls.externalId;
     if (platform === 'valorant' || platform === 'league_of_legends') {
       control.setValidators([Validators.required, riotIdValidator]);
-    } else if (platform === 'cs2') {
+    } else if (platform === 'cs2' || platform === 'dota2') {
       control.setValidators([Validators.required, Validators.pattern(/^7656119\d{10}$/)]);
+    } else if (platform === 'clash_royale' || platform === 'brawl_stars') {
+      control.setValidators([Validators.required, Validators.pattern(/^#?[A-Za-z0-9]{3,15}$/)]);
     } else if (platform === 'roblox') {
       control.setValidators([Validators.required, Validators.pattern(/^\d+$/)]);
     } else {
@@ -470,6 +534,10 @@ export class IntegrationsPageComponent implements OnInit {
     if (!profile.robloxId) return 'roblox';
     if (!profile.leagueOfLegendsId) return 'league_of_legends';
     if (!profile.cs2Id) return 'cs2';
+    if (!profile.dota2Id) return 'dota2';
+    if (!profile.overwatch2Id) return 'overwatch2';
+    if (!profile.clashRoyaleId) return 'clash_royale';
+    if (!profile.brawlStarsId) return 'brawl_stars';
     return 'valorant';
   }
 
@@ -488,6 +556,14 @@ export class IntegrationsPageComponent implements OnInit {
         return p?.leagueOfLegendsId;
       case 'cs2':
         return p?.cs2Id;
+      case 'dota2':
+        return p?.dota2Id;
+      case 'overwatch2':
+        return p?.overwatch2Id;
+      case 'clash_royale':
+        return p?.clashRoyaleId;
+      case 'brawl_stars':
+        return p?.brawlStarsId;
     }
   }
 
@@ -512,6 +588,14 @@ export class IntegrationsPageComponent implements OnInit {
         return 'League of Legends';
       case 'cs2':
         return 'CS2';
+      case 'dota2':
+        return 'Dota 2';
+      case 'overwatch2':
+        return 'Overwatch 2';
+      case 'clash_royale':
+        return 'Clash Royale';
+      case 'brawl_stars':
+        return 'Brawl Stars';
     }
   }
 }

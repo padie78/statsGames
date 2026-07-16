@@ -13,7 +13,11 @@ export interface PlayerProfileView {
   valorantId?: string | null;
   leagueOfLegendsId?: string | null;
   cs2Id?: string | null;
+  dota2Id?: string | null;
+  overwatch2Id?: string | null;
   rocketLeagueId?: string | null;
+  clashRoyaleId?: string | null;
+  brawlStarsId?: string | null;
   avatarUrl?: string | null;
 }
 
@@ -41,13 +45,21 @@ export interface UpsertPlayerProfileInput {
     | 'valorant'
     | 'league_of_legends'
     | 'cs2'
-    | 'rocket_league';
+    | 'dota2'
+    | 'overwatch2'
+    | 'rocket_league'
+    | 'clash_royale'
+    | 'brawl_stars';
   fortniteId?: string;
   robloxId?: string;
   valorantId?: string;
   leagueOfLegendsId?: string;
   cs2Id?: string;
+  dota2Id?: string;
+  overwatch2Id?: string;
   rocketLeagueId?: string;
+  clashRoyaleId?: string;
+  brawlStarsId?: string;
   avatarUrl?: string;
 }
 
@@ -59,7 +71,11 @@ export interface LinkPlatformAccountInput {
     | 'valorant'
     | 'league_of_legends'
     | 'cs2'
-    | 'rocket_league';
+    | 'dota2'
+    | 'overwatch2'
+    | 'rocket_league'
+    | 'clash_royale'
+    | 'brawl_stars';
   externalId: string;
 }
 
@@ -92,7 +108,11 @@ const PROFILE_FIELDS = /* GraphQL */ `
   valorantId
   leagueOfLegendsId
   cs2Id
+  dota2Id
+  overwatch2Id
   rocketLeagueId
+  clashRoyaleId
+  brawlStarsId
   avatarUrl
 `;
 

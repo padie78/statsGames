@@ -22,6 +22,7 @@ export {
   type DailyStatsTableRow,
 } from './molecules/daily-stats-table/daily-stats-table.component';
 export { NotificationsBellComponent } from './molecules/notifications-bell/notifications-bell.component';
+export { ChromeAccountComponent } from './molecules/chrome-account/chrome-account.component';
 export { MatchNotificationToastComponent } from './molecules/match-notification-toast/match-notification-toast.component';
 export { ShareLinkButtonComponent } from './molecules/share-link-button/share-link-button.component';
 export { LiveTickerComponent } from './molecules/live-ticker/live-ticker.component';
@@ -44,6 +45,7 @@ export {
 export { GameSelectionCardComponent } from './molecules/game-selection-card/game-selection-card.component';
 export { GamePlatformSwitcherComponent } from './molecules/game-platform-switcher/game-platform-switcher.component';
 export { PlayerSearchHeroComponent } from './molecules/player-search-hero/player-search-hero.component';
+export { TrackStartPanelComponent } from './molecules/track-start-panel/track-start-panel.component';
 export { AmbientPanelComponent, type AmbientPanelVariant } from './molecules/ambient-panel/ambient-panel.component';
 export { PlatformPageBannerComponent } from './molecules/platform-page-banner/platform-page-banner.component';
 export { PlatformSpotlightCardComponent } from './molecules/platform-spotlight-card/platform-spotlight-card.component';

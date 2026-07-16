@@ -115,6 +115,10 @@ export class MatchHighlightCardComponent {
       p === 'rocket_league' ||
       p === 'league_of_legends' ||
       p === 'cs2' ||
+      p === 'dota2' ||
+      p === 'overwatch2' ||
+      p === 'clash_royale' ||
+      p === 'brawl_stars' ||
       p === 'blox_fruits' ||
       p === 'adopt_me' ||
       p === 'brookhaven'

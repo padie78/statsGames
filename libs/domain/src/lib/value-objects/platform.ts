@@ -6,7 +6,11 @@ export type GamePlatform =
   | 'valorant'
   | 'league_of_legends'
   | 'cs2'
-  | 'rocket_league';
+  | 'dota2'
+  | 'overwatch2'
+  | 'rocket_league'
+  | 'clash_royale'
+  | 'brawl_stars';
 
 const PLATFORMS: ReadonlySet<string> = new Set([
   'fortnite',
@@ -14,7 +18,11 @@ const PLATFORMS: ReadonlySet<string> = new Set([
   'valorant',
   'league_of_legends',
   'cs2',
+  'dota2',
+  'overwatch2',
   'rocket_league',
+  'clash_royale',
+  'brawl_stars',
 ]);
 
 export class Platform {
@@ -29,7 +37,18 @@ export class Platform {
   }
 
   static all(): readonly GamePlatform[] {
-    return ['valorant', 'league_of_legends', 'cs2', 'rocket_league', 'fortnite', 'roblox'];
+    return [
+      'valorant',
+      'league_of_legends',
+      'cs2',
+      'dota2',
+      'overwatch2',
+      'rocket_league',
+      'fortnite',
+      'clash_royale',
+      'brawl_stars',
+      'roblox',
+    ];
   }
 
   toString(): string {

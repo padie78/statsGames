@@ -10,7 +10,11 @@ export const PlayerProfileDtoSchema = z.object({
   valorantId: z.string().optional(),
   leagueOfLegendsId: z.string().optional(),
   cs2Id: z.string().optional(),
+  dota2Id: z.string().optional(),
+  overwatch2Id: z.string().optional(),
   rocketLeagueId: z.string().optional(),
+  clashRoyaleId: z.string().optional(),
+  brawlStarsId: z.string().optional(),
   avatarUrl: z.string().url().optional(),
   createdAtIso: z.string().min(1),
   updatedAtIso: z.string().min(1),
@@ -28,7 +32,11 @@ export const UpsertPlayerProfileInputSchema = z.object({
   valorantId: z.string().optional(),
   leagueOfLegendsId: z.string().optional(),
   cs2Id: z.string().optional(),
+  dota2Id: z.string().optional(),
+  overwatch2Id: z.string().optional(),
   rocketLeagueId: z.string().optional(),
+  clashRoyaleId: z.string().optional(),
+  brawlStarsId: z.string().optional(),
   avatarUrl: z.string().url().optional(),
 });
 

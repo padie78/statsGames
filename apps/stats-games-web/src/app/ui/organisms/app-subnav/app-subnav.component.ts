@@ -1,8 +1,6 @@
 import {
   Component,
-  EventEmitter,
   HostListener,
-  Output,
   ViewEncapsulation,
   computed,
   effect,
@@ -16,30 +14,20 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/services/auth.service';
 import { gamePlatformMeta } from '../../../core/game/game-platform.config';
 import { UserPreferencesService } from '../../../core/preferences/user-preferences.service';
-import {
-  APP_ACCOUNT_MENU_ITEMS,
-  navFocusForRole,
-} from '../../../core/navigation/app-nav.config';
+import { navFocusForRole } from '../../../core/navigation/app-nav.config';
 import { roleLabel as formatRoleLabel } from '../../../core/auth/user-role';
-import { PlayerService } from '../../../services/player.service';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
-import { NotificationsBellComponent } from '../../molecules/notifications-bell/notifications-bell.component';
 
 /**
  * Fila 2 del chrome:
- * [juego + enfoque del rol] | tabs del portal | cuenta
+ * [juego + enfoque] | tabs del portal | menú mobile
+ * (cuenta y notificaciones viven en la línea 1)
  */
 @Component({
   standalone: true,
   selector: 'sg-app-subnav',
   encapsulation: ViewEncapsulation.None,
-  imports: [
-    NgTemplateOutlet,
-    RouterLink,
-    RouterLinkActive,
-    NeonBadgeComponent,
-    NotificationsBellComponent,
-  ],
+  imports: [NgTemplateOutlet, RouterLink, RouterLinkActive, NeonBadgeComponent],
   template: `
     <header
       class="sg-game-nav"
@@ -82,77 +70,6 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
         </nav>
 
         <div class="sg-game-nav__actions">
-          <sg-notifications-bell />
-
-          <div class="sg-game-nav__account" [class.sg-game-nav__account--open]="accountMenuOpen()">
-            <button
-              type="button"
-              class="sg-game-nav__account-trigger"
-              [attr.aria-expanded]="accountMenuOpen()"
-              aria-haspopup="true"
-              aria-controls="sg-game-nav-account-menu"
-              aria-label="Menú de cuenta"
-              (click)="toggleAccountMenu($event)"
-            >
-              <span class="sg-game-nav__avatar">{{ userInitials() }}</span>
-              <span class="sg-game-nav__account-meta">
-                <span class="sg-game-nav__user-email u-truncate">
-                  {{ gamerTag() || auth.email() || 'Gamer' }}
-                </span>
-                <span class="sg-game-nav__user-role">{{ roleLabel() }} · {{ roleFocus() }}</span>
-              </span>
-              <span class="sg-game-nav__account-caret" aria-hidden="true"></span>
-            </button>
-
-            @if (accountMenuOpen()) {
-              <div
-                id="sg-game-nav-account-menu"
-                class="sg-game-nav__account-menu"
-                role="menu"
-                aria-label="Cuenta"
-              >
-                <div class="sg-game-nav__account-head">
-                  <span class="sg-game-nav__avatar">{{ userInitials() }}</span>
-                  <div class="sg-game-nav__user-meta">
-                    <span class="sg-game-nav__user-email u-truncate">
-                      {{ gamerTag() || auth.email() || 'Gamer' }}
-                    </span>
-                    <span class="sg-game-nav__user-role">{{ roleLabel() }} · {{ roleFocus() }}</span>
-                  </div>
-                </div>
-
-                @if (profileRoute(); as profilePath) {
-                  <a
-                    class="sg-game-nav__account-item"
-                    role="menuitem"
-                    [routerLink]="profilePath"
-                    (click)="closeAccountMenu()"
-                  >
-                    Perfil público
-                  </a>
-                }
-                @for (item of accountMenuItems; track item.id) {
-                  <a
-                    class="sg-game-nav__account-item"
-                    role="menuitem"
-                    [routerLink]="item.route"
-                    (click)="closeAccountMenu()"
-                  >
-                    {{ item.label }}
-                  </a>
-                }
-                <button
-                  type="button"
-                  class="sg-game-nav__account-item sg-game-nav__account-item--danger"
-                  role="menuitem"
-                  (click)="onAccountLogout()"
-                >
-                  Salir
-                </button>
-              </div>
-            }
-          </div>
-
           <button
             type="button"
             class="sg-game-nav__menu-btn"
@@ -210,27 +127,6 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
             </a>
           }
         </nav>
-
-        <div class="sg-game-nav__mobile-footer">
-          @if (profileRoute(); as profilePath) {
-            <a class="sg-game-nav__mobile-link" [routerLink]="profilePath" (click)="closeMobileMenu()">
-              <span class="sg-game-nav__mobile-copy">
-                <span class="sg-game-nav__mobile-title">Perfil público</span>
-                <span class="sg-game-nav__mobile-desc">Vista scout de tu página</span>
-              </span>
-            </a>
-          }
-          @for (item of accountMenuItems; track item.id) {
-            <a class="sg-game-nav__mobile-link" [routerLink]="item.route" (click)="closeMobileMenu()">
-              <span class="sg-game-nav__mobile-copy">
-                <span class="sg-game-nav__mobile-title">{{ item.label }}</span>
-              </span>
-            </a>
-          }
-          <button type="button" class="u-btn u-btn--ghost sg-game-nav__mobile-logout" (click)="onMobileLogout()">
-            Salir
-          </button>
-        </div>
       </div>
 
       <ng-template #navIcon let-icon>
@@ -248,6 +144,12 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
           @case ('analytics') {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
               <path d="M4 19V5M4 19h16"/><path d="m7 14 4-4 3 3 5-6"/>
+            </svg>
+          }
+          @case ('coach') {
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <path d="M12 3.5 4.5 7v5c0 4.4 3.1 7.8 7.5 9 4.4-1.2 7.5-4.6 7.5-9V7L12 3.5Z"/>
+              <path d="M9.5 12.2 11 13.7l3.5-3.5"/>
             </svg>
           }
           @case ('profile') {
@@ -283,13 +185,9 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
 export class AppSubnavComponent {
   readonly auth = inject(AuthService);
   private readonly prefs = inject(UserPreferencesService);
-  private readonly playerService = inject(PlayerService);
   private readonly router = inject(Router);
 
-  @Output() readonly logout = new EventEmitter<void>();
-
   readonly items = this.prefs.visibleNavItems;
-  readonly accountMenuItems = APP_ACCOUNT_MENU_ITEMS;
   readonly roleLabel = computed(() => formatRoleLabel(this.auth.userRole()));
   readonly roleFocus = computed(() => navFocusForRole(this.auth.userRole()));
   readonly roleNavLabel = computed(() =>
@@ -299,13 +197,7 @@ export class AppSubnavComponent {
     const id = this.auth.selectedGame();
     return id ? gamePlatformMeta(id) : gamePlatformMeta('fortnite');
   });
-  readonly gamerTag = signal<string | null>(null);
-  readonly profileRoute = computed(() => {
-    const tag = this.gamerTag();
-    return tag ? `/player/${encodeURIComponent(tag)}` : null;
-  });
   readonly mobileMenuOpen = signal(false);
-  readonly accountMenuOpen = signal(false);
 
   constructor() {
     effect(() => {
@@ -313,67 +205,21 @@ export class AppSubnavComponent {
       if (userId) this.prefs.load(userId);
     });
 
-    effect(() => {
-      const userId = this.auth.userId();
-      if (!userId) {
-        this.gamerTag.set(null);
-        return;
-      }
-      void this.playerService
-        .getPlayerProfileOrNull(userId)
-        .then((profile) => this.gamerTag.set(profile?.gamerTag ?? null))
-        .catch(() => this.gamerTag.set(null));
-    });
-
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => {
-        this.closeMobileMenu();
-        this.closeAccountMenu();
-      });
+      .subscribe(() => this.closeMobileMenu());
 
     effect(() => {
       document.body.classList.toggle('sg-nav-lock', this.mobileMenuOpen());
     });
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement | null;
-    if (!target?.closest('.sg-game-nav__account')) {
-      this.closeAccountMenu();
-    }
-  }
-
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.closeMobileMenu();
-    this.closeAccountMenu();
-  }
-
-  userInitials(): string {
-    const tag = this.gamerTag();
-    if (tag) return tag.slice(0, 2).toUpperCase();
-    const email = this.auth.email();
-    if (!email) return 'SG';
-    return email.slice(0, 2).toUpperCase();
-  }
-
-  toggleAccountMenu(event: Event): void {
-    event.stopPropagation();
-    this.accountMenuOpen.update((open) => !open);
-  }
-
-  closeAccountMenu(): void {
-    this.accountMenuOpen.set(false);
-  }
-
-  onAccountLogout(): void {
-    this.closeAccountMenu();
-    this.logout.emit();
   }
 
   toggleMobileMenu(): void {
@@ -382,10 +228,5 @@ export class AppSubnavComponent {
 
   closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
-  }
-
-  onMobileLogout(): void {
-    this.closeMobileMenu();
-    this.logout.emit();
   }
 }

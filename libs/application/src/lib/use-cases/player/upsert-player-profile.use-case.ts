@@ -25,7 +25,11 @@ export class UpsertPlayerProfileUseCase {
           valorantId: parsed.valorantId,
           leagueOfLegendsId: parsed.leagueOfLegendsId,
           cs2Id: parsed.cs2Id,
+          dota2Id: parsed.dota2Id,
+          overwatch2Id: parsed.overwatch2Id,
           rocketLeagueId: parsed.rocketLeagueId,
+          clashRoyaleId: parsed.clashRoyaleId,
+          brawlStarsId: parsed.brawlStarsId,
           avatarUrl: parsed.avatarUrl,
         })
       : PlayerProfile.create({
@@ -37,7 +41,11 @@ export class UpsertPlayerProfileUseCase {
           valorantId: parsed.valorantId,
           leagueOfLegendsId: parsed.leagueOfLegendsId,
           cs2Id: parsed.cs2Id,
+          dota2Id: parsed.dota2Id,
+          overwatch2Id: parsed.overwatch2Id,
           rocketLeagueId: parsed.rocketLeagueId,
+          clashRoyaleId: parsed.clashRoyaleId,
+          brawlStarsId: parsed.brawlStarsId,
           avatarUrl: parsed.avatarUrl,
         });
 

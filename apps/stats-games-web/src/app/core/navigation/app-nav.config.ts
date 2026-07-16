@@ -4,6 +4,7 @@ export type AppNavIcon =
   | 'dashboard'
   | 'matches'
   | 'analytics'
+  | 'coach'
   | 'profile'
   | 'talent'
   | 'radar'
@@ -40,8 +41,8 @@ export const PLAYER_SUBNAV_ITEMS: AppSubnavItem[] = [
   {
     id: 'dashboard',
     label: 'Inicio',
-    title: 'Dashboard',
-    description: 'Resumen, rango y últimas stats',
+    title: 'Inicio',
+    description: 'Resumen de ahora y próximos pasos',
     route: '/tabs/dashboard',
     icon: 'dashboard',
     tone: 'lime',
@@ -49,8 +50,8 @@ export const PLAYER_SUBNAV_ITEMS: AppSubnavItem[] = [
   {
     id: 'matches',
     label: 'Partidas',
-    title: 'Historial de Partidas',
-    description: 'Recientes + análisis IA por match',
+    title: 'Partidas',
+    description: 'Historial y análisis por match',
     route: '/tabs/matches',
     icon: 'matches',
     exact: false,
@@ -58,16 +59,26 @@ export const PLAYER_SUBNAV_ITEMS: AppSubnavItem[] = [
   {
     id: 'analytics',
     label: 'Evolución',
-    title: 'Evolución Táctica',
-    description: 'Tendencias semanales y KPIs',
+    title: 'Evolución',
+    description: 'Tendencias, percentiles y forma',
     route: '/tabs/analytics',
     icon: 'analytics',
     tone: 'cyan',
   },
   {
+    id: 'coach',
+    label: 'Coach',
+    title: 'AI Coach',
+    description: 'Qué entrenar según tu telemetría',
+    route: '/tabs/ai-coach',
+    icon: 'coach',
+    tone: 'purple',
+    badge: 'IA',
+  },
+  {
     id: 'profile',
     label: 'Perfil',
-    title: 'Mi Perfil Público',
+    title: 'Mi perfil',
     description: 'Cómo te ven los scouts',
     route: '/tabs/profile',
     icon: 'profile',
@@ -134,10 +145,10 @@ export const APP_ACCOUNT_MENU_ITEMS: AppAccountMenuItem[] = [
 ];
 
 export const APP_ROUTE_TITLES: Record<string, string> = {
-  dashboard: 'Dashboard',
-  matches: 'Historial de Partidas',
-  analytics: 'Evolución Táctica',
-  profile: 'Mi Perfil Público',
+  dashboard: 'Inicio',
+  matches: 'Partidas',
+  analytics: 'Evolución',
+  profile: 'Mi perfil',
   talent: 'Buscador de Talento',
   radar: 'Mi Radar',
   reports: 'Reportes Generados',

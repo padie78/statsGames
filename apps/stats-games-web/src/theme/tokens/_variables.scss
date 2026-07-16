@@ -123,8 +123,9 @@
   --sg-stack-section: var(--sg-space-8);
 
   // —— Page layout ——
-  --sg-page-max-width: 1200px;
-  --sg-page-padding-x: clamp(var(--sg-space-4), 3.2vw, var(--sg-space-8));
+  // ~Tracker.gg content rail (~1400): hub, meta y body comparten este ancho.
+  --sg-page-max-width: 1400px;
+  --sg-page-padding-x: clamp(var(--sg-space-4), 2.8vw, var(--sg-space-7));
 
   // —— Radius ——
   --sg-radius-sm: 8px;

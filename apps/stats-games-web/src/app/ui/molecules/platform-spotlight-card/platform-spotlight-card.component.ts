@@ -59,7 +59,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
         </div>
 
         <div class="sg-platform-spotlight__actions">
-          <a routerLink="/tabs/analytics" class="u-btn u-btn--ghost">Stats avanzadas</a>
+          <a routerLink="/tabs/analytics" class="u-btn u-btn--ghost">Evolución</a>
           <a routerLink="/tabs/matches" class="u-btn u-btn--primary">Partidas</a>
         </div>
       </div>

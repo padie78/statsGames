@@ -9,7 +9,11 @@ export interface PlayerProfileProps {
   valorantId?: string;
   leagueOfLegendsId?: string;
   cs2Id?: string;
+  dota2Id?: string;
+  overwatch2Id?: string;
   rocketLeagueId?: string;
+  clashRoyaleId?: string;
+  brawlStarsId?: string;
   avatarUrl?: string;
   createdAtIso: string;
   updatedAtIso: string;
@@ -28,7 +32,11 @@ export class PlayerProfile {
     valorantId?: string;
     leagueOfLegendsId?: string;
     cs2Id?: string;
+    dota2Id?: string;
+    overwatch2Id?: string;
     rocketLeagueId?: string;
+    clashRoyaleId?: string;
+    brawlStarsId?: string;
     avatarUrl?: string;
     nowIso?: string;
   }): PlayerProfile {
@@ -42,7 +50,11 @@ export class PlayerProfile {
       valorantId: input.valorantId,
       leagueOfLegendsId: input.leagueOfLegendsId,
       cs2Id: input.cs2Id,
+      dota2Id: input.dota2Id,
+      overwatch2Id: input.overwatch2Id,
       rocketLeagueId: input.rocketLeagueId,
+      clashRoyaleId: input.clashRoyaleId,
+      brawlStarsId: input.brawlStarsId,
       avatarUrl: input.avatarUrl,
       createdAtIso: now,
       updatedAtIso: now,
@@ -86,8 +98,24 @@ export class PlayerProfile {
     return this.props.cs2Id;
   }
 
+  get dota2Id(): string | undefined {
+    return this.props.dota2Id;
+  }
+
+  get overwatch2Id(): string | undefined {
+    return this.props.overwatch2Id;
+  }
+
   get rocketLeagueId(): string | undefined {
     return this.props.rocketLeagueId;
+  }
+
+  get clashRoyaleId(): string | undefined {
+    return this.props.clashRoyaleId;
+  }
+
+  get brawlStarsId(): string | undefined {
+    return this.props.brawlStarsId;
   }
 
   get avatarUrl(): string | undefined {
@@ -114,7 +142,11 @@ export class PlayerProfile {
     valorantId?: string;
     leagueOfLegendsId?: string;
     cs2Id?: string;
+    dota2Id?: string;
+    overwatch2Id?: string;
     rocketLeagueId?: string;
+    clashRoyaleId?: string;
+    brawlStarsId?: string;
     avatarUrl?: string;
     nowIso?: string;
   }): PlayerProfile {
@@ -127,7 +159,11 @@ export class PlayerProfile {
       valorantId: input.valorantId ?? this.props.valorantId,
       leagueOfLegendsId: input.leagueOfLegendsId ?? this.props.leagueOfLegendsId,
       cs2Id: input.cs2Id ?? this.props.cs2Id,
+      dota2Id: input.dota2Id ?? this.props.dota2Id,
+      overwatch2Id: input.overwatch2Id ?? this.props.overwatch2Id,
       rocketLeagueId: input.rocketLeagueId ?? this.props.rocketLeagueId,
+      clashRoyaleId: input.clashRoyaleId ?? this.props.clashRoyaleId,
+      brawlStarsId: input.brawlStarsId ?? this.props.brawlStarsId,
       avatarUrl: input.avatarUrl ?? this.props.avatarUrl,
       updatedAtIso: input.nowIso ?? new Date().toISOString(),
       versionId: this.props.versionId + 1,
@@ -146,8 +182,16 @@ export class PlayerProfile {
         return this.update({ leagueOfLegendsId: externalId, primaryPlatform: platform });
       case 'cs2':
         return this.update({ cs2Id: externalId, primaryPlatform: platform });
+      case 'dota2':
+        return this.update({ dota2Id: externalId, primaryPlatform: platform });
+      case 'overwatch2':
+        return this.update({ overwatch2Id: externalId, primaryPlatform: platform });
       case 'rocket_league':
         return this.update({ rocketLeagueId: externalId, primaryPlatform: platform });
+      case 'clash_royale':
+        return this.update({ clashRoyaleId: externalId, primaryPlatform: platform });
+      case 'brawl_stars':
+        return this.update({ brawlStarsId: externalId, primaryPlatform: platform });
       default: {
         const _exhaustive: never = platform;
         return _exhaustive;

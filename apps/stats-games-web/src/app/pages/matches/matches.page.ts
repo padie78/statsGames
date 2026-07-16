@@ -51,7 +51,7 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
         <sg-platform-page-banner
           [platform]="bannerPlatform()"
           title="Partidas"
-          subtitle="Tu historial, victorias y mejores momentos — sin gráficos complicados."
+          subtitle="Historial, filtros y análisis por match. Las tendencias viven en Evolución."
         />
 
         <sg-match-filters-toolbar

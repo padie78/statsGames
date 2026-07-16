@@ -40,11 +40,11 @@ import {
       [style.--sg-shell-glow]="shellGlow()"
     >
       <div class="sg-app-shell__chrome">
-        <!-- 1) Logo + games -->
-        <sg-game-platform-switcher />
-        <!-- 2) Game tabs + per-game search + account -->
+        <!-- 1) Logo + juegos + notificaciones + cuenta -->
+        <sg-game-platform-switcher (logout)="logout()" />
+        <!-- 2) Tabs del portal por juego -->
         <div class="sg-app-shell__header-block">
-          <sg-app-subnav (logout)="logout()" />
+          <sg-app-subnav />
         </div>
       </div>
       <main class="sg-app-shell__content">
