@@ -3,6 +3,7 @@ import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/st
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import type { SelectedGame } from '../../core/game/selected-game';
+import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import {
   KpiStripComponent,
@@ -111,6 +112,7 @@ export class MatchesPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
+  private readonly realtime = inject(AppSyncRealtimeService);
 
   readonly allMatches = signal<MatchUpdateView[]>([]);
   readonly platformFilter = signal<MatchPlatformFilter>('all');
@@ -197,6 +199,16 @@ export class MatchesPageComponent implements OnInit {
         void this.loadMatches();
       }
     });
+
+    effect(() => {
+      const userId = this.auth.userId();
+      if (!userId) return;
+      this.realtime.ensureConnected(userId);
+      const liveMatches = this.realtime.liveMatches();
+      if (!liveMatches.length) return;
+
+      this.allMatches.update((current) => mergeMatches(liveMatches, current));
+    });
   }
 
   ngOnInit(): void {
@@ -231,11 +243,30 @@ export class MatchesPageComponent implements OnInit {
 
     try {
       const rows = await this.matchService.listPlayerMatchesOnce(userId, { limit: 100 });
-      this.allMatches.set(rows);
+      this.allMatches.set(mergeMatches(this.realtime.liveMatches(), rows));
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Error cargando partidas');
     } finally {
       this.loading.set(false);
     }
   }
+}
+
+function mergeMatches(
+  incoming: MatchUpdateView[],
+  current: MatchUpdateView[],
+): MatchUpdateView[] {
+  const byId = new Map<string, MatchUpdateView>();
+
+  for (const match of current) {
+    byId.set(match.matchId, match);
+  }
+
+  for (const match of incoming) {
+    byId.set(match.matchId, match);
+  }
+
+  return [...byId.values()].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
 }

@@ -6,7 +6,8 @@
  *
  * Uso:
  *   npm run send:match -- --platform valorant --kills 18 --deaths 14 --assists 6
- *   npm run send:match -- --platform league_of_legends --kills 8 --deaths 3 --assists 12
+ *   npm run send:match -- --platform league_of_legends --platform-user-id "Diego#XQ37" --kills 8 --deaths 3 --assists 12
+ *   npm run send:match -- --platform league_of_legends --platform-user-id "Diego#XQ37" --champion Ahri --role MIDDLE --cs 210 --vision 32
  *   npm run send:match -- --platform cs2 --kills 22 --deaths 14 --assists 5
  *   npm run send:match -- --platform rocket_league --kills 5
  *   npm run send:match -- --platform fortnite --kills 8 --placement 1
@@ -24,6 +25,16 @@ loadDotEnv(resolve(dirname(fileURLToPath(import.meta.url)), '../../.env'));
 
 const PLATFORMS = new Set(['valorant', 'league_of_legends', 'cs2', 'rocket_league', 'fortnite', 'roblox']);
 
+const LOL_QUEUE_MODE = {
+  420: 'Ranked Solo',
+  440: 'Ranked Flex',
+  450: 'ARAM',
+  400: 'Normal Draft',
+  430: 'Normal Blind',
+  700: 'Clash',
+  1700: 'Arena',
+};
+
 const { values } = parseArgs({
   options: {
     platform: { type: 'string', default: 'valorant' },
@@ -37,6 +48,12 @@ const { values } = parseArgs({
     mode: { type: 'string' },
     map: { type: 'string' },
     summary: { type: 'string' },
+    champion: { type: 'string' },
+    role: { type: 'string' },
+    cs: { type: 'string' },
+    vision: { type: 'string' },
+    won: { type: 'string' },
+    'queue-id': { type: 'string' },
     url: { type: 'string' },
     secret: { type: 'string' },
   },
@@ -82,10 +99,29 @@ const matchId =
   values['match-id'] ||
   `${platform}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const lolQueueId = Number(values['queue-id'] || 420);
+const lolChampion = values.champion || 'Ahri';
+const lolRole = values.role || 'MIDDLE';
+const lolCs = Number(values.cs || 210);
+const lolVision = Number(values.vision || 28);
+const lolWon = values.won == null ? true : !['0', 'false', 'no', 'loss', 'derrota'].includes(String(values.won).toLowerCase());
+const lolKills = Number(values.kills) || 0;
+const lolDeaths = Number(values.deaths) || 0;
+const lolAssists = Number(values.assists) || 0;
+const lolMode = values.mode || LOL_QUEUE_MODE[lolQueueId] || `Queue ${lolQueueId}`;
+const lolMap = values.map || "Summoner's Rift";
+const occurredAt = new Date().toISOString();
+const gameStartMs = Date.now() - 28 * 60 * 1000;
+const riotMatchId =
+  platform === 'league_of_legends'
+    ? values['match-id'] || `EUW1_${Date.now().toString().slice(-10)}`
+    : matchId;
+
 const mode =
   values.mode ||
   ({
     valorant: 'Competitive',
+    league_of_legends: lolMode,
     rocket_league: '2v2',
     fortnite: 'Battle Royale',
     roblox: 'BedWars',
@@ -94,6 +130,7 @@ const map =
   values.map ||
   ({
     valorant: 'Ascent',
+    league_of_legends: lolMap,
     rocket_league: 'DFH Stadium',
     fortnite: undefined,
     roblox: mode === 'Arsenal' ? 'Urban' : 'Classic',
@@ -107,28 +144,117 @@ const label =
     fortnite: 'Fortnite',
     roblox: mode === 'Arsenal' ? 'Arsenal' : 'BedWars',
   }[platform] ?? platform;
+
+const lolSummary =
+  values.summary ||
+  ['LoL', lolMode, lolChampion, lolRole, lolWon ? 'Victoria' : 'Derrota', `${lolKills}/${lolDeaths}/${lolAssists}`, `${lolCs} CS`]
+    .filter(Boolean)
+    .join(' · ')
+    .slice(0, 200);
+
 const summary =
   values.summary ||
-  [
-    label,
-    mode,
-    map,
-    values.placement != null ? `Top ${values.placement}` : null,
-    platform === 'rocket_league'
-      ? `${values.kills ?? 0}G`
-      : `${values.kills ?? 0}/${values.deaths ?? 0}${values.assists != null ? `/${values.assists}` : ''}`.replace(
-          /\/$/,
-          '',
-        ),
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  (platform === 'league_of_legends'
+    ? lolSummary
+    : [
+        label,
+        mode,
+        map,
+        values.placement != null ? `Top ${values.placement}` : null,
+        platform === 'rocket_league'
+          ? `${values.kills ?? 0}G`
+          : `${values.kills ?? 0}/${values.deaths ?? 0}${values.assists != null ? `/${values.assists}` : ''}`.replace(
+              /\/$/,
+              '',
+            ),
+      ]
+        .filter(Boolean)
+        .join(' · '));
+
+const finalMatchId = platform === 'league_of_legends' ? `lol-${riotMatchId}` : matchId;
+
+/** Forma reducida de lo que Riot Match-v5 devuelve al cerrar una partida (simulado). */
+function buildSimulatedRiotMatchV5() {
+  return {
+    metadata: {
+      dataVersion: '2',
+      matchId: riotMatchId,
+      participants: ['simulated-puuid-diego-xq37'],
+    },
+    info: {
+      endOfGameResult: 'GameComplete',
+      gameCreation: gameStartMs,
+      gameDuration: 1684,
+      gameEndTimestamp: Date.now(),
+      gameId: Number(String(riotMatchId).replace(/\D/g, '').slice(-10)) || Date.now(),
+      gameMode: 'CLASSIC',
+      gameName: `EUW1 ${Date.now()}`,
+      gameStartTimestamp: gameStartMs,
+      gameType: 'MATCHED_GAME',
+      gameVersion: '14.12.1.512',
+      mapId: 11,
+      queueId: lolQueueId,
+      platformId: 'EUW1',
+      participants: [
+        {
+          puuid: 'simulated-puuid-diego-xq37',
+          riotIdGameName: 'Diego',
+          riotIdTagline: 'XQ37',
+          summonerName: 'Diego',
+          championName: lolChampion,
+          teamPosition: lolRole,
+          individualPosition: lolRole,
+          kills: lolKills,
+          deaths: lolDeaths,
+          assists: lolAssists,
+          totalMinionsKilled: Math.max(0, lolCs - 24),
+          neutralMinionsKilled: 24,
+          visionScore: lolVision,
+          win: lolWon,
+          goldEarned: 12480,
+          champLevel: 16,
+          item0: 3089,
+          item1: 3020,
+          item2: 4645,
+          item3: 3115,
+          item4: 3135,
+          item5: 3165,
+          item6: 3364,
+        },
+      ],
+      teams: [
+        { teamId: 100, win: lolWon, objectives: { baron: { kills: 1 }, dragon: { kills: 2 }, tower: { kills: 8 } } },
+        { teamId: 200, win: !lolWon, objectives: { baron: { kills: 0 }, dragon: { kills: 1 }, tower: { kills: 3 } } },
+      ],
+    },
+  };
+}
+
+/** Lo que el poller LoL extrae de Match-v5 y encola a SQS. */
+function buildPollerLikeStats() {
+  return {
+    kills: lolKills,
+    deaths: lolDeaths,
+    assists: lolAssists,
+    cs: lolCs,
+    visionScore: lolVision,
+    champion: lolChampion,
+    role: lolRole,
+    mode: lolMode,
+    queueId: lolQueueId,
+    map: lolMap,
+    won: lolWon,
+    placement: lolWon ? 1 : 2,
+    summary: lolSummary,
+    source: 'send-match-cli-simulated-riot',
+  };
+}
 
 const body = {
   ...(userId ? { userId } : {}),
   ...(platformUserId ? { platformUserId } : {}),
-  matchId,
-  occurredAt: new Date().toISOString(),
+  matchId: finalMatchId,
+  occurredAt,
   mode,
   ...(map ? { map } : {}),
   summary,
@@ -148,16 +274,7 @@ const body = {
           placement: 1,
         }
       : {}),
-    ...(platform === 'league_of_legends'
-      ? {
-          champion: values.champion || 'Jinx',
-          role: values.role || 'BOTTOM',
-          cs: Number(values.cs || 180),
-          visionScore: Number(values.vision || 24),
-          won: true,
-          placement: 1,
-        }
-      : {}),
+    ...(platform === 'league_of_legends' ? buildPollerLikeStats() : {}),
     ...(platform === 'cs2'
       ? {
           map: values.map || 'de_mirage',
@@ -198,6 +315,16 @@ const body = {
   },
 };
 
+if (platform === 'league_of_legends') {
+  console.log('\n=== Simulación Riot Match-v5 (fin de partida) ===');
+  console.log(JSON.stringify(buildSimulatedRiotMatchV5(), null, 2));
+  console.log('\n=== Stats que el poller encolaría (extraídas del match) ===');
+  console.log(JSON.stringify(buildPollerLikeStats(), null, 2));
+  console.log('\n=== Payload webhook → game_ingestion ===');
+  console.log(JSON.stringify(body, null, 2));
+  console.log('');
+}
+
 console.log(`→ POST ${webhookUrl} (platformUserId=${platformUserId ?? userId})`);
 
 const response = await fetch(webhookUrl, {
@@ -210,7 +337,7 @@ const response = await fetch(webhookUrl, {
 });
 
 const text = await response.text();
-console.log(response.status, text);
+console.log('← Response', response.status, text);
 if (!response.ok) process.exit(1);
 
 function loadDotEnv(filePath) {
