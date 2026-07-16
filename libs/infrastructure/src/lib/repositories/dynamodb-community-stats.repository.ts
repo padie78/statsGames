@@ -22,7 +22,11 @@ const DEFAULT_STD = {
   valorant: { winRateStd: 12, kdStd: 0.35, killsStd: 18 },
   league_of_legends: { winRateStd: 12, kdStd: 0.4, killsStd: 10 },
   cs2: { winRateStd: 12, kdStd: 0.35, killsStd: 20 },
+  dota2: { winRateStd: 12, kdStd: 0.4, killsStd: 10 },
+  overwatch2: { winRateStd: 12, kdStd: 0.35, killsStd: 18 },
   rocket_league: { winRateStd: 15, kdStd: 0.5, killsStd: 12 },
+  clash_royale: { winRateStd: 14, kdStd: 0.3, killsStd: 8 },
+  brawl_stars: { winRateStd: 14, kdStd: 0.35, killsStd: 12 },
 } as const;
 
 function computeLeaderboardScore(input: SyncWeeklyCommunityInput): number {
