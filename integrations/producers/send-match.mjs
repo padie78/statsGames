@@ -62,6 +62,15 @@ const PLATFORM_ADAPTERS = {
       cs: num(ctx.values.cs ?? '210'),
       visionScore: num(ctx.values.vision ?? ctx.values.visionScore ?? '28'),
       queueId: num(ctx.values['queue-id'] ?? '420'),
+      durationSec: num(ctx.values.duration ?? '1684'),
+      goldEarned: num(ctx.values.gold ?? ctx.values.goldEarned ?? '12480'),
+      champLevel: num(ctx.values.level ?? ctx.values.champLevel ?? '16'),
+      items: parseItems(ctx.values.items) ?? [3089, 3020, 4645, 3115, 3135, 3165, 3364],
+      teamObjectives: {
+        barons: num(ctx.values.barons ?? '1'),
+        dragons: num(ctx.values.dragons ?? '2'),
+        towers: num(ctx.values.towers ?? '8'),
+      },
       won: bool(ctx.values.won, true),
       placement: bool(ctx.values.won, true) ? 1 : 2,
       source: 'send-match-cli-simulated-riot',
@@ -230,6 +239,14 @@ const { values } = parseArgs({
     trophies: { type: 'string' },
     brawler: { type: 'string' },
     duration: { type: 'string' },
+    gold: { type: 'string' },
+    goldEarned: { type: 'string' },
+    level: { type: 'string' },
+    champLevel: { type: 'string' },
+    items: { type: 'string' },
+    barons: { type: 'string' },
+    dragons: { type: 'string' },
+    towers: { type: 'string' },
     url: { type: 'string' },
     secret: { type: 'string' },
   },
@@ -307,6 +324,8 @@ function buildSimulatedRiotMatchV5() {
   const lolVision = num(values.vision ?? values.visionScore ?? '28');
   const lolQueueId = num(values['queue-id'] ?? '420');
   const lolWon = bool(values.won, true);
+  const lolItems = Array.isArray(stats.items) ? stats.items : [];
+  const objectives = stats.teamObjectives ?? { barons: 0, dragons: 0, towers: 0 };
   return {
     metadata: {
       dataVersion: '2',
@@ -322,6 +341,7 @@ function buildSimulatedRiotMatchV5() {
       gameMode: 'CLASSIC',
       gameName: `EUW1 ${Date.now()}`,
       gameStartTimestamp: gameStartMs,
+      gameDuration: stats.durationSec,
       gameType: 'MATCHED_GAME',
       gameVersion: '14.12.1.512',
       mapId: 11,
@@ -343,19 +363,19 @@ function buildSimulatedRiotMatchV5() {
           neutralMinionsKilled: 24,
           visionScore: lolVision,
           win: lolWon,
-          goldEarned: 12480,
-          champLevel: 16,
-          item0: 3089,
-          item1: 3020,
-          item2: 4645,
-          item3: 3115,
-          item4: 3135,
-          item5: 3165,
-          item6: 3364,
+          goldEarned: stats.goldEarned,
+          champLevel: stats.champLevel,
+          item0: lolItems[0] ?? 0,
+          item1: lolItems[1] ?? 0,
+          item2: lolItems[2] ?? 0,
+          item3: lolItems[3] ?? 0,
+          item4: lolItems[4] ?? 0,
+          item5: lolItems[5] ?? 0,
+          item6: lolItems[6] ?? 0,
         },
       ],
       teams: [
-        { teamId: 100, win: lolWon, objectives: { baron: { kills: 1 }, dragon: { kills: 2 }, tower: { kills: 8 } } },
+        { teamId: 100, win: lolWon, objectives: { baron: { kills: objectives.barons }, dragon: { kills: objectives.dragons }, tower: { kills: objectives.towers } } },
         { teamId: 200, win: !lolWon, objectives: { baron: { kills: 0 }, dragon: { kills: 1 }, tower: { kills: 3 } } },
       ],
     },
@@ -437,6 +457,15 @@ function stripUndefined(input) {
   return Object.fromEntries(
     Object.entries(input).filter(([, value]) => value !== undefined),
   );
+}
+
+function parseItems(value) {
+  if (!value) return null;
+  const items = String(value)
+    .split(',')
+    .map((item) => num(item.trim()))
+    .filter((item) => item > 0);
+  return items.length ? items.slice(0, 7) : null;
 }
 
 function loadDotEnv(filePath) {

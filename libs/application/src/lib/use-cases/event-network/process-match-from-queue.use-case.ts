@@ -8,6 +8,7 @@ import type {
 } from '../../ports/event-network/match.port';
 import type { IStatsSummaryRepository } from '../../ports/event-network/stats-summary.repository.port';
 import type { ILogger } from '../../ports/shared/logger.port';
+import { supportsAiMatchAnalysis } from './match-analysis-prompt.registry';
 
 export interface ProcessMatchFromQueueDeps {
   matchWriter: IMatchWriter;
@@ -58,7 +59,7 @@ export class ProcessMatchFromQueueUseCase {
 
     if (
       !skippedDuplicate &&
-      message.platform === 'valorant' &&
+      supportsAiMatchAnalysis(message.platform) &&
       this.deps.matchAiAnalysisPublisher
     ) {
       await this.deps.matchAiAnalysisPublisher.enqueue({

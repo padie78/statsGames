@@ -7,6 +7,7 @@ import type {
   MatchAiReportRecord,
 } from '../../ports/event-network/match.port';
 import type { ILogger } from '../../ports/shared/logger.port';
+import { buildMatchAnalysisPrompt } from './match-analysis-prompt.registry';
 
 export interface AnalyzeMatchAiDeps {
   matchReader: IMatchReader;
@@ -39,7 +40,7 @@ export class AnalyzeMatchWithAiUseCase {
     }
 
     const stats = match.stats.toRecord();
-    const prompt = buildValorantPrompt(match, stats);
+    const prompt = buildMatchAnalysisPrompt(match, stats);
 
     let report: MatchAiReportRecord;
     try {
@@ -62,7 +63,7 @@ export class AnalyzeMatchWithAiUseCase {
           verdict: 'solid',
           pros: [],
           cons: ['El proveedor de IA no respondió correctamente.'],
-          actionPlan: ['Revisá KDA y HS% manualmente hasta el próximo análisis.'],
+          actionPlan: ['Revisá las métricas base manualmente.', 'Reintentá el análisis cuando Bedrock esté disponible.'],
         },
         'failed',
       );
@@ -92,32 +93,6 @@ export class AnalyzeMatchWithAiUseCase {
     const recent = await this.deps.matchReader.listByUser(userId, { limit: 100 });
     return recent.find((m) => m.matchId === matchId) ?? null;
   }
-}
-
-function buildValorantPrompt(match: Match, stats: Record<string, unknown>): string {
-  return `Sos el AI Coach de StatsGames para jugadores de Valorant (rol Jugador / micro post-partida).
-Respondé SOLO con un JSON válido (sin markdown fences) con esta forma:
-{
-  "headline": string,
-  "summary": string (1-2 oraciones),
-  "markdown": string (markdown breve: contexto, lo que salió bien/mal, foco),
-  "performanceScore": number 0-100,
-  "gradeLabel": string (ej. S, A, B, C),
-  "verdict": "victory" | "podium" | "solid" | "rough",
-  "pros": string[],
-  "cons": string[],
-  "actionPlan": string[] (3 pasos concretos)
-}
-
-Glosario Valorant a usar cuando aplique: aim/HS%, trades, utility usage, site execute, retake, clutch, eco/anti-eco, mid-round calls, first blood, entry, lurk, support.
-Tono: directo, motivador, sin humo. Español rioplatense neutro.
-
-Datos de la partida:
-matchId: ${match.matchId}
-platform: ${match.platform}
-occurredAt: ${match.occurredAtIso}
-summary: ${match.summary()}
-statsJson: ${JSON.stringify(stats)}`;
 }
 
 function parseModelJson(raw: string): BedrockAnalysisJson {

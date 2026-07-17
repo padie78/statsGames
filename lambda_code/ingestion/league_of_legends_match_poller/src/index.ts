@@ -46,6 +46,15 @@ interface LolMatchSummary {
   won?: boolean;
   queueId?: number;
   gameStartMillis?: number;
+  durationSec?: number;
+  goldEarned?: number;
+  champLevel?: number;
+  items?: number[];
+  teamObjectives?: {
+    barons: number;
+    dragons: number;
+    towers: number;
+  };
   mode?: string;
 }
 
@@ -119,6 +128,11 @@ export const handler: Handler = async () => {
             role: detail.role ?? null,
             mode: detail.mode ?? null,
             queueId: detail.queueId ?? null,
+            durationSec: detail.durationSec ?? null,
+            goldEarned: detail.goldEarned ?? null,
+            champLevel: detail.champLevel ?? null,
+            items: detail.items ?? [],
+            teamObjectives: detail.teamObjectives ?? null,
             won: detail.won ?? null,
             summary,
             source: 'league_of_legends_match_poller',
@@ -212,8 +226,10 @@ async function fetchMatchForPlayer(
     info?: {
       queueId?: number;
       gameStartTimestamp?: number;
+      gameDuration?: number;
       participants?: Array<{
         puuid?: string;
+        teamId?: number;
         championName?: string;
         teamPosition?: string;
         individualPosition?: string;
@@ -224,6 +240,23 @@ async function fetchMatchForPlayer(
         neutralMinionsKilled?: number;
         visionScore?: number;
         win?: boolean;
+        goldEarned?: number;
+        champLevel?: number;
+        item0?: number;
+        item1?: number;
+        item2?: number;
+        item3?: number;
+        item4?: number;
+        item5?: number;
+        item6?: number;
+      }>;
+      teams?: Array<{
+        teamId?: number;
+        objectives?: {
+          baron?: { kills?: number };
+          dragon?: { kills?: number };
+          tower?: { kills?: number };
+        };
       }>;
     };
     metadata?: { matchId?: string };
@@ -235,6 +268,18 @@ async function fetchMatchForPlayer(
   const queueId = body.info?.queueId;
   const cs =
     Number(player.totalMinionsKilled ?? 0) + Number(player.neutralMinionsKilled ?? 0);
+  const team = body.info?.teams?.find((t) => t.teamId === player.teamId);
+  const items = [
+    player.item0,
+    player.item1,
+    player.item2,
+    player.item3,
+    player.item4,
+    player.item5,
+    player.item6,
+  ]
+    .map((item) => Number(item ?? 0))
+    .filter((item) => item > 0);
 
   return {
     matchId: body.metadata?.matchId ?? matchId,
@@ -249,6 +294,17 @@ async function fetchMatchForPlayer(
     queueId,
     mode: queueId != null ? QUEUE_MODE[queueId] ?? `Queue ${queueId}` : undefined,
     gameStartMillis: body.info?.gameStartTimestamp,
+    durationSec: body.info?.gameDuration != null ? Number(body.info.gameDuration) : undefined,
+    goldEarned: player.goldEarned != null ? Number(player.goldEarned) : undefined,
+    champLevel: player.champLevel != null ? Number(player.champLevel) : undefined,
+    items,
+    teamObjectives: team
+      ? {
+          barons: Number(team.objectives?.baron?.kills ?? 0),
+          dragons: Number(team.objectives?.dragon?.kills ?? 0),
+          towers: Number(team.objectives?.tower?.kills ?? 0),
+        }
+      : undefined,
   };
 }
 
