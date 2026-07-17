@@ -8,10 +8,13 @@ import {
 } from '@stats-games/infrastructure';
 
 /**
- * League of Legends — Riot match-v5.
+ * League of Legends — Riot match-v5 + match-timeline-v5.
  *
  * Vinculá Riot ID `Nombre#TAG` en Integraciones.
- * Poller: account-v1 → matchlist-v5 → match-v5 → SQS.
+ * Poller: account-v1 → matchlist-v5 → match-v5 → timeline-v5 → SQS.
+ *
+ * Timeline aporta path (x,y) por frame (~1 min) y hitos (kills/deaths/objetivos).
+ * Live Client Data (127.0.0.1:2999) queda para companion Electron/Overwolf (in-match).
  *
  * Env:
  *   RIOT_API_KEY
@@ -56,7 +59,51 @@ interface LolMatchSummary {
     towers: number;
   };
   mode?: string;
+  participantId?: number;
+  mapTelemetry?: LolMapTelemetry;
 }
+
+interface LolMapPoint {
+  t: number;
+  x: number;
+  y: number;
+}
+
+interface LolMapEvent {
+  t: number;
+  type: string;
+  x: number;
+  y: number;
+  poi?: string;
+  label?: string;
+  detail?: string;
+  impact?: string;
+}
+
+interface LolMapTelemetry {
+  source: 'riot_timeline_v5';
+  durationSec: number;
+  path: LolMapPoint[];
+  events: LolMapEvent[];
+  participantId?: number;
+  coordinateSpace: { maxX: number; maxY: number };
+}
+
+const RIFT_MAX = 15_000;
+
+const RIFT_POIS: Array<{ name: string; x: number; y: number }> = [
+  { name: 'Blue Base', x: 0.12, y: 0.88 },
+  { name: 'Red Base', x: 0.88, y: 0.12 },
+  { name: 'Top Lane', x: 0.18, y: 0.35 },
+  { name: 'Mid Lane', x: 0.5, y: 0.5 },
+  { name: 'Bot Lane', x: 0.72, y: 0.82 },
+  { name: 'Dragon Pit', x: 0.62, y: 0.62 },
+  { name: 'Baron Pit', x: 0.38, y: 0.38 },
+  { name: 'Blue Jungle', x: 0.28, y: 0.55 },
+  { name: 'Red Jungle', x: 0.72, y: 0.45 },
+  { name: 'River', x: 0.5, y: 0.48 },
+];
+
 
 const PLATFORM: GamePlatform = 'league_of_legends';
 const logger = new ConsoleLogger({ source: 'league_of_legends_match_poller' });
@@ -113,6 +160,16 @@ export const handler: Handler = async () => {
         const detail = await fetchMatchForPlayer(matchId, puuid, region, apiKey);
         if (!detail) continue;
 
+        const timeline = await fetchMatchTimelineForPlayer(
+          matchId,
+          puuid,
+          detail.participantId,
+          detail.durationSec,
+          region,
+          apiKey,
+        );
+        if (timeline) detail.mapTelemetry = timeline;
+
         const summary = buildSummary(detail);
         await publisher.enqueue({
           userId: account.userId,
@@ -133,6 +190,10 @@ export const handler: Handler = async () => {
             champLevel: detail.champLevel ?? null,
             items: detail.items ?? [],
             teamObjectives: detail.teamObjectives ?? null,
+            teamBarons: detail.teamObjectives?.barons ?? null,
+            teamDragons: detail.teamObjectives?.dragons ?? null,
+            teamTowers: detail.teamObjectives?.towers ?? null,
+            mapTelemetry: detail.mapTelemetry ?? null,
             won: detail.won ?? null,
             summary,
             source: 'league_of_legends_match_poller',
@@ -229,6 +290,7 @@ async function fetchMatchForPlayer(
       gameDuration?: number;
       participants?: Array<{
         puuid?: string;
+        participantId?: number;
         teamId?: number;
         championName?: string;
         teamPosition?: string;
@@ -298,6 +360,7 @@ async function fetchMatchForPlayer(
     goldEarned: player.goldEarned != null ? Number(player.goldEarned) : undefined,
     champLevel: player.champLevel != null ? Number(player.champLevel) : undefined,
     items,
+    participantId: player.participantId != null ? Number(player.participantId) : undefined,
     teamObjectives: team
       ? {
           barons: Number(team.objectives?.baron?.kills ?? 0),
@@ -306,6 +369,254 @@ async function fetchMatchForPlayer(
         }
       : undefined,
   };
+}
+
+/**
+ * Match-Timeline-V5: frames ~1 min con position (x,y) 0–15000 + eventos de kill/objetivos.
+ */
+async function fetchMatchTimelineForPlayer(
+  matchId: string,
+  puuid: string,
+  participantIdHint: number | undefined,
+  durationSecHint: number | undefined,
+  region: string,
+  apiKey: string,
+): Promise<LolMapTelemetry | null> {
+  const url = `https://${region}.api.riotgames.com/lol/match/v5/matches/${encodeURIComponent(matchId)}/timeline`;
+  const response = await fetch(url, { headers: { 'X-Riot-Token': apiKey } });
+  if (!response.ok) {
+    logger.warn('No se pudo leer timeline LoL', { matchId, status: response.status });
+    return null;
+  }
+
+  const body = (await response.json()) as {
+    metadata?: { participants?: string[] };
+    info?: {
+      frameInterval?: number;
+      frames?: Array<{
+        timestamp?: number;
+        participantFrames?: Record<
+          string,
+          {
+            position?: { x?: number; y?: number };
+          }
+        >;
+        events?: Array<{
+          type?: string;
+          timestamp?: number;
+          killerId?: number;
+          victimId?: number;
+          assistingParticipantIds?: number[];
+          monsterType?: string;
+          buildingType?: string;
+          towerType?: string;
+          position?: { x?: number; y?: number };
+        }>;
+      }>;
+    };
+  };
+
+  const participants = body.metadata?.participants ?? [];
+  let participantId = participantIdHint;
+  if (participantId == null) {
+    const idx = participants.findIndex((id) => id === puuid);
+    participantId = idx >= 0 ? idx + 1 : undefined;
+  }
+  if (participantId == null) return null;
+
+  const frames = body.info?.frames ?? [];
+  const path: LolMapPoint[] = [];
+  const events: LolMapEvent[] = [];
+  let killCount = 0;
+  let deathCount = 0;
+  let assistCount = 0;
+
+  for (const frame of frames) {
+    const tSec = Math.max(0, Math.round(Number(frame.timestamp ?? 0) / 1000));
+    const pf = frame.participantFrames?.[String(participantId)];
+    if (pf?.position && Number.isFinite(pf.position.x) && Number.isFinite(pf.position.y)) {
+      const norm = riotToNorm(Number(pf.position.x), Number(pf.position.y));
+      path.push({ t: tSec, ...norm });
+    }
+
+    for (const event of frame.events ?? []) {
+      const et = Math.max(0, Math.round(Number(event.timestamp ?? 0) / 1000));
+      const pos = event.position
+        ? riotToNorm(Number(event.position.x ?? 0), Number(event.position.y ?? 0))
+        : path.length
+          ? { x: path[path.length - 1].x, y: path[path.length - 1].y }
+          : { x: 0.5, y: 0.5 };
+      const poi = nearestRiftPoi(pos.x, pos.y);
+
+      if (event.type === 'CHAMPION_KILL') {
+        if (event.killerId === participantId) {
+          killCount += 1;
+          events.push({
+            t: et,
+            type: 'kill',
+            x: pos.x,
+            y: pos.y,
+            poi,
+            label: `Kill #${killCount}`,
+            detail: `Eliminación en ${poi} (coordenada Riot Timeline-V5).`,
+            impact: '+1 kill',
+          });
+        } else if (event.victimId === participantId) {
+          deathCount += 1;
+          events.push({
+            t: et,
+            type: 'death',
+            x: pos.x,
+            y: pos.y,
+            poi,
+            label: `Death #${deathCount}`,
+            detail: `Caída en ${poi}. Revisá visión y spacing en esta zona.`,
+            impact: '−1',
+          });
+        } else if (event.assistingParticipantIds?.includes(participantId)) {
+          assistCount += 1;
+          events.push({
+            t: et,
+            type: 'assist',
+            x: pos.x,
+            y: pos.y,
+            poi,
+            label: `Assist #${assistCount}`,
+            detail: `Asistencia cerca de ${poi}.`,
+            impact: '+1 assist',
+          });
+        }
+      } else if (event.type === 'ELITE_MONSTER_KILL') {
+        const monster = String(event.monsterType ?? 'OBJECTIVE').toUpperCase();
+        const isTeamRelevant =
+          event.killerId === participantId ||
+          event.assistingParticipantIds?.includes(participantId);
+        if (!isTeamRelevant && event.killerId !== participantId) {
+          // Igual marcamos objetivos del mapa si el evento tiene posición (contexto).
+        }
+        if (monster.includes('DRAGON')) {
+          events.push({
+            t: et,
+            type: 'dragon',
+            x: pos.x,
+            y: pos.y,
+            poi: 'Dragon Pit',
+            label: isTeamRelevant ? 'Dragón (participaste)' : 'Dragón',
+            detail: `Elite monster DRAGON en ${poi}.`,
+            impact: 'Dragon',
+          });
+        } else if (monster.includes('BARON')) {
+          events.push({
+            t: et,
+            type: 'baron',
+            x: pos.x,
+            y: pos.y,
+            poi: 'Baron Pit',
+            label: isTeamRelevant ? 'Barón (participaste)' : 'Barón',
+            detail: `Elite monster BARON en ${poi}.`,
+            impact: 'Baron',
+          });
+        } else {
+          events.push({
+            t: et,
+            type: 'objective',
+            x: pos.x,
+            y: pos.y,
+            poi,
+            label: monster,
+            detail: `Objetivo elite ${monster} en ${poi}.`,
+            impact: 'Obj',
+          });
+        }
+      } else if (event.type === 'BUILDING_KILL') {
+        const involved =
+          event.killerId === participantId ||
+          event.assistingParticipantIds?.includes(participantId);
+        if (involved) {
+          events.push({
+            t: et,
+            type: 'turret',
+            x: pos.x,
+            y: pos.y,
+            poi,
+            label: event.towerType ? `Torre ${event.towerType}` : 'Estructura',
+            detail: `Building kill (${event.buildingType ?? 'BUILDING'}) en ${poi}.`,
+            impact: 'Torre',
+          });
+        }
+      }
+    }
+  }
+
+  if (path.length === 0) return null;
+
+  const durationSec =
+    durationSecHint && durationSecHint > 0
+      ? durationSecHint
+      : Math.max(path[path.length - 1].t, events.at(-1)?.t ?? 0, 60);
+
+  // Spawn + cierre
+  const start = path[0];
+  events.unshift({
+    t: 0,
+    type: 'spawn',
+    x: start.x,
+    y: start.y,
+    poi: nearestRiftPoi(start.x, start.y),
+    label: 'Inicio de partida',
+    detail: 'Primera posición registrada en Timeline-V5.',
+    impact: 'Inicio',
+  });
+  const end = path[path.length - 1];
+  events.push({
+    t: durationSec,
+    type: 'loot',
+    x: end.x,
+    y: end.y,
+    poi: nearestRiftPoi(end.x, end.y),
+    label: 'Cierre',
+    detail: 'Última posición del timeline.',
+    impact: 'Fin',
+  });
+
+  events.sort((a, b) => a.t - b.t);
+
+  return {
+    source: 'riot_timeline_v5',
+    durationSec,
+    path: dedupePath(path),
+    events,
+    participantId,
+    coordinateSpace: { maxX: RIFT_MAX, maxY: RIFT_MAX },
+  };
+}
+
+function riotToNorm(x: number, y: number): { x: number; y: number } {
+  return {
+    x: clamp01(x / RIFT_MAX),
+    y: clamp01(1 - y / RIFT_MAX),
+  };
+}
+
+function nearestRiftPoi(x: number, y: number): string {
+  return RIFT_POIS.reduce((best, poi) => {
+    const bestDist = Math.hypot(best.x - x, best.y - y);
+    const poiDist = Math.hypot(poi.x - x, poi.y - y);
+    return poiDist < bestDist ? poi : best;
+  }).name;
+}
+
+function dedupePath(points: LolMapPoint[]): LolMapPoint[] {
+  const seen = new Set<number>();
+  return points.filter((point) => {
+    if (seen.has(point.t)) return false;
+    seen.add(point.t);
+    return true;
+  });
+}
+
+function clamp01(value: number): number {
+  return Math.max(0.02, Math.min(0.98, value));
 }
 
 async function listLinkedAccounts(): Promise<LinkedAccount[]> {

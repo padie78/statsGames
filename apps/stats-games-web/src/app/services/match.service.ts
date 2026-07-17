@@ -32,6 +32,7 @@ export interface MatchStatsView {
   teamBarons?: number | null;
   teamDragons?: number | null;
   teamTowers?: number | null;
+  mapTelemetry?: Record<string, unknown> | null;
 }
 
 export interface MatchUpdateView {
@@ -76,6 +77,7 @@ const MATCH_STATS_FIELDS = /* GraphQL */ `
     teamBarons
     teamDragons
     teamTowers
+    mapTelemetry
   }
 `;
 

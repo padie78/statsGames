@@ -23,7 +23,10 @@ const FORTNITE_MVP_POIS: PoiAnchor[] = [
 
 const MAP_ASSET = '/assets/maps/fortnite-island-mvp.svg';
 
-export function resolveMatchMapTelemetry(match: MatchUpdateView): MatchMapTelemetry | null {
+/** Solo Fortnite. LoL usa `match-map-lol.util.ts`. */
+export function resolveFortniteMatchMapTelemetry(
+  match: MatchUpdateView,
+): MatchMapTelemetry | null {
   if (!isFortnitePlatform(match.platform)) return null;
   return buildMockMatchMapTelemetry(match);
 }
@@ -47,12 +50,14 @@ export function buildMockMatchMapTelemetry(match: MatchUpdateView): MatchMapTele
 
   return {
     matchId: match.matchId,
+    platform: match.platform,
     seasonId: 'CH7S1',
     seasonLabel: 'Capítulo 7 · Season 1 (preview)',
     mapAssetUrl: MAP_ASSET,
     durationSec,
     path,
     events,
+    source: 'fortnite_preview',
     isPreview: true,
   };
 }

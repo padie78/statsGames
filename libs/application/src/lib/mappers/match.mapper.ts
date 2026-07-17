@@ -1,5 +1,9 @@
 import type { Match } from '@stats-games/domain';
-import type { MatchStatsDto, MatchUpdateDto } from '../dto/event-network/match-update.dto';
+import {
+  MatchStatsDtoSchema,
+  type MatchStatsDto,
+  type MatchUpdateDto,
+} from '../dto/event-network/match-update.dto';
 
 function toOptionalInt(value: unknown): number | undefined {
   if (value == null || value === '') return undefined;
@@ -59,6 +63,7 @@ function extractStats(record: Record<string, unknown>): MatchStatsDto | undefine
   const teamBarons = toOptionalInt(record['teamBarons'] ?? teamObjectives?.['barons']);
   const teamDragons = toOptionalInt(record['teamDragons'] ?? teamObjectives?.['dragons']);
   const teamTowers = toOptionalInt(record['teamTowers'] ?? teamObjectives?.['towers']);
+  const mapTelemetry = toOptionalMapTelemetry(record['mapTelemetry']);
 
   // Rocket League: goals actúan como "kills" en KPIs genéricos.
   const resolvedKills = kills ?? goals;
@@ -90,7 +95,8 @@ function extractStats(record: Record<string, unknown>): MatchStatsDto | undefine
     champLevel != null ||
     teamBarons != null ||
     teamDragons != null ||
-    teamTowers != null;
+    teamTowers != null ||
+    mapTelemetry != null;
 
   if (!hasAny) return undefined;
 
@@ -122,7 +128,24 @@ function extractStats(record: Record<string, unknown>): MatchStatsDto | undefine
     teamBarons,
     teamDragons,
     teamTowers,
+    mapTelemetry,
   };
+}
+
+function toOptionalMapTelemetry(
+  value: unknown,
+): MatchStatsDto['mapTelemetry'] | undefined {
+  let raw: unknown = value;
+  if (typeof value === 'string') {
+    try {
+      raw = JSON.parse(value) as unknown;
+    } catch {
+      return undefined;
+    }
+  }
+  if (!raw || typeof raw !== 'object') return undefined;
+  const parsed = MatchStatsDtoSchema.shape.mapTelemetry.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
 }
 
 export const MatchMapper = {

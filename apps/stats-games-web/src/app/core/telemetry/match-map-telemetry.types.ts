@@ -1,16 +1,33 @@
+/**
+ * Contrato de telemetría de mapa (Fortnite companion / Riot Timeline-V5 / Live Client).
+ * Coordenadas siempre normalizadas 0–1 para el overlay SVG.
+ */
+
 export type MatchMapEventType =
   | 'spawn'
   | 'kill'
   | 'death'
+  | 'assist'
   | 'storm'
   | 'rotate'
   | 'damage'
-  | 'loot';
+  | 'loot'
+  | 'objective'
+  | 'turret'
+  | 'dragon'
+  | 'baron'
+  | 'ward';
+
+export type MatchMapTelemetrySource =
+  | 'riot_timeline_v5'
+  | 'live_client'
+  | 'synthetic'
+  | 'fortnite_preview';
 
 export interface MatchMapPoint {
   /** Segundos desde el inicio de la partida. */
   t: number;
-  /** Coordenada normalizada 0–1 sobre el mapa de la season. */
+  /** Coordenada normalizada 0–1 sobre el mapa. */
   x: number;
   y: number;
 }
@@ -28,13 +45,28 @@ export interface MatchMapEvent {
   impact?: string;
 }
 
+export interface MatchMapTelemetryPayload {
+  source: MatchMapTelemetrySource;
+  durationSec: number;
+  path: MatchMapPoint[];
+  events: MatchMapEvent[];
+  /** Espacio Riot original (opcional; path ya viene normalizado). */
+  coordinateSpace?: {
+    maxX: number;
+    maxY: number;
+  };
+  participantId?: number;
+}
+
 export interface MatchMapTelemetry {
   matchId: string;
+  platform: string;
   seasonId: string;
   seasonLabel: string;
   mapAssetUrl: string;
   durationSec: number;
   path: MatchMapPoint[];
   events: MatchMapEvent[];
+  source: MatchMapTelemetrySource;
   isPreview: boolean;
 }

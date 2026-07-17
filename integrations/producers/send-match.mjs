@@ -55,26 +55,46 @@ const PLATFORM_ADAPTERS = {
     mode: (ctx) => LOL_QUEUE_MODE[num(ctx.values['queue-id'] ?? '420')] || `Queue ${ctx.values['queue-id']}`,
     map: "Summoner's Rift",
     matchPrefix: 'lol',
-    buildStats: (ctx) => ({
-      ...baseCombatStats(ctx),
-      champion: ctx.values.champion || 'Ahri',
-      role: ctx.values.role || 'MIDDLE',
-      cs: num(ctx.values.cs ?? '210'),
-      visionScore: num(ctx.values.vision ?? ctx.values.visionScore ?? '28'),
-      queueId: num(ctx.values['queue-id'] ?? '420'),
-      durationSec: num(ctx.values.duration ?? '1684'),
-      goldEarned: num(ctx.values.gold ?? ctx.values.goldEarned ?? '12480'),
-      champLevel: num(ctx.values.level ?? ctx.values.champLevel ?? '16'),
-      items: parseItems(ctx.values.items) ?? [3089, 3020, 4645, 3115, 3135, 3165, 3364],
-      teamObjectives: {
+    buildStats: (ctx) => {
+      const durationSec = num(ctx.values.duration ?? '1684');
+      const kills = num(ctx.values.kills ?? '0');
+      const deaths = num(ctx.values.deaths ?? '0');
+      const assists = num(ctx.values.assists ?? '0');
+      const role = ctx.values.role || 'MIDDLE';
+      const teamObjectives = {
         barons: num(ctx.values.barons ?? '1'),
         dragons: num(ctx.values.dragons ?? '2'),
         towers: num(ctx.values.towers ?? '8'),
-      },
-      won: bool(ctx.values.won, true),
-      placement: bool(ctx.values.won, true) ? 1 : 2,
-      source: 'send-match-cli-simulated-riot',
-    }),
+      };
+      return {
+        ...baseCombatStats(ctx),
+        champion: ctx.values.champion || 'Ahri',
+        role,
+        cs: num(ctx.values.cs ?? '210'),
+        visionScore: num(ctx.values.vision ?? ctx.values.visionScore ?? '28'),
+        queueId: num(ctx.values['queue-id'] ?? '420'),
+        durationSec,
+        goldEarned: num(ctx.values.gold ?? ctx.values.goldEarned ?? '12480'),
+        champLevel: num(ctx.values.level ?? ctx.values.champLevel ?? '16'),
+        items: parseItems(ctx.values.items) ?? [3089, 3020, 4645, 3115, 3135, 3165, 3364],
+        teamObjectives,
+        teamBarons: teamObjectives.barons,
+        teamDragons: teamObjectives.dragons,
+        teamTowers: teamObjectives.towers,
+        mapTelemetry: buildSyntheticLolMapTelemetry({
+          durationSec,
+          kills,
+          deaths,
+          assists,
+          role,
+          won: bool(ctx.values.won, true),
+          teamObjectives,
+        }),
+        won: bool(ctx.values.won, true),
+        placement: bool(ctx.values.won, true) ? 1 : 2,
+        source: 'send-match-cli-simulated-riot',
+      };
+    },
   },
   cs2: {
     label: 'CS2',
@@ -415,6 +435,157 @@ const response = await fetch(webhookUrl, {
 const text = await response.text();
 console.log('← Response', response.status, text);
 if (!response.ok) process.exit(1);
+
+/** Path + hitos sintéticos (simula Timeline-V5 normalizado 0–1). */
+function buildSyntheticLolMapTelemetry(input) {
+  const durationSec = Math.max(600, Number(input.durationSec) || 1680);
+  const role = String(input.role || 'MIDDLE').toUpperCase();
+  const lanes = {
+    TOP: [
+      [0.12, 0.88],
+      [0.18, 0.35],
+      [0.28, 0.55],
+      [0.5, 0.5],
+      [0.38, 0.38],
+      [0.88, 0.12],
+    ],
+    JUNGLE: [
+      [0.12, 0.88],
+      [0.28, 0.55],
+      [0.62, 0.62],
+      [0.5, 0.5],
+      [0.38, 0.38],
+      [0.72, 0.45],
+      [0.88, 0.12],
+    ],
+    MIDDLE: [
+      [0.12, 0.88],
+      [0.5, 0.5],
+      [0.5, 0.48],
+      [0.62, 0.62],
+      [0.38, 0.38],
+      [0.88, 0.12],
+    ],
+    BOTTOM: [
+      [0.12, 0.88],
+      [0.72, 0.82],
+      [0.62, 0.62],
+      [0.5, 0.5],
+      [0.88, 0.12],
+    ],
+    UTILITY: [
+      [0.12, 0.88],
+      [0.72, 0.82],
+      [0.62, 0.62],
+      [0.5, 0.48],
+      [0.5, 0.5],
+      [0.88, 0.12],
+    ],
+  };
+  const waypoints = lanes[role] || lanes.MIDDLE;
+  const path = [];
+  const segments = Math.max(waypoints.length - 1, 1);
+  for (let s = 0; s < segments; s += 1) {
+    const [x0, y0] = waypoints[s];
+    const [x1, y1] = waypoints[s + 1] || waypoints[s];
+    const steps = 6;
+    const t0 = (durationSec / segments) * s;
+    const t1 = (durationSec / segments) * (s + 1);
+    for (let i = 0; i <= steps; i += 1) {
+      const r = i / steps;
+      path.push({
+        t: Math.round(t0 + (t1 - t0) * r),
+        x: Number((x0 + (x1 - x0) * r).toFixed(3)),
+        y: Number((y0 + (y1 - y0) * r).toFixed(3)),
+      });
+    }
+  }
+
+  const pointAt = (ratio) => {
+    const t = Math.round(durationSec * ratio);
+    const hit = path.find((p) => p.t >= t) || path[path.length - 1];
+    return { t, x: hit.x, y: hit.y };
+  };
+
+  const events = [
+    {
+      t: 0,
+      type: 'spawn',
+      x: path[0].x,
+      y: path[0].y,
+      poi: 'Blue Base',
+      label: 'Salida de base',
+      detail: 'Simulación send-match (Timeline-V5 shape).',
+      impact: 'Inicio',
+    },
+  ];
+
+  for (let i = 0; i < Math.min(input.kills || 0, 5); i += 1) {
+    const p = pointAt(0.2 + i * 0.12);
+    events.push({
+      ...p,
+      type: 'kill',
+      poi: 'Mid Lane',
+      label: `Kill #${i + 1}`,
+      detail: 'Kill simulado.',
+      impact: '+1 kill',
+    });
+  }
+  for (let i = 0; i < Math.min(input.deaths || 0, 4); i += 1) {
+    const p = pointAt(0.25 + i * 0.15);
+    events.push({
+      ...p,
+      type: 'death',
+      poi: 'River',
+      label: `Death #${i + 1}`,
+      detail: 'Death simulada.',
+      impact: '−1',
+    });
+  }
+  if ((input.teamObjectives?.dragons || 0) > 0) {
+    events.push({
+      t: Math.round(durationSec * 0.42),
+      type: 'dragon',
+      x: 0.62,
+      y: 0.62,
+      poi: 'Dragon Pit',
+      label: 'Dragón',
+      detail: 'Objetivo simulado.',
+      impact: 'Dragon',
+    });
+  }
+  if ((input.teamObjectives?.barons || 0) > 0) {
+    events.push({
+      t: Math.round(durationSec * 0.72),
+      type: 'baron',
+      x: 0.38,
+      y: 0.38,
+      poi: 'Baron Pit',
+      label: 'Barón',
+      detail: 'Objetivo simulado.',
+      impact: 'Baron',
+    });
+  }
+  const end = path[path.length - 1];
+  events.push({
+    t: durationSec,
+    type: 'loot',
+    x: end.x,
+    y: end.y,
+    poi: 'Red Base',
+    label: input.won ? 'Victoria' : 'Derrota',
+    detail: 'Cierre simulado.',
+    impact: input.won ? 'Win' : 'Loss',
+  });
+
+  return {
+    source: 'synthetic',
+    durationSec,
+    path,
+    events: events.sort((a, b) => a.t - b.t),
+    coordinateSpace: { maxX: 15000, maxY: 15000 },
+  };
+}
 
 function baseCombatStats(ctx) {
   return {

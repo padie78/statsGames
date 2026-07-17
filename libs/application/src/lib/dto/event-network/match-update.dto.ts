@@ -29,6 +29,38 @@ export const MatchStatsDtoSchema = z.object({
   teamBarons: z.number().int().nonnegative().optional(),
   teamDragons: z.number().int().nonnegative().optional(),
   teamTowers: z.number().int().nonnegative().optional(),
+  mapTelemetry: z
+    .object({
+      source: z.enum(['riot_timeline_v5', 'live_client', 'synthetic', 'fortnite_preview']),
+      durationSec: z.number().nonnegative(),
+      path: z.array(
+        z.object({
+          t: z.number().nonnegative(),
+          x: z.number(),
+          y: z.number(),
+        }),
+      ),
+      events: z.array(
+        z.object({
+          t: z.number().nonnegative(),
+          type: z.string().min(1),
+          x: z.number(),
+          y: z.number(),
+          poi: z.string().optional(),
+          label: z.string().optional(),
+          detail: z.string().optional(),
+          impact: z.string().optional(),
+        }),
+      ),
+      participantId: z.number().int().positive().optional(),
+      coordinateSpace: z
+        .object({
+          maxX: z.number().positive(),
+          maxY: z.number().positive(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 export type MatchStatsDto = z.infer<typeof MatchStatsDtoSchema>;

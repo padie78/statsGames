@@ -266,6 +266,8 @@ query ListMatches($userId: ID!, $platform: String, $limit: Int) {
 
 **Frontend:** `apps/stats-games-web/src/app/services/match.service.ts` → `listPlayerMatchesOnce(userId, { platform, limit })`.
 
+**Mapa LoL:** `stats.mapTelemetry` (AWSJSON) con `source: riot_timeline_v5 | live_client | synthetic`, `path[]` y `events[]` normalizados 0–1. El poller LoL llama Match-Timeline-V5; la SPA usa `match-map-lol.util.ts` + asset `summoners-rift-mvp.svg`. Live Client (`127.0.0.1:2999`) está tipado en `lol-live-client.types.ts` para companion futuro.
+
 **Repositorio:** `libs/infrastructure/src/lib/repositories/dynamodb-match.repository.ts`  
 Query: `PK = USER#<id> AND begins_with(SK, "MATCH#")` con prefijo opcional `MATCH#<platform>#`.
 

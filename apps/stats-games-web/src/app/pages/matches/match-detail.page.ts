@@ -30,7 +30,7 @@ import {
   withCommunityBenchmarks,
 } from '../../utils/match-analysis.util';
 import { mapCommunityBenchmarksFromApi } from '../../utils/community-stats.util';
-import { resolveMatchMapTelemetry } from '../../utils/match-map-telemetry.mock';
+import { resolveMatchMapTelemetry } from '../../utils/match-map-lol.util';
 import { toMatchCardStats, mergeMatchStats } from '../../utils/match-stats.util';
 
 @Component({
@@ -182,9 +182,12 @@ export class MatchDetailPageComponent implements OnInit {
     if (!current) return null;
     const base = resolveMatchMapTelemetry(current);
     if (!base) return null;
-    const official = this.fortniteOfficial.map();
-    const mapAssetUrl = official?.poisUrl || official?.blankUrl || base.mapAssetUrl;
-    return { ...base, mapAssetUrl };
+    if (base.platform.toLowerCase().includes('fortnite') || base.source === 'fortnite_preview') {
+      const official = this.fortniteOfficial.map();
+      const mapAssetUrl = official?.poisUrl || official?.blankUrl || base.mapAssetUrl;
+      return { ...base, mapAssetUrl };
+    }
+    return base;
   });
 
   constructor() {

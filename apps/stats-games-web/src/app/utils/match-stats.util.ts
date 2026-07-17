@@ -31,6 +31,7 @@ export interface MatchStatsView {
   teamBarons?: number | null;
   teamDragons?: number | null;
   teamTowers?: number | null;
+  mapTelemetry?: Record<string, unknown> | null;
 }
 
 export interface MatchOutcome {

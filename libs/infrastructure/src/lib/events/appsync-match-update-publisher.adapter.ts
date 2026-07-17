@@ -37,6 +37,7 @@ const MATCH_UPDATE_FRAGMENT = /* GraphQL */ `
       teamBarons
       teamDragons
       teamTowers
+      mapTelemetry
     }
   }
 `;

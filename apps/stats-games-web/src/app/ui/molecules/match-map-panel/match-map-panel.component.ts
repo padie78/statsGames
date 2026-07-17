@@ -26,11 +26,29 @@ const EVENT_META: Record<
   spawn: { label: 'Spawn', color: '#8fa3c4', tone: 'muted' },
   kill: { label: 'Kill', color: '#f5d075', tone: 'lime' },
   death: { label: 'Death', color: '#ff9a9a', tone: 'muted' },
+  assist: { label: 'Assist', color: '#86efac', tone: 'lime' },
   storm: { label: 'Storm', color: '#22d3ee', tone: 'cyan' },
   rotate: { label: 'Rotate', color: '#a78bfa', tone: 'purple' },
   damage: { label: 'Damage', color: '#fb923c', tone: 'muted' },
   loot: { label: 'Cierre', color: '#86efac', tone: 'lime' },
+  objective: { label: 'Objetivo', color: '#3de0f5', tone: 'cyan' },
+  turret: { label: 'Torre', color: '#fbbf24', tone: 'lime' },
+  dragon: { label: 'Dragón', color: '#f5d075', tone: 'lime' },
+  baron: { label: 'Barón', color: '#a78bfa', tone: 'purple' },
+  ward: { label: 'Ward', color: '#22d3ee', tone: 'cyan' },
 };
+
+const FORTNITE_LEGEND: MatchMapEventType[] = ['spawn', 'kill', 'storm', 'rotate', 'death', 'loot'];
+const LOL_LEGEND: MatchMapEventType[] = [
+  'spawn',
+  'kill',
+  'assist',
+  'death',
+  'dragon',
+  'baron',
+  'turret',
+  'loot',
+];
 
 @Component({
   standalone: true,
@@ -38,23 +56,25 @@ const EVENT_META: Record<
   encapsulation: ViewEncapsulation.None,
   imports: [NeonBadgeComponent],
   template: `
-    <section class="sg-match-map u-surface-card u-p-5" aria-label="Mapa de partida Fortnite">
+    <section class="sg-match-map u-surface-card u-p-5" [attr.aria-label]="mapAriaLabel">
       <header class="sg-match-map__header">
         <div>
-          <h3 class="sg-match-map__title">Mapa de la partida</h3>
+          <h3 class="sg-match-map__title">{{ mapTitle }}</h3>
           <p class="sg-match-map__subtitle u-m-0">
-            Reproducí o mové el timeline · cada etapa se describe abajo · {{ telemetry.seasonLabel }}
+            Reproducí o mové el timeline · hitos y movimientos · {{ telemetry.seasonLabel }}
           </p>
         </div>
         @if (telemetry.isPreview) {
-          <sg-neon-badge tone="purple">Preview telemetría</sg-neon-badge>
+          <sg-neon-badge tone="purple">{{ previewBadge }}</sg-neon-badge>
+        } @else if (telemetry.source === 'riot_timeline_v5') {
+          <sg-neon-badge tone="cyan">Timeline-V5</sg-neon-badge>
+        } @else if (telemetry.source === 'live_client') {
+          <sg-neon-badge tone="lime">Live Client</sg-neon-badge>
         }
       </header>
 
       @if (telemetry.isPreview) {
-        <p class="sg-match-map__preview u-m-0">
-          Datos simulados localmente. El companion enviará path real + eventos por webhook/S3.
-        </p>
+        <p class="sg-match-map__preview u-m-0">{{ previewCopy }}</p>
       }
 
       <div class="sg-match-map__layout">
@@ -229,11 +249,41 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
   readonly playing = signal(false);
   readonly selectedEvent = signal<MatchMapEvent | null>(null);
 
-  readonly legendTypes: MatchMapEventType[] = ['spawn', 'kill', 'storm', 'rotate', 'death', 'loot'];
-
   readonly formatMapTime = formatMapTime;
 
   private playbackTimer: ReturnType<typeof setInterval> | null = null;
+
+  get isLol(): boolean {
+    const platform = (this.telemetry?.platform ?? '').toLowerCase();
+    return (
+      platform === 'league_of_legends' ||
+      platform === 'lol' ||
+      this.telemetry?.source === 'riot_timeline_v5' ||
+      this.telemetry?.source === 'live_client'
+    );
+  }
+
+  get mapTitle(): string {
+    return this.isLol ? 'Mapa · Grieta del Invocador' : 'Mapa de la partida';
+  }
+
+  get mapAriaLabel(): string {
+    return this.isLol ? 'Mapa de partida League of Legends' : 'Mapa de partida Fortnite';
+  }
+
+  get previewBadge(): string {
+    return this.isLol ? 'Preview estimado' : 'Preview telemetría';
+  }
+
+  get previewCopy(): string {
+    return this.isLol
+      ? 'Path e hitos estimados por rol/KDA. Cuando el poller traiga Match-Timeline-V5, verás coordenadas Riot reales (0–15000). Live Client queda para companion in-match.'
+      : 'Datos simulados localmente. El companion enviará path real + eventos por webhook/S3.';
+  }
+
+  get legendTypes(): MatchMapEventType[] {
+    return this.isLol ? LOL_LEGEND : FORTNITE_LEGEND;
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['telemetry']) {
@@ -255,7 +305,6 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
     return [...this.telemetry.events].sort((a, b) => a.t - b.t);
   }
 
-  /** Etapa activa según el tiempo del timeline (o el nodo seleccionado). */
   currentStage(): MatchMapEvent | null {
     const events = this.sortedEvents();
     if (events.length === 0) return null;
@@ -282,6 +331,12 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
   stagePhase(t: number): string {
     const duration = Math.max(this.telemetry.durationSec, 1);
     const ratio = t / duration;
+    if (this.isLol) {
+      if (ratio < 0.2) return 'Early game';
+      if (ratio < 0.55) return 'Mid game';
+      if (ratio < 0.8) return 'Late game';
+      return 'Endgame';
+    }
     if (ratio < 0.22) return 'Early game';
     if (ratio < 0.55) return 'Mid game';
     if (ratio < 0.78) return 'Late game';
@@ -311,7 +366,7 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
   }
 
   eventKey(event: MatchMapEvent): string {
-    return `${event.t}-${event.type}-${event.poi ?? ''}`;
+    return `${event.t}-${event.type}-${event.poi ?? ''}-${event.label ?? ''}`;
   }
 
   pathPoints(): string {
@@ -334,19 +389,20 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
   }
 
   eventColor(type: MatchMapEventType): string {
-    return EVENT_META[type].color;
+    return EVENT_META[type]?.color ?? '#8fa3c4';
   }
 
   eventLabel(type: MatchMapEventType): string {
-    return EVENT_META[type].label;
+    return EVENT_META[type]?.label ?? type;
   }
 
   eventTone(type: MatchMapEventType): 'cyan' | 'lime' | 'purple' | 'muted' {
-    return EVENT_META[type].tone;
+    return EVENT_META[type]?.tone ?? 'muted';
   }
 
   isEventActive(event: MatchMapEvent): boolean {
-    return Math.abs(event.t - this.currentTime()) <= 8;
+    const windowSec = this.isLol ? 20 : 8;
+    return Math.abs(event.t - this.currentTime()) <= windowSec;
   }
 
   isEventSelected(event: MatchMapEvent): boolean {
@@ -361,7 +417,7 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
 
   defaultDetail(event: MatchMapEvent): string {
     const place = event.poi ? ` en ${event.poi}` : '';
-    return `${eventLabelFallback(event.type)}${place} a los ${formatMapTime(event.t)}.`;
+    return `${this.eventLabel(event.type)}${place} a los ${formatMapTime(event.t)}.`;
   }
 
   onTimelineInput(event: Event): void {
@@ -404,8 +460,4 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
       this.playbackTimer = null;
     }
   }
-}
-
-function eventLabelFallback(type: MatchMapEventType): string {
-  return EVENT_META[type].label;
 }

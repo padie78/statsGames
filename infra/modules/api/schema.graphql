@@ -117,6 +117,7 @@ input MatchStatsInput {
   teamBarons: Int
   teamDragons: Int
   teamTowers: Int
+  mapTelemetry: AWSJSON
 }
 
 input MatchUpdateInput {
@@ -220,6 +221,8 @@ type MatchStats @aws_api_key @aws_cognito_user_pools {
   teamBarons: Int
   teamDragons: Int
   teamTowers: Int
+  """Path + hitos de mapa (Riot Timeline-V5 / Live Client / synthetic). JSON: {source,durationSec,path,events}"""
+  mapTelemetry: AWSJSON
 }
 
 type MatchUpdate @aws_api_key @aws_cognito_user_pools {
