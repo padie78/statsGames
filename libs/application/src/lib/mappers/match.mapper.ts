@@ -50,6 +50,15 @@ function extractStats(record: Record<string, unknown>): MatchStatsDto | undefine
   const shots = toOptionalInt(record['shots']);
   const shotPct = toOptionalFloat(record['shotPct']);
   const durationSec = toOptionalInt(record['durationSec'] ?? record['gameLength']);
+  const goldEarned = toOptionalInt(record['goldEarned'] ?? record['gold']);
+  const champLevel = toOptionalInt(record['champLevel'] ?? record['level']);
+  const teamObjectives =
+    record['teamObjectives'] && typeof record['teamObjectives'] === 'object'
+      ? (record['teamObjectives'] as Record<string, unknown>)
+      : null;
+  const teamBarons = toOptionalInt(record['teamBarons'] ?? teamObjectives?.['barons']);
+  const teamDragons = toOptionalInt(record['teamDragons'] ?? teamObjectives?.['dragons']);
+  const teamTowers = toOptionalInt(record['teamTowers'] ?? teamObjectives?.['towers']);
 
   // Rocket League: goals actúan como "kills" en KPIs genéricos.
   const resolvedKills = kills ?? goals;
@@ -76,7 +85,12 @@ function extractStats(record: Record<string, unknown>): MatchStatsDto | undefine
     saves != null ||
     shots != null ||
     shotPct != null ||
-    durationSec != null;
+    durationSec != null ||
+    goldEarned != null ||
+    champLevel != null ||
+    teamBarons != null ||
+    teamDragons != null ||
+    teamTowers != null;
 
   if (!hasAny) return undefined;
 
@@ -103,6 +117,11 @@ function extractStats(record: Record<string, unknown>): MatchStatsDto | undefine
     shots,
     shotPct,
     durationSec,
+    goldEarned,
+    champLevel,
+    teamBarons,
+    teamDragons,
+    teamTowers,
   };
 }
 

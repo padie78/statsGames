@@ -32,6 +32,11 @@ const MATCH_UPDATE_FRAGMENT = /* GraphQL */ `
       shots
       shotPct
       durationSec
+      goldEarned
+      champLevel
+      teamBarons
+      teamDragons
+      teamTowers
     }
   }
 `;

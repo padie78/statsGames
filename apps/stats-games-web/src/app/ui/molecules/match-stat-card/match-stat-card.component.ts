@@ -38,6 +38,11 @@ export interface MatchCardStats {
   shots?: number | null;
   shotPct?: number | null;
   durationSec?: number | null;
+  goldEarned?: number | null;
+  champLevel?: number | null;
+  teamBarons?: number | null;
+  teamDragons?: number | null;
+  teamTowers?: number | null;
 }
 
 @Component({

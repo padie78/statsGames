@@ -24,6 +24,11 @@ export const MatchStatsDtoSchema = z.object({
   shots: z.number().int().nonnegative().optional(),
   shotPct: z.number().nonnegative().optional(),
   durationSec: z.number().int().nonnegative().optional(),
+  goldEarned: z.number().int().nonnegative().optional(),
+  champLevel: z.number().int().nonnegative().optional(),
+  teamBarons: z.number().int().nonnegative().optional(),
+  teamDragons: z.number().int().nonnegative().optional(),
+  teamTowers: z.number().int().nonnegative().optional(),
 });
 
 export type MatchStatsDto = z.infer<typeof MatchStatsDtoSchema>;

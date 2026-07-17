@@ -300,6 +300,93 @@ export function buildDualTrendChartOptions(
   };
 }
 
+/** Curva dual CS / Gold con ejes independientes (timeline LoL estimado). */
+export function buildEconomyTimelineChartOptions(
+  csTrend: TrendChartPoint[],
+  goldTrend: TrendChartPoint[],
+): EChartsOption {
+  if (!csTrend.length && !goldTrend.length) return {};
+  const categories = (csTrend.length ? csTrend : goldTrend).map((point) => point.label);
+
+  return {
+    animationDuration: 720,
+    grid: {
+      left: 8,
+      right: 12,
+      top: 36,
+      bottom: 0,
+      containLabel: true,
+    },
+    legend: {
+      top: 0,
+      right: 0,
+      textStyle: { color: CHART_COLORS.text, fontSize: 11 },
+      itemWidth: 10,
+      itemHeight: 10,
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(10, 14, 24, 0.94)',
+      borderColor: CHART_COLORS.border,
+      textStyle: { color: '#f2f5fb', fontSize: 12 },
+    },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      boundaryGap: false,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: CHART_COLORS.textMuted, fontSize: 11 },
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: 'CS',
+        nameTextStyle: { color: CHART_COLORS.textMuted, fontSize: 10 },
+        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: 'dashed' } },
+        axisLabel: { color: CHART_COLORS.textMuted, fontSize: 11 },
+      },
+      {
+        type: 'value',
+        name: 'Gold',
+        nameTextStyle: { color: CHART_COLORS.textMuted, fontSize: 10 },
+        splitLine: { show: false },
+        axisLabel: { color: CHART_COLORS.textMuted, fontSize: 11 },
+      },
+    ],
+    series: [
+      {
+        name: 'CS acum.',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        yAxisIndex: 0,
+        data: csTrend.map((point) => point.value),
+        lineStyle: { width: 3, color: CHART_COLORS.lime },
+        itemStyle: { color: CHART_COLORS.lime, borderColor: '#0a1020', borderWidth: 2 },
+        areaStyle: {
+          color: softGradient(CHART_COLORS.limeSoft, 'rgba(10, 16, 32, 0)'),
+        },
+      },
+      {
+        name: 'Gold acum.',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        yAxisIndex: 1,
+        data: goldTrend.map((point) => point.value),
+        lineStyle: { width: 3, color: CHART_COLORS.gold },
+        itemStyle: { color: CHART_COLORS.gold, borderColor: '#0a1020', borderWidth: 2 },
+        areaStyle: {
+          color: softGradient(CHART_COLORS.goldSoft, 'rgba(10, 16, 32, 0)'),
+        },
+      },
+    ],
+  };
+}
+
 export function buildStatsRadarOptions(axes: StatsRadarAxis[]): EChartsOption {
   if (axes.length === 0) return {};
 

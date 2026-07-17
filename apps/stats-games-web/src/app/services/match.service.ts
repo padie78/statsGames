@@ -27,6 +27,11 @@ export interface MatchStatsView {
   shots?: number | null;
   shotPct?: number | null;
   durationSec?: number | null;
+  goldEarned?: number | null;
+  champLevel?: number | null;
+  teamBarons?: number | null;
+  teamDragons?: number | null;
+  teamTowers?: number | null;
 }
 
 export interface MatchUpdateView {
@@ -66,6 +71,11 @@ const MATCH_STATS_FIELDS = /* GraphQL */ `
     shots
     shotPct
     durationSec
+    goldEarned
+    champLevel
+    teamBarons
+    teamDragons
+    teamTowers
   }
 `;
 

@@ -1,19 +1,35 @@
 import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonContent } from '@ionic/angular/standalone';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import {
+  matchBackendPlatform,
+  selectedGameFromBackend,
+  type SelectedGame,
+} from '../../core/game/selected-game';
+import {
+  MOCK_COMMUNITY_BENCHMARKS,
+  type CommunityBenchmarks,
+} from '../../data/community-mock.data';
 import { resolveMatchHistory } from '../../data/match-mock.data';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchAiService, type MatchAiReportView } from '../../services/match-ai.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { FortniteOfficialMediaService } from '../../services/fortnite-official-media.service';
+import {
+  StatsService,
+  currentWeeklyPeriodIdForStats,
+} from '../../services/stats.service';
 import { MatchNotificationsStore } from '../../stores/match-notifications.store';
 import { MatchAnalysisPanelComponent, MatchMapPanelComponent, MatchStatCardComponent } from '../../ui';
 import {
   buildMatchAnalysisReport,
   formatMatchDetailMeta,
   matchAiReportToAnalysisReport,
+  withCommunityBenchmarks,
 } from '../../utils/match-analysis.util';
+import { mapCommunityBenchmarksFromApi } from '../../utils/community-stats.util';
 import { resolveMatchMapTelemetry } from '../../utils/match-map-telemetry.mock';
 import { toMatchCardStats, mergeMatchStats } from '../../utils/match-stats.util';
 
@@ -98,6 +114,7 @@ export class MatchDetailPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly matchService = inject(MatchService);
   private readonly matchAi = inject(MatchAiService);
+  private readonly statsService = inject(StatsService);
   private readonly fortniteOfficial = inject(FortniteOfficialMediaService);
   private readonly realtime = inject(AppSyncRealtimeService);
   private readonly notifications = inject(MatchNotificationsStore);
@@ -107,6 +124,7 @@ export class MatchDetailPageComponent implements OnInit {
   readonly match = signal<MatchUpdateView | null>(null);
   readonly recentMatches = signal<MatchUpdateView[]>([]);
   readonly aiReport = signal<MatchAiReportView | null>(null);
+  readonly communityBenchmarks = signal<CommunityBenchmarks | null>(null);
 
   readonly cardStats = computed(() => toMatchCardStats(this.match()?.stats));
 
@@ -132,6 +150,9 @@ export class MatchDetailPageComponent implements OnInit {
 
   readonly report = computed(() => {
     const current = this.match();
+    const recent = this.recentMatches();
+    const benchmarks = this.communityBenchmarks();
+
     if (!current) {
       return buildMatchAnalysisReport({
         match: {
@@ -145,14 +166,15 @@ export class MatchDetailPageComponent implements OnInit {
     }
 
     const bedrock = this.aiReport();
-    if (bedrock && bedrock.status !== 'failed') {
-      return matchAiReportToAnalysisReport(bedrock, current, this.recentMatches());
-    }
+    const base =
+      bedrock && bedrock.status !== 'failed'
+        ? matchAiReportToAnalysisReport(bedrock, current, recent)
+        : buildMatchAnalysisReport({
+            match: current,
+            recentMatches: recent,
+          });
 
-    return buildMatchAnalysisReport({
-      match: current,
-      recentMatches: this.recentMatches(),
-    });
+    return withCommunityBenchmarks(base, current, recent, benchmarks);
   });
 
   readonly mapTelemetry = computed(() => {
@@ -265,6 +287,7 @@ export class MatchDetailPageComponent implements OnInit {
       }
 
       this.match.set(found);
+      await this.loadCommunityBenchmarks(found.platform);
 
       try {
         const ai = await this.matchAi.getMatchAiReport(userId, matchId);
@@ -277,5 +300,38 @@ export class MatchDetailPageComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private async loadCommunityBenchmarks(platformRaw: string): Promise<void> {
+    const uiGame: SelectedGame = selectedGameFromBackend(platformRaw);
+    const backendPlatform = matchBackendPlatform(uiGame);
+    const periodId = currentWeeklyPeriodIdForStats();
+
+    try {
+      const community = await firstValueFrom(
+        this.statsService.getCommunityBenchmarks(backendPlatform ?? 'fortnite', periodId),
+      );
+
+      if (community && community.sampleSize > 0) {
+        this.communityBenchmarks.set(
+          mapCommunityBenchmarksFromApi({
+            platform: selectedGameFromBackend(community.platform, uiGame),
+            sampleSize: community.sampleSize,
+            avgWinRate: community.avgWinRate,
+            avgKd: community.avgKd,
+            avgKillsPerWeek: community.avgKillsPerWeek,
+            avgMatchesPerWeek: community.avgMatchesPerWeek,
+            winRateStd: community.winRateStd,
+            kdStd: community.kdStd,
+            killsStd: community.killsStd,
+          }),
+        );
+        return;
+      }
+    } catch {
+      // Fallback a mock local si no hay rollups comunitarios.
+    }
+
+    this.communityBenchmarks.set(MOCK_COMMUNITY_BENCHMARKS[uiGame] ?? null);
   }
 }

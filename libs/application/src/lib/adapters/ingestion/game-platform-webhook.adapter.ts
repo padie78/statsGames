@@ -57,6 +57,12 @@ const STAT_BUILDERS: Record<GamePlatform, StatBuilder> = {
     cs: numberStat(payload, 'cs'),
     visionScore: numberStat(payload, 'visionScore', 'vision'),
     queueId: numberStat(payload, 'queueId', 'queue-id'),
+    durationSec: numberStat(payload, 'durationSec', 'duration', 'gameLength'),
+    goldEarned: numberStat(payload, 'goldEarned', 'gold'),
+    champLevel: numberStat(payload, 'champLevel', 'level'),
+    teamBarons: numberStat(payload, 'teamBarons', 'barons'),
+    teamDragons: numberStat(payload, 'teamDragons', 'dragons'),
+    teamTowers: numberStat(payload, 'teamTowers', 'towers'),
     won: booleanStat(payload, 'won'),
   }),
   cs2: (payload) => ({

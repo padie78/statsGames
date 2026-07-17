@@ -112,6 +112,11 @@ input MatchStatsInput {
   shots: Int
   shotPct: Float
   durationSec: Int
+  goldEarned: Int
+  champLevel: Int
+  teamBarons: Int
+  teamDragons: Int
+  teamTowers: Int
 }
 
 input MatchUpdateInput {
@@ -210,6 +215,11 @@ type MatchStats @aws_api_key @aws_cognito_user_pools {
   shots: Int
   shotPct: Float
   durationSec: Int
+  goldEarned: Int
+  champLevel: Int
+  teamBarons: Int
+  teamDragons: Int
+  teamTowers: Int
 }
 
 type MatchUpdate @aws_api_key @aws_cognito_user_pools {

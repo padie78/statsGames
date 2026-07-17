@@ -26,6 +26,11 @@ export interface MatchStatsView {
   shots?: number | null;
   shotPct?: number | null;
   durationSec?: number | null;
+  goldEarned?: number | null;
+  champLevel?: number | null;
+  teamBarons?: number | null;
+  teamDragons?: number | null;
+  teamTowers?: number | null;
 }
 
 export interface MatchOutcome {
@@ -78,6 +83,11 @@ export function toMatchCardStats(stats?: MatchStatsView | null): MatchCardStats 
     shots: stats.shots ?? undefined,
     shotPct: stats.shotPct ?? undefined,
     durationSec: stats.durationSec ?? undefined,
+    goldEarned: stats.goldEarned ?? undefined,
+    champLevel: stats.champLevel ?? undefined,
+    teamBarons: stats.teamBarons ?? undefined,
+    teamDragons: stats.teamDragons ?? undefined,
+    teamTowers: stats.teamTowers ?? undefined,
   };
 }
 
