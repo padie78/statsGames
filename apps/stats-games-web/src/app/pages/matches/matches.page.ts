@@ -18,6 +18,7 @@ import {
 import {
   formatMatchRelativeTime,
   groupMatchesByDay,
+  mergeMatchUpdates,
   sortMatches,
   toMatchCardStats,
   type MatchSortKey,
@@ -189,26 +190,49 @@ export class MatchesPageComponent implements OnInit {
   );
 
   constructor() {
-    effect(() => {
-      const tick = this.gameContext.refreshTick();
-      if (tick === 0) return;
+    effect(
+      () => {
+        const tick = this.gameContext.refreshTick();
+        if (tick === 0) return;
 
-      const active = this.gameContext.activeGame();
-      if (active) {
-        this.platformFilter.set(active);
-        void this.loadMatches();
-      }
-    });
+        const active = this.gameContext.activeGame();
+        if (active) {
+          this.platformFilter.set(active);
+          void this.loadMatches();
+        }
+      },
+      { allowSignalWrites: true },
+    );
 
-    effect(() => {
-      const userId = this.auth.userId();
-      if (!userId) return;
-      this.realtime.ensureConnected(userId);
-      const liveMatches = this.realtime.liveMatches();
-      if (!liveMatches.length) return;
+    // Mismo feed que el toast de notificaciones: merge live → lista sin F5.
+    effect(
+      () => {
+        const userId = this.auth.userId();
+        if (!userId) return;
+        this.realtime.ensureConnected(userId);
 
-      this.allMatches.update((current) => mergeMatches(liveMatches, current));
-    });
+        const liveMatches = this.realtime.liveMatches();
+        if (!liveMatches.length) return;
+
+        const newest = liveMatches[0];
+        this.allMatches.update((current) => mergeMatchUpdates(liveMatches, current));
+
+        // Si el filtro activo oculta la partida nueva, abrí ese juego / "all".
+        const filter = this.platformFilter();
+        if (
+          newest?.platform &&
+          filter !== 'all' &&
+          filter !== newest.platform
+        ) {
+          this.platformFilter.set(newest.platform as MatchPlatformFilter);
+        }
+
+        if (this.loading()) {
+          this.loading.set(false);
+        }
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   ngOnInit(): void {
@@ -243,7 +267,7 @@ export class MatchesPageComponent implements OnInit {
 
     try {
       const rows = await this.matchService.listPlayerMatchesOnce(userId, { limit: 100 });
-      this.allMatches.set(mergeMatches(this.realtime.liveMatches(), rows));
+      this.allMatches.set(mergeMatchUpdates(this.realtime.liveMatches(), rows));
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Error cargando partidas');
     } finally {
@@ -252,21 +276,3 @@ export class MatchesPageComponent implements OnInit {
   }
 }
 
-function mergeMatches(
-  incoming: MatchUpdateView[],
-  current: MatchUpdateView[],
-): MatchUpdateView[] {
-  const byId = new Map<string, MatchUpdateView>();
-
-  for (const match of current) {
-    byId.set(match.matchId, match);
-  }
-
-  for (const match of incoming) {
-    byId.set(match.matchId, match);
-  }
-
-  return [...byId.values()].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
-}

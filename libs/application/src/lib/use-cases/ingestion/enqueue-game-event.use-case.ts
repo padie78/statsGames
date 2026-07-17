@@ -4,6 +4,7 @@ import {
   GameWebhookPayloadSchema,
   type GameWebhookPayloadDto,
 } from '../../dto/ingestion/game-webhook.dto';
+import { normalizeGameWebhookEvent } from '../../adapters/ingestion/game-platform-webhook.adapter';
 import type { IPlatformAccountResolver } from '../../ports/player/platform-account-resolver.port';
 import type { ILogger } from '../../ports/shared/logger.port';
 
@@ -27,18 +28,14 @@ export class EnqueueGameEventUseCase {
     const platform = Platform.from(input.platform);
     const payload: GameWebhookPayloadDto = GameWebhookPayloadSchema.parse(input.payload);
     const userId = await this.resolveUserId(platform.value, payload);
-
-    const stats: Record<string, unknown> = { ...(payload.stats ?? {}) };
-    if (payload.summary) stats['summary'] = payload.summary;
-    if (payload.mode) stats['mode'] = payload.mode;
-    if (payload.map) stats['map'] = payload.map;
+    const normalized = normalizeGameWebhookEvent(platform.value, payload);
 
     const message = {
       userId,
-      matchId: payload.matchId,
+      matchId: normalized.matchId,
       platform: platform.value,
-      stats,
-      occurredAtIso: payload.occurredAt ?? new Date().toISOString(),
+      stats: normalized.stats,
+      occurredAtIso: normalized.occurredAtIso,
       correlationId: input.correlationId,
     };
 

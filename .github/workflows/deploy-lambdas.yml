@@ -72,6 +72,18 @@ jobs:
           - path: ingestion/cs2_match_poller
             artifact: cs2_match_poller
             tf_output: cs2_match_poller_name
+          - path: ingestion/dota2_match_poller
+            artifact: dota2_match_poller
+            tf_output: dota2_match_poller_name
+          - path: ingestion/overwatch2_match_poller
+            artifact: overwatch2_match_poller
+            tf_output: overwatch2_match_poller_name
+          - path: ingestion/clash_royale_match_poller
+            artifact: clash_royale_match_poller
+            tf_output: clash_royale_match_poller_name
+          - path: ingestion/brawl_stars_match_poller
+            artifact: brawl_stars_match_poller
+            tf_output: brawl_stars_match_poller_name
           - path: ingestion/match_ai_analyzer
             artifact: match_ai_analyzer
             tf_output: match_ai_analyzer_name
@@ -148,6 +160,18 @@ jobs:
           - path: ingestion/cs2_match_poller
             artifact: cs2_match_poller
             tf_output: cs2_match_poller_name
+          - path: ingestion/dota2_match_poller
+            artifact: dota2_match_poller
+            tf_output: dota2_match_poller_name
+          - path: ingestion/overwatch2_match_poller
+            artifact: overwatch2_match_poller
+            tf_output: overwatch2_match_poller_name
+          - path: ingestion/clash_royale_match_poller
+            artifact: clash_royale_match_poller
+            tf_output: clash_royale_match_poller_name
+          - path: ingestion/brawl_stars_match_poller
+            artifact: brawl_stars_match_poller
+            tf_output: brawl_stars_match_poller_name
           - path: ingestion/match_ai_analyzer
             artifact: match_ai_analyzer
             tf_output: match_ai_analyzer_name

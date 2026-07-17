@@ -10,6 +10,12 @@ aws_region               = "eu-central-1"
 # lol_region = "europe"
 # steam_web_api_key = "..."     # Fase 1 — steamcommunity.com/dev/apikey
 # ballchasing_api_key = "..."    # Fase 1 — ballchasing.com (Rocket League)
+# dota2_api_key = "..."          # Opcional; fallback a steam_web_api_key
+# overwatch2_api_url = "https://partner.example.com/ow2"
+# overwatch2_api_key = "..."
+# supercell_api_key = "..."      # Clash Royale + Brawl Stars
+# clash_royale_api_key = "..."   # Opcional; fallback a supercell_api_key
+# brawl_stars_api_key = "..."    # Opcional; fallback a supercell_api_key
 # bedrock_model_id = "anthropic.claude-3-haiku-20240307-v1:0"  # post-match AI (Valorant)
 
 tags = {

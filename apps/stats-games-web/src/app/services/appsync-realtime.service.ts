@@ -124,10 +124,25 @@ export class AppSyncRealtimeService {
             const payload = msg.data?.onMatchUpdate;
             if (!payload) return;
             this._liveMatches.update((current) => {
-              if (current.some((m) => m.matchId === payload.matchId)) {
-                return current;
+              const existing = current.find((m) => m.matchId === payload.matchId);
+              if (!existing) {
+                return [payload, ...current].slice(0, 25);
               }
-              return [payload, ...current].slice(0, 25);
+
+              const merged = {
+                ...existing,
+                ...payload,
+                summary: payload.summary || existing.summary,
+                stats: {
+                  ...(existing.stats ?? {}),
+                  ...(payload.stats ?? {}),
+                  ...Object.fromEntries(
+                    Object.entries(payload.stats ?? {}).filter(([, v]) => v != null && v !== ''),
+                  ),
+                },
+              };
+
+              return [merged, ...current.filter((m) => m.matchId !== payload.matchId)].slice(0, 25);
             });
           },
           error: (err) => {

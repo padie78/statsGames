@@ -63,6 +63,22 @@ output "cs2_match_poller_name" {
   value = aws_lambda_function.cs2_match_poller.function_name
 }
 
+output "dota2_match_poller_name" {
+  value = aws_lambda_function.additional_match_pollers["dota2"].function_name
+}
+
+output "overwatch2_match_poller_name" {
+  value = aws_lambda_function.additional_match_pollers["overwatch2"].function_name
+}
+
+output "clash_royale_match_poller_name" {
+  value = aws_lambda_function.additional_match_pollers["clash_royale"].function_name
+}
+
+output "brawl_stars_match_poller_name" {
+  value = aws_lambda_function.additional_match_pollers["brawl_stars"].function_name
+}
+
 output "match_ai_analyzer_name" {
   value = aws_lambda_function.match_ai_analyzer.function_name
 }

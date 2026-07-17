@@ -71,6 +71,67 @@ variable "steam_web_api_key" {
   description = "Steam Web API key (poller CS2)."
 }
 
+variable "dota2_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "API key alternativa para Dota 2; si está vacía se usa steam_web_api_key."
+}
+
+variable "dota2_poll_schedule" {
+  type    = string
+  default = "rate(5 minutes)"
+}
+
+variable "overwatch2_api_url" {
+  type        = string
+  default     = ""
+  description = "Base URL de API partner/bridge para Overwatch 2."
+}
+
+variable "overwatch2_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Bearer token opcional para OVERWATCH2_API_URL."
+}
+
+variable "overwatch2_poll_schedule" {
+  type    = string
+  default = "rate(5 minutes)"
+}
+
+variable "supercell_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Bearer token Supercell para Clash Royale y Brawl Stars."
+}
+
+variable "clash_royale_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Token específico Clash Royale; si está vacío se usa supercell_api_key."
+}
+
+variable "clash_royale_poll_schedule" {
+  type    = string
+  default = "rate(5 minutes)"
+}
+
+variable "brawl_stars_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Token específico Brawl Stars; si está vacío se usa supercell_api_key."
+}
+
+variable "brawl_stars_poll_schedule" {
+  type    = string
+  default = "rate(5 minutes)"
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags adicionales propagados a todos los recursos."

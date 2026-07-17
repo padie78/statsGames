@@ -6,12 +6,11 @@
  *
  * Uso:
  *   npm run send:match -- --platform valorant --kills 18 --deaths 14 --assists 6
- *   npm run send:match -- --platform league_of_legends --platform-user-id "Diego#XQ37" --kills 8 --deaths 3 --assists 12
- *   npm run send:match -- --platform league_of_legends --platform-user-id "Diego#XQ37" --champion Ahri --role MIDDLE --cs 210 --vision 32
- *   npm run send:match -- --platform cs2 --kills 22 --deaths 14 --assists 5
- *   npm run send:match -- --platform rocket_league --kills 5
- *   npm run send:match -- --platform fortnite --kills 8 --placement 1
- *   npm run send:match -- --platform roblox --kills 8 --deaths 2 --placement 3
+ *   npm run send:match -- --platform league_of_legends --platform-user-id "Diego#XQ37" --champion Ahri --role MIDDLE --cs 210
+ *   npm run send:match -- --platform dota2 --hero "Shadow Fiend" --gpm 620 --xpm 770
+ *   npm run send:match -- --platform overwatch2 --hero Tracer --role Damage --damage 12000
+ *   npm run send:match -- --platform clash_royale --crowns 3 --trophies 6500
+ *   npm run send:match -- --platform brawl_stars --brawler Shelly --trophies 800
  *
  * También acepta --user-id (Cognito sub) en lugar de platform user id.
  */
@@ -23,8 +22,6 @@ import { fileURLToPath } from 'node:url';
 
 loadDotEnv(resolve(dirname(fileURLToPath(import.meta.url)), '../../.env'));
 
-const PLATFORMS = new Set(['valorant', 'league_of_legends', 'cs2', 'rocket_league', 'fortnite', 'roblox']);
-
 const LOL_QUEUE_MODE = {
   420: 'Ranked Solo',
   440: 'Ranked Flex',
@@ -33,6 +30,163 @@ const LOL_QUEUE_MODE = {
   430: 'Normal Blind',
   700: 'Clash',
   1700: 'Arena',
+};
+
+const PLATFORM_ADAPTERS = {
+  valorant: {
+    label: 'Valorant',
+    mode: 'Competitive',
+    map: 'Ascent',
+    matchPrefix: 'val',
+    buildStats: (ctx) => ({
+      ...baseCombatStats(ctx),
+      headshotPct: num(ctx.values.hs ?? ctx.values.headshotPct ?? '24'),
+      agent: ctx.values.agent || 'Jett',
+      roundsWon: num(ctx.values['rounds-won'] ?? '13'),
+      roundsLost: num(ctx.values['rounds-lost'] ?? '9'),
+      score: num(ctx.values.score ?? '4400'),
+      acs: num(ctx.values.acs ?? '245'),
+      won: bool(ctx.values.won, true),
+      placement: bool(ctx.values.won, true) ? 1 : 2,
+    }),
+  },
+  league_of_legends: {
+    label: 'League of Legends',
+    mode: (ctx) => LOL_QUEUE_MODE[num(ctx.values['queue-id'] ?? '420')] || `Queue ${ctx.values['queue-id']}`,
+    map: "Summoner's Rift",
+    matchPrefix: 'lol',
+    buildStats: (ctx) => ({
+      ...baseCombatStats(ctx),
+      champion: ctx.values.champion || 'Ahri',
+      role: ctx.values.role || 'MIDDLE',
+      cs: num(ctx.values.cs ?? '210'),
+      visionScore: num(ctx.values.vision ?? ctx.values.visionScore ?? '28'),
+      queueId: num(ctx.values['queue-id'] ?? '420'),
+      won: bool(ctx.values.won, true),
+      placement: bool(ctx.values.won, true) ? 1 : 2,
+      source: 'send-match-cli-simulated-riot',
+    }),
+  },
+  cs2: {
+    label: 'CS2',
+    mode: 'Premier',
+    map: 'de_mirage',
+    matchPrefix: 'cs2',
+    buildStats: (ctx) => ({
+      ...baseCombatStats(ctx),
+      adr: num(ctx.values.adr ?? '85'),
+      headshotPct: num(ctx.values.hs ?? ctx.values.headshotPct ?? '38'),
+      won: bool(ctx.values.won, true),
+      placement: bool(ctx.values.won, true) ? 1 : 2,
+    }),
+  },
+  dota2: {
+    label: 'Dota 2',
+    mode: 'Ranked',
+    map: 'Dota 2',
+    matchPrefix: 'dota2',
+    buildStats: (ctx) => ({
+      ...baseCombatStats(ctx),
+      hero: ctx.values.hero || 'Shadow Fiend',
+      gpm: num(ctx.values.gpm ?? '620'),
+      xpm: num(ctx.values.xpm ?? '770'),
+      won: bool(ctx.values.won, true),
+      placement: bool(ctx.values.won, true) ? 1 : 2,
+    }),
+  },
+  overwatch2: {
+    label: 'Overwatch 2',
+    mode: 'Competitive',
+    map: 'Control',
+    matchPrefix: 'ow2',
+    buildStats: (ctx) => ({
+      ...baseCombatStats(ctx),
+      hero: ctx.values.hero || 'Tracer',
+      role: ctx.values.role || 'Damage',
+      damage: num(ctx.values.damage ?? '12000'),
+      healing: num(ctx.values.healing ?? '0'),
+      won: bool(ctx.values.won, true),
+      placement: bool(ctx.values.won, true) ? 1 : 2,
+    }),
+  },
+  rocket_league: {
+    label: 'Rocket League',
+    mode: '2v2',
+    map: 'DFH Stadium',
+    matchPrefix: 'rl',
+    buildStats: (ctx) => {
+      const goals = num(ctx.values.goals ?? ctx.values.kills ?? '4');
+      return {
+        goals,
+        kills: goals,
+        deaths: 0,
+        assists: num(ctx.values.assists ?? '1'),
+        saves: num(ctx.values.saves ?? '2'),
+        shots: num(ctx.values.shots ?? '8'),
+        shotPct: num(ctx.values['shot-pct'] ?? '42'),
+        score: num(ctx.values.score ?? '650'),
+        won: bool(ctx.values.won, true),
+        placement: bool(ctx.values.won, true) ? 1 : 2,
+      };
+    },
+  },
+  fortnite: {
+    label: 'Fortnite',
+    mode: 'Battle Royale',
+    matchPrefix: 'fn',
+    buildStats: (ctx) => ({
+      ...baseCombatStats(ctx),
+      placement: num(ctx.values.placement ?? '1'),
+      won: num(ctx.values.placement ?? '1') === 1 || bool(ctx.values.won, false),
+    }),
+  },
+  clash_royale: {
+    label: 'Clash Royale',
+    mode: 'Ladder',
+    map: 'Arena',
+    matchPrefix: 'cr',
+    buildStats: (ctx) => ({
+      crowns: num(ctx.values.crowns ?? '3'),
+      trophies: num(ctx.values.trophies ?? '6500'),
+      score: num(ctx.values.score ?? ctx.values.crowns ?? '3'),
+      kills: num(ctx.values.crowns ?? '3'),
+      deaths: 0,
+      won: bool(ctx.values.won, true),
+      placement: bool(ctx.values.won, true) ? 1 : 2,
+    }),
+  },
+  brawl_stars: {
+    label: 'Brawl Stars',
+    mode: 'Gem Grab',
+    map: 'Hard Rock Mine',
+    matchPrefix: 'bs',
+    buildStats: (ctx) => ({
+      ...baseCombatStats(ctx),
+      brawler: ctx.values.brawler || 'Shelly',
+      trophies: num(ctx.values.trophies ?? '800'),
+      won: bool(ctx.values.won, true),
+      placement: bool(ctx.values.won, true) ? 1 : 2,
+    }),
+  },
+  roblox: {
+    label: (ctx) => (ctx.mode.toLowerCase() === 'arsenal' ? 'Arsenal' : 'BedWars'),
+    mode: 'BedWars',
+    map: 'Classic',
+    matchPrefix: 'rbx',
+    buildStats: (ctx) => {
+      const isArsenal = ctx.mode.toLowerCase() === 'arsenal';
+      return {
+        ...baseCombatStats(ctx),
+        placement: num(ctx.values.placement ?? '2'),
+        experienceName: isArsenal ? 'Arsenal' : 'BedWars',
+        experienceId: isArsenal ? 'arsenal' : 'bedwars',
+        placeId: isArsenal ? '286090429' : '6872265039',
+        universeId: isArsenal ? '111958650' : '2619619496',
+        jobId: `cli-${ctx.matchId}`,
+        durationSec: num(ctx.values.duration ?? '180'),
+      };
+    },
+  },
 };
 
 const { values } = parseArgs({
@@ -52,8 +206,30 @@ const { values } = parseArgs({
     role: { type: 'string' },
     cs: { type: 'string' },
     vision: { type: 'string' },
+    visionScore: { type: 'string' },
     won: { type: 'string' },
     'queue-id': { type: 'string' },
+    hs: { type: 'string' },
+    headshotPct: { type: 'string' },
+    adr: { type: 'string' },
+    agent: { type: 'string' },
+    acs: { type: 'string' },
+    score: { type: 'string' },
+    'rounds-won': { type: 'string' },
+    'rounds-lost': { type: 'string' },
+    goals: { type: 'string' },
+    saves: { type: 'string' },
+    shots: { type: 'string' },
+    'shot-pct': { type: 'string' },
+    hero: { type: 'string' },
+    gpm: { type: 'string' },
+    xpm: { type: 'string' },
+    damage: { type: 'string' },
+    healing: { type: 'string' },
+    crowns: { type: 'string' },
+    trophies: { type: 'string' },
+    brawler: { type: 'string' },
+    duration: { type: 'string' },
     url: { type: 'string' },
     secret: { type: 'string' },
   },
@@ -61,10 +237,14 @@ const { values } = parseArgs({
 });
 
 const platformRaw = (values.platform || 'valorant').toLowerCase();
-const platform = PLATFORMS.has(platformRaw) ? platformRaw : 'valorant';
-if (platformRaw !== platform) {
-  console.warn(`Platform "${platformRaw}" no soportada; usando valorant.`);
+const adapter = PLATFORM_ADAPTERS[platformRaw];
+if (!adapter) {
+  console.error(
+    `Platform "${platformRaw}" no soportada. Usá una de: ${Object.keys(PLATFORM_ADAPTERS).join(', ')}`,
+  );
+  process.exit(1);
 }
+const platform = platformRaw;
 const baseUrl =
   values.url ||
   process.env.SG_WEBHOOK_URL ||
@@ -97,84 +277,36 @@ if (!userId && !platformUserId) {
 
 const matchId =
   values['match-id'] ||
-  `${platform}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-const lolQueueId = Number(values['queue-id'] || 420);
-const lolChampion = values.champion || 'Ahri';
-const lolRole = values.role || 'MIDDLE';
-const lolCs = Number(values.cs || 210);
-const lolVision = Number(values.vision || 28);
-const lolWon = values.won == null ? true : !['0', 'false', 'no', 'loss', 'derrota'].includes(String(values.won).toLowerCase());
-const lolKills = Number(values.kills) || 0;
-const lolDeaths = Number(values.deaths) || 0;
-const lolAssists = Number(values.assists) || 0;
-const lolMode = values.mode || LOL_QUEUE_MODE[lolQueueId] || `Queue ${lolQueueId}`;
-const lolMap = values.map || "Summoner's Rift";
+  `${adapter.matchPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const occurredAt = new Date().toISOString();
 const gameStartMs = Date.now() - 28 * 60 * 1000;
-const riotMatchId =
-  platform === 'league_of_legends'
-    ? values['match-id'] || `EUW1_${Date.now().toString().slice(-10)}`
-    : matchId;
-
-const mode =
-  values.mode ||
-  ({
-    valorant: 'Competitive',
-    league_of_legends: lolMode,
-    rocket_league: '2v2',
-    fortnite: 'Battle Royale',
-    roblox: 'BedWars',
-  }[platform] ?? 'match');
-const map =
-  values.map ||
-  ({
-    valorant: 'Ascent',
-    league_of_legends: lolMap,
-    rocket_league: 'DFH Stadium',
-    fortnite: undefined,
-    roblox: mode === 'Arsenal' ? 'Urban' : 'Classic',
-  }[platform] ?? undefined);
-const label =
-  {
-    valorant: 'Valorant',
-    league_of_legends: 'League of Legends',
-    cs2: 'CS2',
-    rocket_league: 'Rocket League',
-    fortnite: 'Fortnite',
-    roblox: mode === 'Arsenal' ? 'Arsenal' : 'BedWars',
-  }[platform] ?? platform;
-
-const lolSummary =
-  values.summary ||
-  ['LoL', lolMode, lolChampion, lolRole, lolWon ? 'Victoria' : 'Derrota', `${lolKills}/${lolDeaths}/${lolAssists}`, `${lolCs} CS`]
-    .filter(Boolean)
-    .join(' · ')
-    .slice(0, 200);
-
-const summary =
-  values.summary ||
-  (platform === 'league_of_legends'
-    ? lolSummary
-    : [
-        label,
-        mode,
-        map,
-        values.placement != null ? `Top ${values.placement}` : null,
-        platform === 'rocket_league'
-          ? `${values.kills ?? 0}G`
-          : `${values.kills ?? 0}/${values.deaths ?? 0}${values.assists != null ? `/${values.assists}` : ''}`.replace(
-              /\/$/,
-              '',
-            ),
-      ]
-        .filter(Boolean)
-        .join(' · '));
-
-const finalMatchId = platform === 'league_of_legends' ? `lol-${riotMatchId}` : matchId;
+const mode = values.mode || resolveAdapterValue(adapter.mode, { values, mode: '', matchId });
+const map = values.map || resolveAdapterValue(adapter.map, { values, mode, matchId });
+const label = resolveAdapterValue(adapter.label, { values, mode, matchId });
+const ctx = { values, mode, map, matchId };
+const stats = {
+  source: 'send-match-cli',
+  ...adapter.buildStats(ctx),
+  ...(mode ? { mode } : {}),
+  ...(map ? { map } : {}),
+};
+const summary = values.summary || buildSummary(label, stats);
+const finalMatchId = matchId.startsWith(`${adapter.matchPrefix}-`)
+  ? matchId
+  : `${adapter.matchPrefix}-${matchId}`;
+const riotMatchId = platform === 'league_of_legends'
+  ? finalMatchId.replace(/^lol-/, '') || `EUW1_${Date.now().toString().slice(-10)}`
+  : matchId;
 
 /** Forma reducida de lo que Riot Match-v5 devuelve al cerrar una partida (simulado). */
 function buildSimulatedRiotMatchV5() {
+  const lolKills = num(values.kills ?? '0');
+  const lolDeaths = num(values.deaths ?? '0');
+  const lolAssists = num(values.assists ?? '0');
+  const lolCs = num(values.cs ?? '210');
+  const lolVision = num(values.vision ?? values.visionScore ?? '28');
+  const lolQueueId = num(values['queue-id'] ?? '420');
+  const lolWon = bool(values.won, true);
   return {
     metadata: {
       dataVersion: '2',
@@ -201,9 +333,9 @@ function buildSimulatedRiotMatchV5() {
           riotIdGameName: 'Diego',
           riotIdTagline: 'XQ37',
           summonerName: 'Diego',
-          championName: lolChampion,
-          teamPosition: lolRole,
-          individualPosition: lolRole,
+          championName: stats.champion,
+          teamPosition: stats.role,
+          individualPosition: stats.role,
           kills: lolKills,
           deaths: lolDeaths,
           assists: lolAssists,
@@ -230,26 +362,6 @@ function buildSimulatedRiotMatchV5() {
   };
 }
 
-/** Lo que el poller LoL extrae de Match-v5 y encola a SQS. */
-function buildPollerLikeStats() {
-  return {
-    kills: lolKills,
-    deaths: lolDeaths,
-    assists: lolAssists,
-    cs: lolCs,
-    visionScore: lolVision,
-    champion: lolChampion,
-    role: lolRole,
-    mode: lolMode,
-    queueId: lolQueueId,
-    map: lolMap,
-    won: lolWon,
-    placement: lolWon ? 1 : 2,
-    summary: lolSummary,
-    source: 'send-match-cli-simulated-riot',
-  };
-}
-
 const body = {
   ...(userId ? { userId } : {}),
   ...(platformUserId ? { platformUserId } : {}),
@@ -258,68 +370,12 @@ const body = {
   mode,
   ...(map ? { map } : {}),
   summary,
-  stats: {
-    kills: Number(values.kills) || 0,
-    deaths: Number(values.deaths) || 0,
-    ...(values.placement != null ? { placement: Number(values.placement) } : {}),
-    ...(values.assists != null ? { assists: Number(values.assists) } : {}),
-    source: 'send-match-cli',
-    ...(platform === 'rocket_league'
-      ? {
-          goals: Number(values.kills) || 0,
-          saves: 2,
-          shots: 8,
-          shotPct: Number(values['shot-pct'] || 42),
-          won: true,
-          placement: 1,
-        }
-      : {}),
-    ...(platform === 'league_of_legends' ? buildPollerLikeStats() : {}),
-    ...(platform === 'cs2'
-      ? {
-          map: values.map || 'de_mirage',
-          adr: Number(values.adr || 85),
-          hsPct: Number(values.hs || 38),
-          headshotPct: Number(values.hs || 38),
-          won: true,
-          placement: 1,
-        }
-      : {}),
-    ...(platform === 'valorant'
-      ? {
-          headshotPct: Number(values.hs || 24),
-          agent: values.agent || 'Jett',
-          roundsWon: Number(values['rounds-won'] || 13),
-          roundsLost: Number(values['rounds-lost'] || 9),
-          score: Number(values.score || 4400),
-          won: true,
-          placement: 1,
-        }
-      : {}),
-    ...(platform === 'roblox'
-      ? {
-          placeName: label,
-          experienceName: label,
-          experienceId: mode.toLowerCase() === 'arsenal' ? 'arsenal' : 'bedwars',
-          placeId: mode.toLowerCase() === 'arsenal' ? '286090429' : '6872265039',
-          universeId: mode.toLowerCase() === 'arsenal' ? '111958650' : '2619619496',
-          jobId: `cli-${matchId}`,
-          durationSec: 180,
-        }
-      : {}),
-    ...(platform === 'fortnite'
-      ? {
-          placeName: undefined,
-        }
-      : {}),
-  },
+  stats: stripUndefined(stats),
 };
 
 if (platform === 'league_of_legends') {
   console.log('\n=== Simulación Riot Match-v5 (fin de partida) ===');
   console.log(JSON.stringify(buildSimulatedRiotMatchV5(), null, 2));
-  console.log('\n=== Stats que el poller encolaría (extraídas del match) ===');
-  console.log(JSON.stringify(buildPollerLikeStats(), null, 2));
   console.log('\n=== Payload webhook → game_ingestion ===');
   console.log(JSON.stringify(body, null, 2));
   console.log('');
@@ -339,6 +395,49 @@ const response = await fetch(webhookUrl, {
 const text = await response.text();
 console.log('← Response', response.status, text);
 if (!response.ok) process.exit(1);
+
+function baseCombatStats(ctx) {
+  return {
+    kills: num(ctx.values.kills ?? '0'),
+    deaths: num(ctx.values.deaths ?? '0'),
+    ...(ctx.values.assists != null ? { assists: num(ctx.values.assists) } : { assists: 0 }),
+  };
+}
+
+function buildSummary(label, stats) {
+  const result = stats.won === true ? 'Victoria' : stats.won === false ? 'Derrota' : null;
+  const placement = stats.placement != null ? `Top ${stats.placement}` : null;
+  const performance = stats.goals != null
+    ? `${stats.goals}G ${stats.assists ?? 0}A`
+    : stats.crowns != null
+      ? `${stats.crowns} coronas`
+      : `${stats.kills ?? 0}/${stats.deaths ?? 0}/${stats.assists ?? 0}`;
+  return [label, stats.mode, stats.map, result ?? placement, performance]
+    .filter(Boolean)
+    .join(' · ')
+    .slice(0, 200);
+}
+
+function resolveAdapterValue(value, ctx) {
+  if (typeof value === 'function') return value(ctx);
+  return value;
+}
+
+function num(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function bool(value, fallback) {
+  if (value == null) return fallback;
+  return !['0', 'false', 'no', 'loss', 'derrota'].includes(String(value).toLowerCase());
+}
+
+function stripUndefined(input) {
+  return Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  );
+}
 
 function loadDotEnv(filePath) {
   if (!existsSync(filePath)) return;

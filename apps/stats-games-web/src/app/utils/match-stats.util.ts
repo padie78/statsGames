@@ -81,6 +81,56 @@ export function toMatchCardStats(stats?: MatchStatsView | null): MatchCardStats 
   };
 }
 
+/** Combina stats sin pisar valores ya presentes con null/undefined del update. */
+export function mergeMatchStats(
+  current?: MatchStatsView | null,
+  incoming?: MatchStatsView | null,
+): MatchStatsView | undefined {
+  if (!current && !incoming) return undefined;
+  const base = { ...(current ?? {}), ...(incoming ?? {}) };
+  for (const [key, value] of Object.entries(incoming ?? {})) {
+    if (value != null && value !== '') {
+      (base as Record<string, unknown>)[key] = value;
+    }
+  }
+  return Object.keys(base).length ? base : undefined;
+}
+
+/** Upsert de partidas: incoming gana salvo stats, donde se hace merge profundo. */
+export function mergeMatchUpdates(
+  incoming: MatchUpdateView[],
+  current: MatchUpdateView[],
+): MatchUpdateView[] {
+  const byId = new Map<string, MatchUpdateView>();
+
+  for (const match of current) {
+    byId.set(match.matchId, match);
+  }
+
+  for (const match of incoming) {
+    const existing = byId.get(match.matchId);
+    if (!existing) {
+      byId.set(match.matchId, match);
+      continue;
+    }
+
+    byId.set(match.matchId, {
+      ...existing,
+      ...match,
+      summary: match.summary || existing.summary,
+      updatedAt:
+        new Date(match.updatedAt).getTime() >= new Date(existing.updatedAt).getTime()
+          ? match.updatedAt
+          : existing.updatedAt,
+      stats: mergeMatchStats(existing.stats, match.stats),
+    });
+  }
+
+  return [...byId.values()].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+}
+
 export function isMatchWin(stats?: MatchStatsView | null): boolean {
   if (!stats) return false;
   if (stats.won === true) return true;

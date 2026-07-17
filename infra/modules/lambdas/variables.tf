@@ -132,3 +132,68 @@ variable "cs2_poll_schedule" {
   default     = "rate(15 minutes)"
   description = "Schedule EventBridge del poller CS2 (validación Steam)."
 }
+
+variable "dota2_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "API key alternativa para Dota 2; si está vacía se usa steam_web_api_key."
+}
+
+variable "dota2_poll_schedule" {
+  type        = string
+  default     = "rate(5 minutes)"
+  description = "Schedule EventBridge del poller Dota 2."
+}
+
+variable "overwatch2_api_url" {
+  type        = string
+  default     = ""
+  description = "Base URL partner/bridge para Overwatch 2."
+}
+
+variable "overwatch2_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Bearer token opcional para Overwatch 2."
+}
+
+variable "overwatch2_poll_schedule" {
+  type        = string
+  default     = "rate(5 minutes)"
+  description = "Schedule EventBridge del poller Overwatch 2."
+}
+
+variable "supercell_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Bearer token Supercell compartido."
+}
+
+variable "clash_royale_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Bearer token Clash Royale; fallback a supercell_api_key."
+}
+
+variable "clash_royale_poll_schedule" {
+  type        = string
+  default     = "rate(5 minutes)"
+  description = "Schedule EventBridge del poller Clash Royale."
+}
+
+variable "brawl_stars_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Bearer token Brawl Stars; fallback a supercell_api_key."
+}
+
+variable "brawl_stars_poll_schedule" {
+  type        = string
+  default     = "rate(5 minutes)"
+  description = "Schedule EventBridge del poller Brawl Stars."
+}

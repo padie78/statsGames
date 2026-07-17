@@ -1956,12 +1956,12 @@
 }
 
 .sg-notify__item--pending {
-  opacity: 0.78;
-  cursor: not-allowed;
+  border-color: rgba(245, 208, 117, 0.28);
 }
 
-.sg-notify__item--pending:disabled {
-  cursor: not-allowed;
+.sg-notify__item--pending:hover {
+  background: rgba(245, 208, 117, 0.06);
+  border-color: rgba(245, 208, 117, 0.4);
 }
 
 .sg-notify__item-top {

@@ -9,5 +9,6 @@ export * from './lib/repositories/dynamodb-stats-summary.repository';
 export * from './lib/repositories/dynamodb-community-stats.repository';
 export * from './lib/events/appsync-match-update-publisher.adapter';
 export * from './lib/events/appsync-match-ai-ready-publisher.adapter';
+export * from './lib/game-platform-adapters/dynamodb-platform-poller-state.adapter';
 export * from './lib/ai/bedrock-claude.invoker';
 export * from './lib/utils/console-logger';

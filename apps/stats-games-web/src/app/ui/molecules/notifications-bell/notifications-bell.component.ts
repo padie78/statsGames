@@ -60,7 +60,7 @@ import { formatMatchRelativeTime } from '../../../utils/match-stats.util';
 
           @if (!store.items().length) {
             <p class="sg-notify__empty u-m-0">
-              Cuando termine una partida, aparece acá. La IA tarda unos segundos en generar el análisis.
+              Cuando termine una partida, aparece acá. Podés abrirla al instante; el análisis IA se completa en segundos.
             </p>
           } @else {
             <ul class="sg-notify__list">
@@ -72,11 +72,10 @@ import { formatMatchRelativeTime } from '../../../utils/match-stats.util';
                     [class.sg-notify__item--unread]="!item.read"
                     [class.sg-notify__item--pending]="item.aiStatus === 'pending'"
                     [class.sg-notify__item--ready]="item.aiStatus === 'ready'"
-                    [disabled]="item.aiStatus === 'pending'"
                     [attr.title]="
                       item.aiStatus === 'pending'
-                        ? 'Esperá a que la IA termine el análisis'
-                        : 'Abrir partida y estadísticas'
+                        ? 'Abrir partida · análisis IA en proceso'
+                        : 'Abrir partida y análisis'
                     "
                     (click)="onItemClick(item)"
                   >
@@ -85,7 +84,9 @@ import { formatMatchRelativeTime } from '../../../utils/match-stats.util';
                         {{ platformShort(item.platform) }}
                       </sg-neon-badge>
                       @if (item.aiStatus === 'pending') {
-                        <sg-neon-badge tone="muted">IA pendiente</sg-neon-badge>
+                        <sg-neon-badge tone="muted">IA en proceso</sg-neon-badge>
+                      } @else if (item.aiStatus === 'failed') {
+                        <sg-neon-badge tone="muted">IA no disponible</sg-neon-badge>
                       } @else {
                         <sg-neon-badge tone="lime">IA lista</sg-neon-badge>
                       }
@@ -152,7 +153,6 @@ export class NotificationsBellComponent {
   }
 
   onItemClick(item: MatchNotification): void {
-    if (item.aiStatus !== 'ready') return;
     this.store.markRead(item.id);
     this.store.closePanel();
     void this.router.navigateByUrl(matchDetailRoute(item.matchId));

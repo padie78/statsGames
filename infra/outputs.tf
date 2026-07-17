@@ -103,6 +103,22 @@ output "cs2_match_poller_name" {
   value = module.lambdas.cs2_match_poller_name
 }
 
+output "dota2_match_poller_name" {
+  value = module.lambdas.dota2_match_poller_name
+}
+
+output "overwatch2_match_poller_name" {
+  value = module.lambdas.overwatch2_match_poller_name
+}
+
+output "clash_royale_match_poller_name" {
+  value = module.lambdas.clash_royale_match_poller_name
+}
+
+output "brawl_stars_match_poller_name" {
+  value = module.lambdas.brawl_stars_match_poller_name
+}
+
 output "game_processor_name" {
   value = module.lambdas.game_processor_name
 }

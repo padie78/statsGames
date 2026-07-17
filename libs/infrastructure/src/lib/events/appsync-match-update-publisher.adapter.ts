@@ -21,6 +21,17 @@ const MATCH_UPDATE_FRAGMENT = /* GraphQL */ `
       agent
       mode
       won
+      score
+      adr
+      champion
+      role
+      cs
+      visionScore
+      goals
+      saves
+      shots
+      shotPct
+      durationSec
     }
   }
 `;

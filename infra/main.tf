@@ -48,6 +48,16 @@ module "lambdas" {
   ballchasing_api_key         = var.ballchasing_api_key
   lol_region                  = var.lol_region
   steam_web_api_key           = var.steam_web_api_key
+  dota2_api_key               = var.dota2_api_key
+  dota2_poll_schedule         = var.dota2_poll_schedule
+  overwatch2_api_url          = var.overwatch2_api_url
+  overwatch2_api_key          = var.overwatch2_api_key
+  overwatch2_poll_schedule    = var.overwatch2_poll_schedule
+  supercell_api_key           = var.supercell_api_key
+  clash_royale_api_key        = var.clash_royale_api_key
+  clash_royale_poll_schedule  = var.clash_royale_poll_schedule
+  brawl_stars_api_key         = var.brawl_stars_api_key
+  brawl_stars_poll_schedule   = var.brawl_stars_poll_schedule
 }
 
 module "api" {

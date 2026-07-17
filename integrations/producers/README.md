@@ -13,8 +13,12 @@ Webhook POST /webhooks/{platform}
 | **Valorant** | 1 | Riot matchlist poller | `RIOT_API_KEY` |
 | **League of Legends** | 1 | Riot match-v5 poller | `RIOT_API_KEY` |
 | **CS2** | 1 | Steam link + webhook | `STEAM_WEB_API_KEY` |
+| **Dota 2** | 1 | Steam match poller + webhook | `STEAM_WEB_API_KEY` / `DOTA2_API_KEY` |
 | **Rocket League** | 1 | Webhook + opcional ballchasing | `BALLCHASING_API_KEY` |
 | **Fortnite** | 2 | Career diff poller | `FORTNITE_API_KEY` |
+| **Overwatch 2** | 2 | API bridge configurable + webhook | `OVERWATCH2_API_URL` |
+| **Clash Royale** | 2 | Supercell battlelog poller + webhook | `SUPERCELL_API_KEY` |
+| **Brawl Stars** | 2 | Supercell battlelog poller + webhook | `SUPERCELL_API_KEY` |
 | **Roblox** | 2 | **Solo BedWars + Arsenal** (badges) | — |
 
 ## Fase 1 — Valorant
@@ -72,8 +76,12 @@ Poller de badges públicos → hitos en el feed. Ver `roblox/README.md`.
 npm run send:match -- --platform valorant --kills 18 --deaths 14 --assists 6
 npm run send:match -- --platform league_of_legends --kills 8 --deaths 3 --assists 12
 npm run send:match -- --platform cs2 --kills 22 --deaths 14 --assists 5
+npm run send:match -- --platform dota2 --hero "Shadow Fiend" --kills 10 --deaths 4 --assists 15
 npm run send:match -- --platform rocket_league --kills 4
 npm run send:match -- --platform fortnite --kills 8 --placement 1
+npm run send:match -- --platform overwatch2 --hero Tracer --damage 12000
+npm run send:match -- --platform clash_royale --crowns 3 --trophies 6500
+npm run send:match -- --platform brawl_stars --brawler Shelly --trophies 800
 npm run send:match -- --platform roblox --mode BedWars --kills 7 --placement 2
 npm run send:match -- --platform roblox --mode Arsenal --kills 15
 npm run probe:roblox -- 8367095373

@@ -24,7 +24,9 @@ import { matchDetailRoute } from '../../../utils/match-analysis.util';
               Nueva partida
             </sg-neon-badge>
             @if (toast.aiStatus === 'pending') {
-              <sg-neon-badge tone="muted">IA pendiente</sg-neon-badge>
+              <sg-neon-badge tone="muted">IA en proceso</sg-neon-badge>
+            } @else if (toast.aiStatus === 'failed') {
+              <sg-neon-badge tone="muted">IA no disponible</sg-neon-badge>
             } @else {
               <sg-neon-badge tone="lime">IA lista</sg-neon-badge>
             }
@@ -33,15 +35,9 @@ import { matchDetailRoute } from '../../../utils/match-analysis.util';
           <p class="sg-notify-toast__meta u-m-0">{{ toast.aiHeadline }}</p>
         </div>
         <div class="sg-notify-toast__actions">
-          @if (toast.aiStatus === 'ready') {
-            <button type="button" class="u-btn u-btn--primary" (click)="open(toast.id, toast.matchId)">
-              Ver análisis
-            </button>
-          } @else {
-            <button type="button" class="u-btn u-btn--ghost" (click)="store.openPanel()">
-              Ver cola
-            </button>
-          }
+          <button type="button" class="u-btn u-btn--primary" (click)="open(toast.id, toast.matchId)">
+            {{ toast.aiStatus === 'ready' ? 'Ver análisis' : 'Ver partida' }}
+          </button>
           <button type="button" class="sg-notify-toast__close" aria-label="Cerrar" (click)="store.dismissToast()">
             ×
           </button>
@@ -55,7 +51,6 @@ export class MatchNotificationToastComponent {
   private readonly router = inject(Router);
 
   open(id: string, matchId: string): void {
-    if (!this.store.canOpenMatch(id)) return;
     this.store.markRead(id);
     this.store.dismissToast();
     void this.router.navigateByUrl(matchDetailRoute(matchId));

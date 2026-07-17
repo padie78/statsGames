@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
@@ -15,7 +15,7 @@ import {
   matchAiReportToAnalysisReport,
 } from '../../utils/match-analysis.util';
 import { resolveMatchMapTelemetry } from '../../utils/match-map-telemetry.mock';
-import { toMatchCardStats } from '../../utils/match-stats.util';
+import { toMatchCardStats, mergeMatchStats } from '../../utils/match-stats.util';
 
 @Component({
   standalone: true,
@@ -38,7 +38,7 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
           <div class="sg-match-detail__heading">
             <h1 class="sg-page-header__title">Análisis de partida</h1>
             <p class="sg-page-header__subtitle">
-              Reporte completo con gráficos, pros/contras y plan de mejora.
+              Stats al instante. El reporte IA se completa cuando el análisis termina.
             </p>
           </div>
         </header>
@@ -55,10 +55,16 @@ import { toMatchCardStats } from '../../utils/match-stats.util';
         } @else if (match()) {
           @if (aiPending()) {
             <section class="u-surface-card u-p-5 sg-match-detail__ai-pending">
-              <p class="sg-match-detail__ai-pending-title u-m-0">La IA todavía está analizando</p>
+              <p class="sg-match-detail__ai-pending-title u-m-0">Análisis IA en proceso…</p>
               <p class="u-hint u-m-0">
-                Ya podés ver las stats básicas. El reporte Bedrock se habilita cuando llegue
-                “IA lista”.
+                Ya podés revisar las estadísticas. El reporte se actualiza solo cuando la IA termine.
+              </p>
+            </section>
+          } @else if (aiFailed()) {
+            <section class="u-surface-card u-p-5 sg-match-detail__ai-pending">
+              <p class="sg-match-detail__ai-pending-title u-m-0">Análisis IA no disponible</p>
+              <p class="u-hint u-m-0">
+                Las stats de la partida siguen disponibles. Podés volver a intentar más tarde.
               </p>
             </section>
           }
@@ -104,13 +110,24 @@ export class MatchDetailPageComponent implements OnInit {
 
   readonly cardStats = computed(() => toMatchCardStats(this.match()?.stats));
 
+  readonly notificationAiStatus = computed(() => {
+    const current = this.match();
+    if (!current) return null;
+    return this.notifications.getByMatchId(current.matchId)?.aiStatus ?? null;
+  });
+
   readonly aiPending = computed(() => {
     const current = this.match();
     if (!current) return false;
     if (this.aiReport()?.status === 'ready' || this.aiReport()?.status === 'failed') {
       return false;
     }
-    return this.notifications.getByMatchId(current.matchId)?.aiStatus === 'pending';
+    return this.notificationAiStatus() === 'pending';
+  });
+
+  readonly aiFailed = computed(() => {
+    if (this.aiReport()?.status === 'failed') return true;
+    return this.notificationAiStatus() === 'failed';
   });
 
   readonly report = computed(() => {
@@ -148,6 +165,43 @@ export class MatchDetailPageComponent implements OnInit {
     return { ...base, mapAssetUrl };
   });
 
+  constructor() {
+    effect(() => {
+      const status = this.notificationAiStatus();
+      const current = this.match();
+      const userId = this.auth.userId();
+      if (!current || !userId) return;
+      if (status !== 'ready' && status !== 'failed') return;
+      if (this.aiReport()?.status === 'ready' || this.aiReport()?.status === 'failed') return;
+      void this.refreshAiReport(userId, current.matchId);
+    });
+
+    effect(
+      () => {
+        const current = this.match();
+        if (!current) return;
+
+        const live = this.realtime.liveMatches().find((m) => m.matchId === current.matchId);
+        const notified = this.notifications.getByMatchId(current.matchId)?.match;
+        const patch = live ?? notified;
+        if (!patch) return;
+
+        const mergedStats = mergeMatchStats(current.stats, patch.stats);
+        const sameStats = JSON.stringify(current.stats ?? {}) === JSON.stringify(mergedStats ?? {});
+        const sameSummary = (patch.summary || current.summary) === current.summary;
+        if (sameStats && sameSummary) return;
+
+        this.match.set({
+          ...current,
+          ...patch,
+          summary: patch.summary || current.summary,
+          stats: mergedStats,
+        });
+      },
+      { allowSignalWrites: true },
+    );
+  }
+
   ngOnInit(): void {
     void this.loadMatch();
   }
@@ -159,6 +213,15 @@ export class MatchDetailPageComponent implements OnInit {
 
   goToMatches(): void {
     void this.router.navigateByUrl('/tabs/matches');
+  }
+
+  private async refreshAiReport(userId: string, matchId: string): Promise<void> {
+    try {
+      const ai = await this.matchAi.getMatchAiReport(userId, matchId);
+      this.aiReport.set(ai);
+    } catch {
+      // Mantener stats; el panel local / failed cubre el vacío.
+    }
   }
 
   private async loadMatch(): Promise<void> {

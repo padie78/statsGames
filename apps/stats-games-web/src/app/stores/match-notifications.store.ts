@@ -110,10 +110,9 @@ export class MatchNotificationsStore {
     return this._items().find((item) => item.matchId === matchId);
   }
 
-  /** Solo permite abrir el detalle si la IA ya terminó. */
+  /** La ficha se puede abrir siempre; la IA enriquece el detalle cuando esté lista. */
   canOpenMatch(id: string): boolean {
-    const item = this._items().find((n) => n.id === id);
-    return item?.aiStatus === 'ready' || item?.aiStatus === 'failed';
+    return this._items().some((n) => n.id === id);
   }
 
   /** Demo / tests: empuja una partida como si viniera de AppSync. */

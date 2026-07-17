@@ -18,6 +18,75 @@ data "archive_file" "bootstrap" {
   }
 }
 
+locals {
+  additional_match_pollers = {
+    dota2 = {
+      function_name       = "${var.name_prefix}-dota2-match-poller"
+      target_id           = "dota2-match-poller"
+      description         = "Poll Dota 2 match history via Steam Web API"
+      schedule_expression = var.dota2_poll_schedule
+      enabled             = var.steam_web_api_key != "" || var.dota2_api_key != ""
+      timeout             = 120
+      memory_size         = 512
+      environment = {
+        TABLE_NAME               = var.table_name
+        GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+        STEAM_WEB_API_KEY        = var.steam_web_api_key
+        DOTA2_API_KEY            = var.dota2_api_key
+        LOG_LEVEL                = "INFO"
+      }
+    }
+    overwatch2 = {
+      function_name       = "${var.name_prefix}-overwatch2-match-poller"
+      target_id           = "overwatch2-match-poller"
+      description         = "Poll Overwatch 2 match history via configured partner API"
+      schedule_expression = var.overwatch2_poll_schedule
+      enabled             = var.overwatch2_api_url != ""
+      timeout             = 120
+      memory_size         = 512
+      environment = {
+        TABLE_NAME               = var.table_name
+        GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+        OVERWATCH2_API_URL       = var.overwatch2_api_url
+        OVERWATCH2_API_KEY       = var.overwatch2_api_key
+        LOG_LEVEL                = "INFO"
+      }
+    }
+    clash_royale = {
+      function_name       = "${var.name_prefix}-clash-royale-match-poller"
+      target_id           = "clash-royale-match-poller"
+      description         = "Poll Clash Royale battlelog via Supercell API"
+      schedule_expression = var.clash_royale_poll_schedule
+      enabled             = var.supercell_api_key != "" || var.clash_royale_api_key != ""
+      timeout             = 120
+      memory_size         = 512
+      environment = {
+        TABLE_NAME               = var.table_name
+        GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+        SUPERCELL_API_KEY        = var.supercell_api_key
+        CLASH_ROYALE_API_KEY     = var.clash_royale_api_key
+        LOG_LEVEL                = "INFO"
+      }
+    }
+    brawl_stars = {
+      function_name       = "${var.name_prefix}-brawl-stars-match-poller"
+      target_id           = "brawl-stars-match-poller"
+      description         = "Poll Brawl Stars battlelog via Supercell API"
+      schedule_expression = var.brawl_stars_poll_schedule
+      enabled             = var.supercell_api_key != "" || var.brawl_stars_api_key != ""
+      timeout             = 120
+      memory_size         = 512
+      environment = {
+        TABLE_NAME               = var.table_name
+        GAME_INGESTION_QUEUE_URL = var.game_ingestion_queue_url
+        SUPERCELL_API_KEY        = var.supercell_api_key
+        BRAWL_STARS_API_KEY      = var.brawl_stars_api_key
+        LOG_LEVEL                = "INFO"
+      }
+    }
+  }
+}
+
 # ─────────── AppSync API Lambda (GraphQL resolvers) ───────────
 
 resource "aws_lambda_function" "appsync_api" {
@@ -464,6 +533,53 @@ resource "aws_lambda_permission" "cs2_match_poller_events" {
   function_name = aws_lambda_function.cs2_match_poller.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.cs2_match_poller.arn
+}
+
+# ─────────── Platform adapters: Dota 2 / OW2 / Supercell → SQS ───────────
+
+resource "aws_lambda_function" "additional_match_pollers" {
+  for_each = local.additional_match_pollers
+
+  function_name    = each.value.function_name
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.bootstrap.output_path
+  source_code_hash = data.archive_file.bootstrap.output_base64sha256
+  timeout          = each.value.timeout
+  memory_size      = each.value.memory_size
+  architectures    = ["arm64"]
+
+  environment {
+    variables = each.value.environment
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "additional_match_pollers" {
+  for_each = local.additional_match_pollers
+
+  name                = each.value.function_name
+  description         = each.value.description
+  schedule_expression = each.value.schedule_expression
+  state               = each.value.enabled ? "ENABLED" : "DISABLED"
+}
+
+resource "aws_cloudwatch_event_target" "additional_match_pollers" {
+  for_each = local.additional_match_pollers
+
+  rule      = aws_cloudwatch_event_rule.additional_match_pollers[each.key].name
+  target_id = each.value.target_id
+  arn       = aws_lambda_function.additional_match_pollers[each.key].arn
+}
+
+resource "aws_lambda_permission" "additional_match_pollers_events" {
+  for_each = local.additional_match_pollers
+
+  statement_id  = "AllowEventBridgeInvoke${replace(title(each.key), "_", "")}MatchPoller"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.additional_match_pollers[each.key].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.additional_match_pollers[each.key].arn
 }
 
 # ─────────── Match AI (Bedrock) post-partida ───────────
