@@ -19,6 +19,10 @@ export interface LeaderboardEntryDto {
   platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars';
   score: number;
   totalKills: number;
+  totalDeaths: number;
+  winCount: number;
+  winRate: number;
+  kd: number;
   matchCount: number;
   delta: string;
   trend: 'up' | 'down' | 'flat';

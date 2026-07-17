@@ -2,6 +2,7 @@ import { Component, OnInit, ViewEncapsulation, inject, signal } from '@angular/c
 import { RouterLink } from '@angular/router';
 import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
+import { GameContextService } from '../../core/game/game-context.service';
 import { matchBackendPlatform } from '../../core/game/selected-game';
 import { MatchAiService, type MatchAiReportView } from '../../services/match-ai.service';
 import { NeonBadgeComponent } from '../../ui';
@@ -19,7 +20,8 @@ import { formatMatchRelativeTime } from '../../utils/match-stats.util';
         <header class="sg-page-header">
           <h1 class="sg-page-header__title">AI Coach</h1>
           <p class="sg-page-header__subtitle">
-            Qué entrenar según tu telemetría. Abrí el detalle de cada partida para el reporte completo.
+            Informes Bedrock post-partida. Abrí el detalle para el reporte técnico completo
+            (perfil cognitivo, aciertos, errores y plan de acción).
           </p>
         </header>
 
@@ -31,10 +33,19 @@ import { formatMatchRelativeTime } from '../../utils/match-stats.util';
           <section class="u-surface-card u-p-5">
             <sg-neon-badge tone="muted">Sin reportes aún</sg-neon-badge>
             <p class="u-hint u-mt-3 u-mb-0">
-              Vinculá tu Riot ID en Integraciones y jugá una partida. Al cerrar, el poller encola el
-              match y Bedrock genera el coaching.
+              Acá debería aparecer la lista de análisis IA (headline, grade, summary) por cada
+              partida analizada. Todavía no hay filas porque el analyzer no generó reportes, o
+              las partidas del juego activo no están encoladas a Bedrock.
             </p>
-            <a routerLink="/tabs/integrations" class="u-btn u-btn--ghost u-mt-4">Ir a Integraciones</a>
+            <ul class="u-hint u-mt-3" style="padding-left: 1.1rem; margin: 0">
+              <li>Vinculá la cuenta del juego en Integraciones</li>
+              <li>Jugá / enviá un match (poller o send-match)</li>
+              <li>Esperá a que match_ai_analyzer marque el reporte como ready</li>
+            </ul>
+            <div class="u-flex u-gap-2 u-mt-4" style="flex-wrap: wrap">
+              <a routerLink="/tabs/integrations" class="u-btn u-btn--ghost">Ir a Integraciones</a>
+              <a routerLink="/tabs/matches" class="u-btn u-btn--primary">Ver Partidas</a>
+            </div>
           </section>
         } @else {
           <div class="u-flex u-flex-col u-gap-3">
@@ -47,12 +58,15 @@ import { formatMatchRelativeTime } from '../../utils/match-stats.util';
                   <div>
                     <div class="u-flex u-gap-2 u-items-center u-mb-1">
                       <sg-neon-badge [tone]="report.status === 'ready' ? 'purple' : 'muted'">
-                        {{ report.gradeLabel }} · {{ report.performanceScore }}/100
+                        {{ report.gradeLabel || '—' }} · {{ report.performanceScore ?? '—' }}/100
                       </sg-neon-badge>
                       <sg-neon-badge tone="cyan">{{ report.platform }}</sg-neon-badge>
                     </div>
-                    <h2 class="u-text-md u-m-0">{{ report.headline }}</h2>
+                    <h2 class="u-text-md u-m-0">{{ report.headline || 'Análisis de partida' }}</h2>
                     <p class="u-hint u-m-0 u-mt-1">{{ report.summary }}</p>
+                    @if (report.actionPlan?.length) {
+                      <p class="u-hint u-m-0 u-mt-2">Foco: {{ report.actionPlan[0] }}</p>
+                    }
                   </div>
                   <span class="u-hint u-text-xs">{{ relative(report.createdAt) }}</span>
                 </div>
@@ -79,6 +93,7 @@ import { formatMatchRelativeTime } from '../../utils/match-stats.util';
 })
 export class AiCoachPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly gameContext = inject(GameContextService);
   private readonly matchAi = inject(MatchAiService);
 
   readonly loading = signal(true);
@@ -108,12 +123,14 @@ export class AiCoachPageComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const platform = matchBackendPlatform(this.auth.selectedGame());
+      const platform = matchBackendPlatform(
+        this.gameContext.activeGame() ?? this.auth.selectedGame(),
+      );
       const rows = await this.matchAi.listMatchAiReportsOnce(userId, {
-        platform: platform === 'valorant' ? 'valorant' : undefined,
+        platform,
         limit: 30,
       });
-      this.reports.set(rows);
+      this.reports.set(rows.filter((row) => row.status === 'ready' || row.status === 'failed'));
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Error cargando reportes IA');
     } finally {

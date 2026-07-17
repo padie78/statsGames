@@ -3,7 +3,11 @@ import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { DASHBOARD_QUICK_ACTIONS } from '../../data/dashboard-mock.data';
-import { MOCK_COMMUNITY_BENCHMARKS } from '../../data/community-mock.data';
+import {
+  MOCK_COMMUNITY_BENCHMARKS,
+  type CommunityRankRow,
+  type CommunityRankTableView,
+} from '../../data/community-mock.data';
 import {
   buildMockMatchHistory,
   filterMockMatchesByPlatform,
@@ -17,35 +21,33 @@ import {
   type SelectedGame,
 } from '../../core/game/selected-game';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
+import { MatchAiService, type MatchAiReportView } from '../../services/match-ai.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
 import {
   StatsService,
   currentWeeklyPeriodIdForStats,
+  type LeaderboardEntryView,
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
 import type { CommunityBenchmarks } from '../../data/community-mock.data';
 import {
-  AiInsightCardComponent,
   IntegrationStatusCardComponent,
   MatchHighlightCardComponent,
   QuickActionsBarComponent,
   PlayerSearchHeroComponent,
   TrackStartPanelComponent,
+  WeeklyAiCoachPanelComponent,
 } from '../../ui';
+import { matchDetailRoute } from '../../utils/match-analysis.util';
 import {
   aggregateMatchStats,
-  computeBestKills,
   computeKdRatio,
   filterMatchesWithinDays,
   toMatchCardStats,
 } from '../../utils/match-stats.util';
-import {
-  buildCommunityComparison,
-  mapCommunityBenchmarksFromApi,
-  parsePlayerKdForCommunity,
-  parsePlayerWinRateForCommunity,
-} from '../../utils/community-stats.util';
+import { mapCommunityBenchmarksFromApi } from '../../utils/community-stats.util';
+import { buildWeeklyAiCoachSummary } from '../../utils/weekly-ai-summary.util';
 import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
 @Component({
@@ -58,7 +60,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     IonRefresherContent,
     RouterLink,
     PlayerSearchHeroComponent,
-    AiInsightCardComponent,
+    WeeklyAiCoachPanelComponent,
     TrackStartPanelComponent,
     QuickActionsBarComponent,
     IntegrationStatusCardComponent,
@@ -132,7 +134,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                   @if (needsTrackingSetup()) {
                     Vinculá tu cuenta para desbloquear KPIs en vivo, historial y coaching.
                   } @else {
-                    Insight rápido y atajos. El detalle está en Partidas, Evolución y Coach.
+                    Resumen semanal del coach, atajos e integraciones.
                   }
                 </p>
               </div>
@@ -142,20 +144,20 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               <sg-track-start-panel [platform]="heroPlatform()" />
             }
 
+            @if (!needsTrackingSetup()) {
+              <sg-weekly-ai-coach-panel
+                [summary]="weeklyCoach()"
+                [communityRank]="weeklyCommunityRank()"
+                [ctaLabel]="aiCtaLabel()"
+                (ctaClick)="onAiCta()"
+              />
+            }
+
             <div
               class="sg-dashboard__now"
               [class.sg-dashboard__now--setup]="needsTrackingSetup()"
             >
-              @if (!needsTrackingSetup()) {
-                <sg-ai-insight-card
-                  [headline]="aiHeadline()"
-                  [body]="aiBody()"
-                  ctaLabel="Abrir AI Coach"
-                  (ctaClick)="onAiCta()"
-                />
-              }
-
-              <div class="sg-dashboard__now-side">
+              <div class="sg-dashboard__now-side sg-dashboard__now-side--full">
                 <sg-quick-actions-bar
                   [actions]="quickActions"
                   [gameLabel]="platformMeta().label"
@@ -227,6 +229,7 @@ export class DashboardPageComponent implements OnInit {
   readonly realtime = inject(AppSyncRealtimeService);
   private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
+  private readonly matchAi = inject(MatchAiService);
   private readonly playerService = inject(PlayerService);
   private readonly statsService = inject(StatsService);
   private readonly router = inject(Router);
@@ -235,6 +238,8 @@ export class DashboardPageComponent implements OnInit {
   readonly recentMatches = signal<MatchUpdateView[]>([]);
   readonly weekly = signal<PlayerStatsRollupView | null>(null);
   readonly communityBenchmarksApi = signal<CommunityBenchmarks | null>(null);
+  readonly communityLeaderboardApi = signal<LeaderboardEntryView[]>([]);
+  readonly latestAiReport = signal<MatchAiReportView | null>(null);
   readonly loading = signal(false);
   readonly lastUpdatedAt = signal<Date | null>(null);
   readonly error = signal<string | null>(null);
@@ -353,58 +358,100 @@ export class DashboardPageComponent implements OnInit {
     return filterMockMatchesByPlatform(source, platform);
   });
 
-  readonly aiHeadline = computed(() => {
-    const summary = this.weekSummary();
-    const w = this.weekly();
-    if (!w || w.matchCount === 0) {
-      return 'Conectá tu cuenta y empezá a trackear';
-    }
-    if (summary.winCount >= 3) {
-      return '¡Semana épica! Seguí sumando victorias';
-    }
-    if (summary.winCount >= 1) {
-      return 'Buen arranque — apuntá a más victorias';
-    }
-    return 'Cada partida cuenta — buscá tu primera victoria';
+  readonly weeklyCoach = computed(() => {
+    const platform = this.heroPlatform();
+    return buildWeeklyAiCoachSummary({
+      platform,
+      weekMatches: this.weekMatches(),
+      latestAiReport: this.latestAiReport(),
+      communityBenchmarks:
+        this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform],
+      kdLabel: this.kdLabel(),
+    });
   });
 
-  readonly aiBody = computed(() => {
-    const w = this.weekly();
-    const summary = this.weekSummary();
-    if (!w || w.matchCount === 0) {
-      return 'Vinculá Riot, Steam, Epic o Roblox en Integraciones. Jugá un par de partidas y StatsGames arma solo tus KPIs, historial y coaching.';
-    }
-
+  readonly weeklyCommunityRank = computed<CommunityRankTableView | null>(() => {
     const platform = this.heroPlatform();
-    const benchmarks =
-      this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform];
-    const community = buildCommunityComparison({
-      benchmarks,
-      winRate: summary.winRate,
-      winRateNumeric: parsePlayerWinRateForCommunity(summary.winRate),
-      kd: this.weeklyKd(),
-      kdNumeric: parsePlayerKdForCommunity(this.weeklyKd()),
-      kills: w.totalKills || summary.totalKills,
-      matchCount: w.matchCount || summary.matchCount,
-      kdLabel: this.kdLabel(),
-      killsLabel:
-        platform === 'rocket_league'
-          ? 'Goles / semana'
-          : platform === 'fortnite'
-            ? 'Elims / semana'
-            : 'Kills / semana',
-    });
+    const apiRows = this.communityLeaderboardApi();
+    if (apiRows.length === 0) return null;
 
-    const topWinRate = community.find((item) => item.label === 'Win rate');
-    if (topWinRate && topWinRate.betterThanPct >= 65) {
-      return `${topWinRate.topPercentLabel} en win rate vs la comunidad. Abrí Evolución para el detalle.`;
+    const summary = this.weekSummary();
+    const kd =
+      summary.totalDeaths > 0
+        ? summary.totalKills / summary.totalDeaths
+        : summary.totalKills;
+    const winRate =
+      summary.matchCount > 0 ? (summary.winCount / summary.matchCount) * 100 : 0;
+    const gamerTag = this.profile()?.gamerTag || 'Vos';
+    const userId = this.auth.userId();
+
+    const rows: CommunityRankRow[] = apiRows.map((entry) => ({
+      rank: entry.rank,
+      gamerTag:
+        entry.userId === userId
+          ? gamerTag
+          : entry.gamerTag && entry.gamerTag !== entry.userId
+            ? entry.gamerTag
+            : `Jugador ${entry.rank}`,
+      platform,
+      isYou: entry.userId === userId,
+      kd: entry.kd,
+      winRate: entry.winRate,
+      kills: entry.totalKills,
+      matches: entry.matchCount,
+      score: entry.score,
+      delta: entry.delta,
+      trend:
+        entry.trend === 'up' || entry.trend === 'down'
+          ? entry.trend
+          : 'flat',
+    }));
+
+    if (!rows.some((row) => row.isYou) && summary.matchCount > 0) {
+      rows.push({
+        rank: rows.length + 1,
+        gamerTag,
+        platform,
+        isYou: true,
+        kd,
+        winRate,
+        kills: summary.totalKills,
+        matches: summary.matchCount,
+        score:
+          summary.totalKills * 10 +
+          summary.winCount * 100 +
+          summary.matchCount * 5,
+        delta: '—',
+        trend: 'flat',
+      });
+      rows.sort((a, b) => b.score - a.score);
+      rows.forEach((row, index) => {
+        row.rank = index + 1;
+      });
     }
 
-    const bestKills = computeBestKills(this.effectiveRecentMatches());
-    if (bestKills >= 10) {
-      return `Llevás ${summary.winCount} victoria${summary.winCount === 1 ? '' : 's'} y tu record es ${bestKills} kills. Revisá Coach para el plan de mejora.`;
+    const yourIndex = rows.findIndex((row) => row.isYou);
+    const start = Math.max(0, yourIndex >= 0 ? yourIndex - 5 : 0);
+    const end = Math.min(
+      rows.length,
+      yourIndex >= 0 ? yourIndex + 6 : Math.min(rows.length, 11),
+    );
+
+    return {
+      rows: rows.slice(start, end),
+      yourRank: yourIndex >= 0 ? (rows[yourIndex]?.rank ?? 0) : 0,
+      totalPlayers:
+        this.communityBenchmarksApi()?.sampleSize ?? rows.length,
+      platform,
+    };
+  });
+
+  readonly aiCtaLabel = computed(() => {
+    const report = this.latestAiReport();
+    if (report?.status === 'ready' && report.matchId) {
+      return 'Ver último análisis';
     }
-    return `${w.matchCount} partidas esta semana · WR ${summary.winRate} · ${this.kdLabel()} ${this.weeklyKd()}. Seguí en Partidas o Evolución.`;
+    return 'Abrir AI Coach';
   });
 
   ngOnInit(): void {
@@ -425,6 +472,11 @@ export class DashboardPageComponent implements OnInit {
   }
 
   onAiCta(): void {
+    const report = this.latestAiReport();
+    if (report?.status === 'ready' && report.matchId) {
+      void this.router.navigateByUrl(matchDetailRoute(report.matchId));
+      return;
+    }
     void this.router.navigateByUrl('/tabs/ai-coach');
   }
 
@@ -449,7 +501,7 @@ export class DashboardPageComponent implements OnInit {
       const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
 
-      const [matches, weeklyRows, community] = await Promise.all([
+      const [matches, weeklyRows, community, leaderboard, aiReports] = await Promise.all([
         this.matchService.listPlayerMatchesOnce(userId, { limit: 50 }),
         firstValueFrom(
           this.statsService.listPlayerStatsRollups(userId, 'WEEKLY', periodId, platform),
@@ -457,11 +509,24 @@ export class DashboardPageComponent implements OnInit {
         firstValueFrom(
           this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
         ).catch(() => null),
+        firstValueFrom(
+          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 20),
+        ).catch(() => [] as LeaderboardEntryView[]),
+        this.matchAi
+          .listMatchAiReportsOnce(userId, {
+            platform: platform ?? undefined,
+            limit: 10,
+          })
+          .catch(() => [] as MatchAiReportView[]),
       ]);
 
       this.recentMatches.set(matches);
       this.weekly.set(weeklyRows[0] ?? null);
+      this.communityLeaderboardApi.set(leaderboard);
       this.lastUpdatedAt.set(new Date());
+      this.latestAiReport.set(
+        aiReports.find((row) => row.status === 'ready') ?? aiReports[0] ?? null,
+      );
 
       if (community && community.sampleSize > 0) {
         this.communityBenchmarksApi.set(

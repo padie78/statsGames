@@ -3,8 +3,8 @@ import { IonContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import {
   MOCK_COMMUNITY_BENCHMARKS,
-  buildCommunityRankNeighborhood,
-  mockLeaderboardForPlatform,
+  type CommunityRankRow,
+  type CommunityRankTableView,
 } from '../../data/community-mock.data';
 import {
   buildMockMatchHistory,
@@ -24,6 +24,7 @@ import {
   StatsService,
   currentWeeklyPeriodIdForStats,
   previousWeeklyPeriodIdForStats,
+  type LeaderboardEntryView,
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
 import type { CommunityBenchmarks } from '../../data/community-mock.data';
@@ -266,15 +267,27 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
           </header>
 
           <div class="sg-analytics__community-stack">
-            <sg-community-rank-table
-              title="Tu vecindario en el ranking"
-              [platform]="activePlatform()"
-              [rows]="communityRank().rows"
-              [yourRank]="communityRank().yourRank"
-              [totalPlayers]="communityRank().totalPlayers"
-              [sampleLabel]="communitySampleLabel()"
-              [subtitle]="communityRankSubtitle()"
-            />
+            @if (communityRank(); as rank) {
+              <sg-community-rank-table
+                title="Tu vecindario en el ranking"
+                [platform]="activePlatform()"
+                [rows]="rank.rows"
+                [yourRank]="rank.yourRank"
+                [totalPlayers]="rank.totalPlayers"
+                [sampleLabel]="communitySampleLabel()"
+                [subtitle]="communityRankSubtitle()"
+              />
+            } @else {
+              <aside class="sg-weekly-coach__empty-rank" role="status">
+                <p class="sg-weekly-coach__empty-rank-title u-m-0">
+                  Ranking comunitario aún sin peers
+                </p>
+                <p class="sg-weekly-coach__empty-rank-body u-m-0">
+                  No hay jugadores reales en el leaderboard semanal de esta plataforma.
+                  No se muestran rivales inventados.
+                </p>
+              </aside>
+            }
 
             <div class="sg-analytics__community-row">
               <sg-community-comparison-panel
@@ -285,12 +298,14 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 [disclaimer]="communityDisclaimer()"
               />
 
-              <sg-leaderboard-mini
-                title="Top semanal"
-                [subtitle]="platformMeta().shortLabel"
-                [entries]="leaderboardEntries()"
-                [highlightGamerTag]="gamerTag()"
-              />
+              @if (leaderboardEntries().length) {
+                <sg-leaderboard-mini
+                  title="Top semanal"
+                  [subtitle]="platformMeta().shortLabel"
+                  [entries]="leaderboardEntries()"
+                  [highlightGamerTag]="gamerTag()"
+                />
+              }
             </div>
           </div>
         </section>
@@ -311,7 +326,7 @@ export class AnalyticsPageComponent implements OnInit {
   readonly recentMatches = signal<MatchUpdateView[]>([]);
   readonly gamerTag = signal('');
   readonly communityBenchmarksApi = signal<CommunityBenchmarks | null>(null);
-  readonly leaderboardApi = signal<LeaderboardEntry[] | null>(null);
+  readonly leaderboardApi = signal<LeaderboardEntryView[]>([]);
   readonly communityUsesMock = signal(true);
   readonly error = signal<string | null>(null);
 
@@ -525,39 +540,101 @@ export class AnalyticsPageComponent implements OnInit {
       : 'Percentiles calculados vs jugadores activos de tu plataforma esta semana.',
   );
 
-  readonly communityRank = computed(() => {
+  readonly communityRank = computed<CommunityRankTableView | null>(() => {
     const platform = this.activePlatform();
+    const apiRows = this.leaderboardApi();
+    if (apiRows.length === 0) return null;
+
     const summary = this.weekSummary();
     const weekly = this.weeklyForCharts();
     const kd = parsePlayerKdForCommunity(this.weeklyKd()) ?? 1.0;
-    const winRate = parsePlayerWinRateForCommunity(summary.winRate) ?? 25;
+    const winRate = parsePlayerWinRateForCommunity(summary.winRate) ?? 0;
     const kills = weekly?.totalKills || summary.totalKills || 0;
     const matches = weekly?.matchCount || summary.matchCount || 0;
+    const gamerTag = this.gamerTag() || 'Vos';
+    const userId = this.auth.userId();
 
-    return buildCommunityRankNeighborhood({
+    const rows: CommunityRankRow[] = apiRows.map((entry) => ({
+      rank: entry.rank,
+      gamerTag:
+        entry.userId === userId
+          ? gamerTag
+          : entry.gamerTag && entry.gamerTag !== entry.userId
+            ? entry.gamerTag
+            : `Jugador ${entry.rank}`,
       platform,
-      gamerTag: this.gamerTag() || 'Vos',
-      kd,
-      winRate,
-      kills,
-      matches,
-      radius: 3,
-    });
+      isYou: entry.userId === userId,
+      kd: entry.kd,
+      winRate: entry.winRate,
+      kills: entry.totalKills,
+      matches: entry.matchCount,
+      score: entry.score,
+      delta: entry.delta,
+      trend:
+        entry.trend === 'up' || entry.trend === 'down'
+          ? entry.trend
+          : 'flat',
+    }));
+
+    if (!rows.some((row) => row.isYou) && matches > 0) {
+      rows.push({
+        rank: rows.length + 1,
+        gamerTag,
+        platform,
+        isYou: true,
+        kd,
+        winRate,
+        kills,
+        matches,
+        score: kills * 10 + summary.winCount * 100 + matches * 5,
+        delta: '—',
+        trend: 'flat',
+      });
+      rows.sort((a, b) => b.score - a.score);
+      rows.forEach((row, index) => {
+        row.rank = index + 1;
+      });
+    }
+
+    const yourIndex = rows.findIndex((row) => row.isYou);
+    const start = Math.max(0, yourIndex >= 0 ? yourIndex - 3 : 0);
+    const end = Math.min(
+      rows.length,
+      yourIndex >= 0 ? yourIndex + 4 : Math.min(rows.length, 7),
+    );
+
+    return {
+      rows: rows.slice(start, end),
+      yourRank: yourIndex >= 0 ? (rows[yourIndex]?.rank ?? 0) : 0,
+      totalPlayers:
+        this.communityBenchmarksApi()?.sampleSize ?? rows.length,
+      platform,
+    };
   });
 
   readonly communityRankSubtitle = computed(() => {
+    const rank = this.communityRank();
     const label = gamePlatformMeta(this.activePlatform()).label;
-    const you = this.communityRank().yourRank;
-    return this.communityUsesMock()
-      ? `${label} · puesto #${you} (preview mock)`
-      : `${label} · tu puesto #${you} esta semana`;
+    if (!rank) return `${label} · sin peers reales esta semana`;
+    return `${label} · tu puesto #${rank.yourRank} esta semana`;
   });
 
-  readonly leaderboardEntries = computed<LeaderboardEntry[]>(() => {
-    const api = this.leaderboardApi();
-    if (api?.length) return api;
-    return mockLeaderboardForPlatform(this.activePlatform());
-  });
+  readonly leaderboardEntries = computed<LeaderboardEntry[]>(() =>
+    this.leaderboardApi().map((entry) => ({
+      rank: entry.rank,
+      gamerTag:
+        entry.gamerTag && entry.gamerTag !== entry.userId
+          ? entry.gamerTag
+          : `Jugador ${entry.rank}`,
+      platform: selectedGameFromBackend(entry.platform, this.activePlatform()),
+      score: entry.score,
+      delta: entry.delta,
+      trend:
+        entry.trend === 'up' || entry.trend === 'down'
+          ? entry.trend
+          : 'flat',
+    })),
+  );
 
   readonly killsTrend = computed<TrendChartPoint[]>(() =>
     this.chartDailyTrend().map((d) => ({
@@ -663,8 +740,8 @@ export class AnalyticsPageComponent implements OnInit {
             this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
           ).catch(() => null),
           firstValueFrom(
-            this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 5),
-          ).catch(() => null),
+            this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 20),
+          ).catch(() => [] as LeaderboardEntryView[]),
         ]);
 
       this.gamerTag.set(profile?.gamerTag ?? '');
@@ -693,20 +770,7 @@ export class AnalyticsPageComponent implements OnInit {
         this.communityUsesMock.set(true);
       }
 
-      if (leaderboard && leaderboard.length > 0) {
-        this.leaderboardApi.set(
-          leaderboard.map((entry) => ({
-            rank: entry.rank,
-            gamerTag: entry.gamerTag,
-            platform: selectedGameFromBackend(entry.platform, uiGame),
-            score: entry.score,
-            delta: entry.delta,
-            trend: (entry.trend as 'up' | 'down' | 'flat') ?? 'flat',
-          })),
-        );
-      } else {
-        this.leaderboardApi.set(null);
-      }
+      this.leaderboardApi.set(leaderboard ?? []);
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err, 'Error cargando estadísticas'));
     }

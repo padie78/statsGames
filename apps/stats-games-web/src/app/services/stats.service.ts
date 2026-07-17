@@ -37,6 +37,10 @@ export interface LeaderboardEntryView {
   platform: string;
   score: number;
   totalKills: number;
+  totalDeaths: number;
+  winCount: number;
+  winRate: number;
+  kd: number;
   matchCount: number;
   delta: string;
   trend: string;
@@ -127,6 +131,10 @@ const LIST_WEEKLY_LEADERBOARD = /* GraphQL */ `
       platform
       score
       totalKills
+      totalDeaths
+      winCount
+      winRate
+      kd
       matchCount
       delta
       trend

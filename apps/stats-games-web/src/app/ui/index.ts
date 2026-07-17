@@ -38,6 +38,7 @@ export {
 export { TrendingRailComponent, type TrendingItem } from './molecules/trending-rail/trending-rail.component';
 export { IntegrationStatusCardComponent } from './molecules/integration-status-card/integration-status-card.component';
 export { AiInsightCardComponent } from './molecules/ai-insight-card/ai-insight-card.component';
+export { WeeklyAiCoachPanelComponent } from './molecules/weekly-ai-coach-panel/weekly-ai-coach-panel.component';
 export {
   LiveMatchFeedComponent,
   type LiveMatchFeedItem,

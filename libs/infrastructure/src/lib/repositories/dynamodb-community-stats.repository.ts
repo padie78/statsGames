@@ -163,6 +163,8 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
         platform,
         score: Number(item['score'] ?? 0),
         totalKills: Number(item['totalKills'] ?? 0),
+        totalDeaths: Number(item['totalDeaths'] ?? 0),
+        winCount: Number(item['winCount'] ?? 0),
         matchCount: Number(item['matchCount'] ?? 0),
       }))
       .filter((row) => row.userId)
@@ -176,6 +178,14 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
       platform: row.platform,
       score: row.score,
       totalKills: row.totalKills,
+      totalDeaths: row.totalDeaths,
+      winCount: row.winCount,
+      winRate:
+        row.matchCount > 0 ? round1((row.winCount / row.matchCount) * 100) : 0,
+      kd:
+        row.totalDeaths > 0
+          ? round2(row.totalKills / row.totalDeaths)
+          : row.totalKills,
       matchCount: row.matchCount,
       delta: '—',
       trend: 'flat' as const,

@@ -8,7 +8,17 @@ export class ListWeeklyLeaderboardUseCase {
   ) {}
 
   async execute(input: {
-    platform: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league';
+    platform:
+      | 'fortnite'
+      | 'roblox'
+      | 'valorant'
+      | 'league_of_legends'
+      | 'cs2'
+      | 'dota2'
+      | 'overwatch2'
+      | 'rocket_league'
+      | 'clash_royale'
+      | 'brawl_stars';
     periodId: string;
     limit?: number;
   }) {
@@ -17,7 +27,7 @@ export class ListWeeklyLeaderboardUseCase {
     const rows = await this.communityRepository.listWeeklyLeaderboard(
       input.platform,
       input.periodId.trim(),
-      input.limit ?? 5,
+      input.limit ?? 20,
     );
 
     const enriched = await Promise.all(
