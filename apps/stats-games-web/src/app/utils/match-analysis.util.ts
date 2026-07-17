@@ -171,7 +171,7 @@ function markdownToStructuredSections(markdown: string): MatchAnalysisStructured
     }
   }
 
-  return sections.slice(0, 4);
+  return sections.slice(0, 5);
 }
 
 /** Adjunta benchmarks de comunidad al reporte (sin mutar el original). */

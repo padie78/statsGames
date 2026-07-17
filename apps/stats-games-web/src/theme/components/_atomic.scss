@@ -1154,7 +1154,14 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(0.88) saturate(0.92) contrast(1.05);
+  filter: brightness(0.92) saturate(1.05) contrast(1.06);
+}
+
+.sg-match-map__canvas-wrap--lol {
+  border-color: rgba(245, 208, 117, 0.22);
+  box-shadow:
+    inset 0 0 40px rgba(61, 224, 245, 0.04),
+    inset 0 0 60px rgba(255, 77, 154, 0.03);
 }
 
 .sg-match-map__overlay {

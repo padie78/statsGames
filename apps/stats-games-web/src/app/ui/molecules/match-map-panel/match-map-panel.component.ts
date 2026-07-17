@@ -79,7 +79,10 @@ const LOL_LEGEND: MatchMapEventType[] = [
 
       <div class="sg-match-map__layout">
         <div class="sg-match-map__map-column">
-          <div class="sg-match-map__canvas-wrap">
+          <div
+            class="sg-match-map__canvas-wrap"
+            [class.sg-match-map__canvas-wrap--lol]="isLol"
+          >
             <img
               class="sg-match-map__base"
               [src]="telemetry.mapAssetUrl"
