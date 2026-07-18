@@ -86,30 +86,61 @@ jobs:
 
           BUCKET=$(jq -r '.frontend_bucket.value // empty' tf-outputs.json)
           DIST_ID=$(jq -r '.frontend_cloudfront_id.value // empty' tf-outputs.json)
+          CF_DOMAIN=$(jq -r '.frontend_cloudfront_domain.value // empty' tf-outputs.json)
           APPSYNC_ENDPOINT=$(jq -r '.appsync_endpoint.value // empty' tf-outputs.json)
           APPSYNC_API_KEY=$(jq -r '.appsync_api_key.value // empty' tf-outputs.json)
           COGNITO_POOL=$(jq -r '.cognito_user_pool_id.value // empty' tf-outputs.json)
           COGNITO_CLIENT=$(jq -r '.cognito_web_client_id.value // empty' tf-outputs.json)
+          COGNITO_DOMAIN=$(jq -r '.cognito_domain.value // empty' tf-outputs.json)
+          WEBHOOK_API=$(jq -r '.webhook_api_endpoint.value // empty' tf-outputs.json)
+          WEBHOOK_PATTERN=$(jq -r '.webhook_url_pattern.value // empty' tf-outputs.json)
+          RSO_EXCHANGE=$(jq -r '.riot_rso_exchange_url.value // empty' tf-outputs.json)
+          RIOT_RSO_CLIENT_ID=$(jq -r '.riot_rso_client_id.value // empty' tf-outputs.json)
 
           if [ -z "$BUCKET" ] || [ -z "$DIST_ID" ] || [ -z "$APPSYNC_ENDPOINT" ] || [ -z "$APPSYNC_API_KEY" ] || [ -z "$COGNITO_POOL" ] || [ -z "$COGNITO_CLIENT" ]; then
             echo "::error::Faltan outputs Terraform requeridos (frontend_bucket, frontend_cloudfront_id, appsync_endpoint, appsync_api_key, cognito_user_pool_id, cognito_web_client_id)."
             exit 1
           fi
 
+          if [ -z "$WEBHOOK_API" ]; then
+            echo "::error::Falta output webhook_api_endpoint (media proxy / RSO exchange)."
+            exit 1
+          fi
+
           {
             echo "bucket=$BUCKET"
             echo "distribution_id=$DIST_ID"
+            echo "cloudfront_domain=$CF_DOMAIN"
             echo "appsync_endpoint=$APPSYNC_ENDPOINT"
             echo "cognito_user_pool_id=$COGNITO_POOL"
             echo "cognito_web_client_id=$COGNITO_CLIENT"
+            echo "cognito_domain=$COGNITO_DOMAIN"
+            echo "webhook_api_endpoint=$WEBHOOK_API"
+            echo "webhook_url_pattern=$WEBHOOK_PATTERN"
+            echo "riot_rso_exchange_url=$RSO_EXCHANGE"
+            echo "riot_rso_client_id=$RIOT_RSO_CLIENT_ID"
           } >> "$GITHUB_OUTPUT"
           echo "::add-mask::$APPSYNC_API_KEY"
           echo "appsync_api_key=$APPSYNC_API_KEY" >> "$GITHUB_OUTPUT"
 
       - name: Inject runtime environment
+        env:
+          CF_DOMAIN: ${{ steps.tf.outputs.cloudfront_domain }}
+          WEBHOOK_API: ${{ steps.tf.outputs.webhook_api_endpoint }}
+          WEBHOOK_PATTERN: ${{ steps.tf.outputs.webhook_url_pattern }}
+          RSO_EXCHANGE: ${{ steps.tf.outputs.riot_rso_exchange_url }}
+          RIOT_RSO_CLIENT_ID: ${{ steps.tf.outputs.riot_rso_client_id }}
+          COGNITO_DOMAIN: ${{ steps.tf.outputs.cognito_domain }}
         run: |
+          set -euo pipefail
+          ORIGIN="https://${CF_DOMAIN}"
+          EXCHANGE_URL="${RSO_EXCHANGE:-${WEBHOOK_API}/integrations/riot/rso/exchange}"
+          WEBHOOK_URL="${WEBHOOK_PATTERN:-${WEBHOOK_API}/webhooks/{platform}}"
+
           cat > apps/stats-games-web/src/environments/environment.prod.ts <<EOF
-          export const environment = {
+          import type { AppRuntimeEnvironment } from './environment.types';
+
+          export const environment: AppRuntimeEnvironment = {
             production: true,
             appsync: {
               endpoint: '${{ steps.tf.outputs.appsync_endpoint }}',
@@ -119,6 +150,21 @@ jobs:
             cognito: {
               userPoolId: '${{ steps.tf.outputs.cognito_user_pool_id }}',
               userPoolClientId: '${{ steps.tf.outputs.cognito_web_client_id }}',
+              domain: '${COGNITO_DOMAIN}',
+              oauthRedirectSignIn: '${ORIGIN}/auth/callback',
+              oauthRedirectSignOut: '${ORIGIN}/login',
+            },
+            webhookUrlPattern: '${WEBHOOK_URL}',
+            mediaProxyBaseUrl: '${WEBHOOK_API}',
+            riot: {
+              clientId: '${RIOT_RSO_CLIENT_ID}',
+              redirectUri: '${ORIGIN}/integrations/riot/callback',
+              authorizeUrl: 'https://auth.riotgames.com/authorize',
+              scopes: 'openid offline_access',
+              tokenExchangeUrl: '${EXCHANGE_URL}',
+              accountUrl: 'https://account.riotgames.com/',
+              valorantPrivacyHelpUrl:
+                'https://support-valorant.riotgames.com/hc/en-us/articles/360047241634',
             },
           };
           EOF

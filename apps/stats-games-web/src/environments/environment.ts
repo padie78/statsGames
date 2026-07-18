@@ -1,4 +1,6 @@
-export const environment = {
+import type { AppRuntimeEnvironment } from './environment.types';
+
+export const environment: AppRuntimeEnvironment = {
   production: false,
   appsync: {
     endpoint: 'https://fjfiyg5qmrdwdiga4ru2g2ut7m.appsync-api.eu-central-1.amazonaws.com/graphql',
@@ -20,7 +22,7 @@ export const environment = {
    * El secret vive solo en Lambda (`riot_rso_client_secret`).
    */
   riot: {
-    clientId: '' as string,
+    clientId: '',
     redirectUri: 'http://localhost:4200/integrations/riot/callback',
     authorizeUrl: 'https://auth.riotgames.com/authorize',
     scopes: 'openid offline_access',

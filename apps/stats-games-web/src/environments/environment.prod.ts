@@ -1,4 +1,6 @@
-export const environment = {
+import type { AppRuntimeEnvironment } from './environment.types';
+
+export const environment: AppRuntimeEnvironment = {
   production: true,
   appsync: {
     endpoint: 'https://REPLACE.appsync-api.eu-central-1.amazonaws.com/graphql',
@@ -17,7 +19,7 @@ export const environment = {
   /** Mismo host que webhook_api_endpoint (sin /webhooks). */
   mediaProxyBaseUrl: 'https://REPLACE.execute-api.eu-central-1.amazonaws.com',
   riot: {
-    clientId: '' as string,
+    clientId: '',
     redirectUri: 'https://REPLACE.cloudfront.net/integrations/riot/callback',
     authorizeUrl: 'https://auth.riotgames.com/authorize',
     scopes: 'openid offline_access',

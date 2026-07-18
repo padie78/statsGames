@@ -159,6 +159,19 @@ output "frontend_cloudfront_id" {
   value = module.frontend_hosting.distribution_id
 }
 
+output "frontend_cloudfront_domain" {
+  value = module.frontend_hosting.distribution_domain
+}
+
 output "frontend_url" {
   value = "https://${module.frontend_hosting.distribution_domain}"
+}
+
+output "riot_rso_exchange_url" {
+  value = module.lambdas.riot_rso_exchange_url
+}
+
+output "riot_rso_client_id" {
+  value       = var.riot_rso_client_id
+  description = "Client ID público RSO (no secret). Vacío hasta aprobar RSO en Riot."
 }
