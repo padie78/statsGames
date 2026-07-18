@@ -248,7 +248,7 @@ resource "aws_lambda_function" "riot_rso" {
 
   environment {
     variables = {
-      LOG_LEVEL             = "INFO"
+      LOG_LEVEL              = "INFO"
       RIOT_RSO_CLIENT_ID     = var.riot_rso_client_id
       RIOT_RSO_CLIENT_SECRET = var.riot_rso_client_secret
       VALORANT_REGION        = var.valorant_region
