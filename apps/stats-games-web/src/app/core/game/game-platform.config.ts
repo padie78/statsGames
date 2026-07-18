@@ -24,7 +24,10 @@ export interface GamePlatformMeta {
   portraitUrl: string;
   /** Fallback local si falla el remoto. */
   portraitFallbackUrl: string;
+  /** Ícono compacto (menú / switcher). */
   iconUrl: string;
+  /** Logomark grande para el panel gráfico (opcional; fallback a iconUrl). */
+  markUrl?: string;
   ambientVideoUrl?: string;
   pressBannerUrl?: string;
   officialTrailerVideoId?: string;
@@ -63,6 +66,8 @@ export const GAME_PLATFORMS: Record<SelectedGame, GamePlatformMeta> = {
     portraitUrl: youtubeCover('tEnsqpThaFg'),
     portraitFallbackUrl: '/assets/games/league_of_legends-portrait.svg',
     iconUrl: '/assets/games/league_of_legends-icon.svg',
+    // L dorada oficial para el panel (Tracker-style); el menú usa el SVG compacto.
+    markUrl: '/assets/games/league_of_legends-icon.png',
     officialTrailerVideoId: 'tEnsqpThaFg',
     officialTrailerTitle: 'League of Legends cinematic',
     accent: 'amber',

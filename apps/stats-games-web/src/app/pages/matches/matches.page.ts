@@ -2,16 +2,16 @@ import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal 
 import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
+import { gamePlatformMeta } from '../../core/game/game-platform.config';
+import { lolMatchesBannerSplashUrl } from '../../core/game/lol-ddragon.util';
 import type { SelectedGame } from '../../core/game/selected-game';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import {
-  KpiStripComponent,
   MatchFiltersToolbarComponent,
   MatchHighlightCardComponent,
   MatchHistoryListComponent,
-  PlatformPageBannerComponent,
-  type KpiStripItem,
+  WeekHeroBrandComponent,
   type MatchDateFilter,
   type MatchResultFilter,
 } from '../../ui';
@@ -24,10 +24,7 @@ import {
   toMatchCardStats,
   type MatchSortKey,
 } from '../../utils/match-stats.util';
-import {
-  aggregatePlatformMatchStats,
-  buildPlatformKpiItems,
-} from '../../utils/platform-stats.util';
+import { aggregatePlatformMatchStats } from '../../utils/platform-stats.util';
 import { resolveMatchHistory } from '../../data/match-mock.data';
 
 @Component({
@@ -38,11 +35,10 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    PlatformPageBannerComponent,
     MatchFiltersToolbarComponent,
-    KpiStripComponent,
     MatchHighlightCardComponent,
     MatchHistoryListComponent,
+    WeekHeroBrandComponent,
   ],
   template: `
     <ion-content class="sg-page-content">
@@ -50,77 +46,158 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
         <ion-refresher-content />
       </ion-refresher>
 
-      <div class="page-shell page-shell--fluid sg-matches-page u-flex u-flex-col u-gap-6">
-        <sg-platform-page-banner
-          [platform]="bannerPlatform()"
-          title="Partidas"
-          subtitle="Historial, filtros y análisis por match. Las tendencias viven en Evolución."
-        />
+      <div
+        class="sg-matches-page"
+        [class.sg-matches-page--loading]="loading()"
+        [attr.data-game]="bannerPlatform()"
+      >
+        <section
+          class="sg-dashboard__week sg-matches__hero"
+          [attr.data-game]="bannerPlatform()"
+          aria-label="Partidas"
+        >
+          <img
+            class="sg-dashboard__week-art sg-matches__hero-art"
+            [src]="heroArtSrc()"
+            [alt]="platformMeta().label + ' art'"
+            (error)="onHeroArtError()"
+          />
+          <div class="sg-dashboard__week-veil" aria-hidden="true"></div>
 
-        <sg-match-filters-toolbar
-          [dateRange]="dateFilter()"
-          [result]="resultFilter()"
-          [sort]="sortKey()"
-          [query]="searchQuery()"
-          [mode]="modeFilter()"
-          [identity]="identityFilter()"
-          [map]="mapFilter()"
-          [modeOptions]="modeOptions()"
-          [identityOptions]="identityOptions()"
-          [mapOptions]="mapOptions()"
-          [identityLabel]="identityLabel()"
-          [resultCount]="filteredMatches().length"
-          [usingMockData]="usingMockData()"
-          [hasActiveFilters]="hasActiveFilters()"
-          (dateRangeChange)="setDateFilter($event)"
-          (resultChange)="setResultFilter($event)"
-          (sortChange)="setSortKey($event)"
-          (queryChange)="setSearchQuery($event)"
-          (modeChange)="setModeFilter($event)"
-          (identityChange)="setIdentityFilter($event)"
-          (mapChange)="setMapFilter($event)"
-          (clearFilters)="clearFilters()"
-        />
+          <div class="sg-dashboard__week-inner">
+            <sg-week-hero-brand [platform]="bannerPlatform()" />
+            <div class="sg-dashboard__week-main">
+              <p class="sg-dashboard__week-eyebrow">
+                {{ platformMeta().label }} · Historial
+                @if (!loading()) {
+                  <span>· {{ filteredMatches().length }} resultados</span>
+                }
+              </p>
+              <h1 class="sg-dashboard__week-title">Partidas</h1>
+              <p class="sg-dashboard__week-lede u-m-0">
+                @if (loading()) {
+                  Cargando tu historial filtrable…
+                } @else if (filteredMatches().length === 0) {
+                  No hay partidas con estos filtros. Ampliá búsqueda o periodo.
+                } @else {
+                  Filtrá por resultado, modo y {{ identityLabel().toLowerCase() }}. El análisis
+                  profundo vive en cada match.
+                }
+              </p>
 
-        @if (error()) {
-          <p class="u-error">{{ error() }}</p>
-        }
+              <div class="sg-dashboard__week-kpis" aria-label="KPIs del filtro">
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ heroKpis().winRate }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Win rate</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ heroKpis().kd }}</span>
+                  <span class="sg-dashboard__week-kpi-label">{{ kdLabel() }}</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ heroKpis().wins }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Victorias</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ heroKpis().matches }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Partidas</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        @if (loading()) {
-          <section class="u-surface-card u-p-5">
-            <p class="u-hint u-m-0">Cargando partidas…</p>
-          </section>
-        } @else if (filteredMatches().length > 0) {
-          <sg-kpi-strip
-            title="Resumen del período"
-            [platform]="bannerPlatform()"
-            [items]="summaryKpis()"
+        <div class="sg-matches__body page-shell page-shell--fluid u-flex u-flex-col u-gap-6">
+          <sg-match-filters-toolbar
+            [dateRange]="dateFilter()"
+            [result]="resultFilter()"
+            [sort]="sortKey()"
+            [query]="searchQuery()"
+            [mode]="modeFilter()"
+            [identity]="identityFilter()"
+            [map]="mapFilter()"
+            [modeOptions]="modeOptions()"
+            [identityOptions]="identityOptions()"
+            [mapOptions]="mapOptions()"
+            [identityLabel]="identityLabel()"
+            [resultCount]="filteredMatches().length"
+            [usingMockData]="usingMockData()"
+            [hasActiveFilters]="hasActiveFilters()"
+            (dateRangeChange)="setDateFilter($event)"
+            (resultChange)="setResultFilter($event)"
+            (sortChange)="setSortKey($event)"
+            (queryChange)="setSearchQuery($event)"
+            (modeChange)="setModeFilter($event)"
+            (identityChange)="setIdentityFilter($event)"
+            (mapChange)="setMapFilter($event)"
+            (clearFilters)="clearFilters()"
           />
 
-          @if (highlightMatch(); as match) {
-            <sg-match-highlight-card
-              [matchId]="match.matchId"
-              [platform]="match.platform"
-              [summary]="match.summary"
-              [updatedAt]="match.relativeTime"
-              [stats]="match.stats"
-              [showHistoryLink]="false"
-            />
+          @if (error()) {
+            <p class="u-error">{{ error() }}</p>
           }
 
-          <sg-match-history-list
-            [groups]="groupedMatches()"
-            emptyMessage="No hay partidas con estos filtros."
-          />
-        } @else {
-          <section class="sg-match-history__empty u-surface-card u-p-5">
-            <h2 class="sg-page-header__title u-text-md u-mb-2">Sin partidas</h2>
-            <p class="u-hint u-m-0">
-              No hay resultados con los filtros actuales. Probá ampliar la búsqueda o conectá tu
-              cuenta en Integraciones.
-            </p>
-          </section>
-        }
+          @if (loading()) {
+            <div
+              class="sg-matches__loading"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+              aria-label="Cargando partidas"
+            >
+              <span class="sg-dashboard__loading-dots" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </span>
+            </div>
+          } @else if (filteredMatches().length > 0) {
+            @if (highlightMatch(); as match) {
+              <section class="sg-dashboard__block" aria-labelledby="matches-highlight">
+                <div class="sg-dashboard__block-head">
+                  <div>
+                    <h2 id="matches-highlight" class="sg-dashboard__block-title">
+                      Partida destacada
+                    </h2>
+                    <p class="sg-dashboard__block-desc">
+                      Mejor resultado del filtro actual.
+                    </p>
+                  </div>
+                </div>
+                <sg-match-highlight-card
+                  [matchId]="match.matchId"
+                  [platform]="match.platform"
+                  [summary]="match.summary"
+                  [updatedAt]="match.relativeTime"
+                  [stats]="match.stats"
+                  [showHistoryLink]="false"
+                  [compact]="true"
+                />
+              </section>
+            }
+
+            <section class="sg-dashboard__block" aria-labelledby="matches-history">
+              <div class="sg-dashboard__block-head">
+                <div>
+                  <h2 id="matches-history" class="sg-dashboard__block-title">Historial</h2>
+                  <p class="sg-dashboard__block-desc">
+                    Agrupado por día. Abrí una partida para el análisis.
+                  </p>
+                </div>
+              </div>
+              <sg-match-history-list
+                [groups]="groupedMatches()"
+                emptyMessage="No hay partidas con estos filtros."
+              />
+            </section>
+          } @else {
+            <section class="sg-match-history__empty u-surface-card u-p-5">
+              <h2 class="sg-page-header__title u-text-md u-mb-2">Sin partidas</h2>
+              <p class="u-hint u-m-0">
+                No hay resultados con los filtros actuales. Probá ampliar la búsqueda o conectá tu
+                cuenta en Integraciones.
+              </p>
+            </section>
+          }
+        </div>
       </div>
     </ion-content>
   `,
@@ -141,10 +218,36 @@ export class MatchesPageComponent implements OnInit {
   readonly mapFilter = signal('all');
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+  private readonly heroArtFailed = signal(false);
 
   readonly bannerPlatform = computed(
     (): SelectedGame => this.gameContext.activeGame() ?? 'fortnite',
   );
+
+  readonly platformMeta = computed(() => gamePlatformMeta(this.bannerPlatform()));
+
+  /** Arte distinto a Inicio: pool cinematic de Partidas para LoL. */
+  readonly heroArtSrc = computed(() => {
+    const meta = this.platformMeta();
+    if (this.heroArtFailed()) {
+      return meta.portraitFallbackUrl || meta.artUrl;
+    }
+    if (this.bannerPlatform() === 'league_of_legends') {
+      const seed = (this.auth.userId() ?? 'lol-matches').length + 11;
+      return lolMatchesBannerSplashUrl(seed);
+    }
+    return meta.portraitUrl || meta.artUrl;
+  });
+
+  readonly kdLabel = computed(() => {
+    const p = this.bannerPlatform();
+    return p === 'valorant' ||
+      p === 'league_of_legends' ||
+      p === 'dota2' ||
+      p === 'overwatch2'
+      ? 'KDA'
+      : 'K/D';
+  });
 
   /** Solo partidas del juego activo (selector del chrome). */
   readonly platformScopedMatches = computed(() => {
@@ -242,11 +345,15 @@ export class MatchesPageComponent implements OnInit {
     return sortMatches(rows, this.sortKey());
   });
 
-  readonly summaryKpis = computed<KpiStripItem[]>(() => {
+  readonly heroKpis = computed(() => {
     const matches = this.filteredMatches();
-    const platform = this.bannerPlatform() ?? matches[0]?.platform ?? 'fortnite';
     const summary = aggregatePlatformMatchStats(matches);
-    return buildPlatformKpiItems(platform, summary);
+    return {
+      winRate: summary.winRate || '—',
+      kd: summary.kda || summary.kd || '—',
+      wins: summary.winCount,
+      matches: summary.matchCount,
+    };
   });
 
   readonly highlightMatch = computed(() => {
@@ -254,6 +361,9 @@ export class MatchesPageComponent implements OnInit {
     if (!matches.length) return null;
 
     const best = [...matches].sort((a, b) => {
+      const winA = isMatchWin(a.stats) ? 1 : 0;
+      const winB = isMatchWin(b.stats) ? 1 : 0;
+      if (winA !== winB) return winB - winA;
       const pa = a.stats?.placement ?? 999;
       const pb = b.stats?.placement ?? 999;
       if (pa !== pb) return pa - pb;
@@ -287,6 +397,8 @@ export class MatchesPageComponent implements OnInit {
     effect(
       () => {
         const tick = this.gameContext.refreshTick();
+        this.bannerPlatform();
+        this.heroArtFailed.set(false);
         if (tick === 0) return;
         this.searchQuery.set('');
         this.dateFilter.set('all');
@@ -298,7 +410,6 @@ export class MatchesPageComponent implements OnInit {
       { allowSignalWrites: true },
     );
 
-    // Mismo feed que el toast de notificaciones: merge live → lista sin F5.
     effect(
       () => {
         const userId = this.auth.userId();
@@ -320,6 +431,10 @@ export class MatchesPageComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadMatches();
+  }
+
+  onHeroArtError(): void {
+    this.heroArtFailed.set(true);
   }
 
   setDateFilter(value: MatchDateFilter): void {

@@ -219,7 +219,7 @@ import { NotificationsBellComponent } from '../../molecules/notifications-bell/n
             >
               <span>{{ item.label }}</span>
               @if (item.badge) {
-                <sg-neon-badge [tone]="item.tone === 'purple' ? 'purple' : 'lime'">{{ item.badge }}</sg-neon-badge>
+                <sg-neon-badge tone="lime">{{ item.badge }}</sg-neon-badge>
               }
             </a>
           }

@@ -58,6 +58,7 @@ const CHAMPION_KEY_ALIASES: Record<string, string> = {
  * Splash cinematicos (Data Dragon) — skins con arte fuerte para banner.
  * Formato: ChampionKey_skinNum
  */
+/** Splash para Inicio / resumen semanal. */
 const CINEMATIC_SPLASHES = [
   'Jinx_37', // Arcane
   'Ahri_27', // Spirit Blossom
@@ -68,6 +69,62 @@ const CINEMATIC_SPLASHES = [
   'LeeSin_31', // God Fist / strong pose
   'Darius_15', // Dreadnova
 ] as const;
+
+/**
+ * Splash distintos para Partidas (combate / ranked vibe).
+ * No reutilizar los de Inicio para que cada vista tenga identidad visual.
+ */
+const MATCHES_CINEMATIC_SPLASHES = [
+  'Zed_13', // Galaxy Slayer
+  'Aatrox_7', // Prestige / bloodied
+  'Samira_1', // PsyOps
+  'Pyke_16', // Empyrean
+  'Diana_11', // Dark Waters
+  'Sett_10', // Obsidian Dragon
+  'Viego_1', // Lunar Beast
+  'Riven_16', // Dawnbringer
+] as const;
+
+/** Evolución: progreso / control / macro. */
+const EVOLUTION_CINEMATIC_SPLASHES = [
+  'Ashe_11', // High Noon
+  'Azir_2', // Galactic
+  'Orianna_7', // Dark Star
+  'Syndra_6', // Star Guardian
+  'KaiSa_26', // Star Guardian
+  'Anivia_5', // Blackfrost
+  'Viktor_14', // Arcane
+  'TwistedFate_13', // Crime City Nightmare
+] as const;
+
+/** Coach IA: mentores / utilidad / focus. */
+const COACH_CINEMATIC_SPLASHES = [
+  'Karma_14', // Immortal Journey
+  'Lulu_15', // Star Guardian
+  'Soraka_15', // Immortal Journey
+  'Janna_5', // Forecast
+  'Nami_7', // Program
+  'Yuumi_11', // Heartseeker
+  'Seraphine_1', // K/DA ALL OUT
+  'Sona_6', // DJ Sona / Odyssey
+] as const;
+
+/** Perfil público: identidad / prestige. */
+const PROFILE_CINEMATIC_SPLASHES = [
+  'Akali_14', // True Damage
+  'Katarina_29', // Battle Queen
+  'Ezreal_5', // Pulsefire
+  'Fiora_4', // Headmistress
+  'Irelia_15', // Sentinel
+  'Caitlyn_11', // Pulsefire
+  'Leblanc_20', // Prestige
+  'Camille_2', // Program
+] as const;
+
+function pickDdragonSplash(pool: readonly string[], seed: number): string {
+  const pick = pool[Math.abs(seed) % pool.length] ?? pool[0];
+  return `${DDRAGON_SPLASH_BASE}/${pick}.jpg`;
+}
 
 export function lolChampionKey(name: string | null | undefined): string | null {
   const raw = name?.trim();
@@ -107,7 +164,25 @@ export function lolChampionSplashFallbackUrl(
 }
 
 export function lolFallbackSplashUrl(seed = 0): string {
-  const pick =
-    CINEMATIC_SPLASHES[Math.abs(seed) % CINEMATIC_SPLASHES.length] ?? CINEMATIC_SPLASHES[0];
-  return `${DDRAGON_SPLASH_BASE}/${pick}.jpg`;
+  return pickDdragonSplash(CINEMATIC_SPLASHES, seed);
+}
+
+/** Banner de Partidas: pool cinematic distinto al de Inicio. */
+export function lolMatchesBannerSplashUrl(seed = 0): string {
+  return pickDdragonSplash(MATCHES_CINEMATIC_SPLASHES, seed);
+}
+
+/** Banner de Evolución. */
+export function lolEvolutionBannerSplashUrl(seed = 0): string {
+  return pickDdragonSplash(EVOLUTION_CINEMATIC_SPLASHES, seed);
+}
+
+/** Banner de Coach IA. */
+export function lolCoachBannerSplashUrl(seed = 0): string {
+  return pickDdragonSplash(COACH_CINEMATIC_SPLASHES, seed);
+}
+
+/** Banner de Perfil. */
+export function lolProfileBannerSplashUrl(seed = 0): string {
+  return pickDdragonSplash(PROFILE_CINEMATIC_SPLASHES, seed);
 }

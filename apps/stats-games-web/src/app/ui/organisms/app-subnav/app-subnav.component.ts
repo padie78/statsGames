@@ -63,7 +63,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
               </span>
               <span class="sg-game-nav__tab-label">{{ item.label }}</span>
               @if (item.badge) {
-                <sg-neon-badge [tone]="item.tone === 'purple' ? 'purple' : 'lime'">{{ item.badge }}</sg-neon-badge>
+                <sg-neon-badge [tone]="badgeTone(item.tone)">{{ item.badge }}</sg-neon-badge>
               }
             </a>
           }
@@ -122,7 +122,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
                 </span>
               </span>
               @if (item.badge) {
-                <sg-neon-badge [tone]="item.tone === 'purple' ? 'purple' : 'lime'">{{ item.badge }}</sg-neon-badge>
+                <sg-neon-badge [tone]="badgeTone(item.tone)">{{ item.badge }}</sg-neon-badge>
               }
             </a>
           }
@@ -198,6 +198,11 @@ export class AppSubnavComponent {
     return id ? gamePlatformMeta(id) : gamePlatformMeta('fortnite');
   });
   readonly mobileMenuOpen = signal(false);
+
+  /** Badges de nav: oro (lime alias). Evita púrpura que pelea con la marca. */
+  badgeTone(tone?: 'lime' | 'purple' | 'cyan'): 'lime' | 'cyan' | 'muted' {
+    return tone === 'cyan' ? 'cyan' : 'lime';
+  }
 
   constructor() {
     effect(() => {

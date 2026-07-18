@@ -12,6 +12,7 @@ import {
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
+import { lolEvolutionBannerSplashUrl } from '../../core/game/lol-ddragon.util';
 import {
   matchBackendPlatform,
   selectedGameFromBackend,
@@ -39,8 +40,8 @@ import {
   LeaderboardMiniComponent,
   MatchTrendsPanelComponent,
   PercentileGaugesComponent,
-  PlatformPageBannerComponent,
   StatValueComponent,
+  WeekHeroBrandComponent,
   StatsComparisonChartComponent,
   StatsRadarChartComponent,
   TrendChartComponent,
@@ -75,8 +76,8 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
   encapsulation: ViewEncapsulation.None,
   imports: [
     IonContent,
-    PlatformPageBannerComponent,
     StatValueComponent,
+    WeekHeroBrandComponent,
     TrendChartComponent,
     StatsRadarChartComponent,
     WeekComparisonPanelComponent,
@@ -90,13 +91,58 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
   ],
   template: `
     <ion-content class="sg-page-content">
-      <div class="page-shell page-shell--fluid sg-analytics u-flex u-flex-col u-gap-6">
-        <sg-platform-page-banner
-          [platform]="activePlatform()"
-          title="Evolución"
-          subtitle="Tendencias, forma semanal y percentiles vs comunidad — no el historial de partidas."
-        />
+      <div class="sg-analytics-page" [attr.data-game]="activePlatform()">
+        <section
+          class="sg-dashboard__week sg-analytics__hero"
+          [attr.data-game]="activePlatform()"
+          aria-label="Evolución"
+        >
+          <img
+            class="sg-dashboard__week-art sg-analytics__hero-art"
+            [src]="heroArtSrc()"
+            [alt]="platformMeta().label + ' art'"
+            (error)="onHeroArtError()"
+          />
+          <div class="sg-dashboard__week-veil" aria-hidden="true"></div>
 
+          <div class="sg-dashboard__week-inner">
+            <sg-week-hero-brand [platform]="activePlatform()" />
+            <div class="sg-dashboard__week-main">
+              <p class="sg-dashboard__week-eyebrow">
+                {{ platformMeta().label }} · Tendencias
+                @if (communityUsesMock()) {
+                  <span>· preview</span>
+                }
+              </p>
+              <h1 class="sg-dashboard__week-title">Evolución</h1>
+              <p class="sg-dashboard__week-lede u-m-0">
+                Forma semanal, percentiles vs comunidad y curvas de progreso — no el historial de
+                partidas.
+              </p>
+
+              <div class="sg-dashboard__week-kpis" aria-label="KPIs semanales">
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ platformWeekSummary().winRate }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Win rate</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ heroKd() }}</span>
+                  <span class="sg-dashboard__week-kpi-label">{{ kdLabel() }}</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ platformWeekSummary().winCount }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Victorias</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ weekMatchCount() }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Partidas</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="sg-analytics__body page-shell page-shell--fluid sg-analytics u-flex u-flex-col u-gap-6">
         @if (error()) {
           <p class="u-error">{{ error() }}</p>
         }
@@ -110,23 +156,25 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           </section>
         }
 
-        <section class="sg-analytics__section" aria-labelledby="analytics-overview">
-          <header class="sg-analytics__section-header">
-            <h2 id="analytics-overview" class="sg-analytics__section-title">Resumen semanal</h2>
-            <p class="sg-analytics__section-desc">
-              {{ platformMeta().shortLabel }} · últimos 7 días
-              @if (communityUsesMock()) {
-                <span class="sg-analytics__badge">preview</span>
-              }
-            </p>
-          </header>
+        <section class="sg-dashboard__block" aria-labelledby="analytics-overview">
+          <div class="sg-dashboard__block-head">
+            <div>
+              <h2 id="analytics-overview" class="sg-dashboard__block-title">Resumen semanal</h2>
+              <p class="sg-dashboard__block-desc">
+                {{ platformMeta().shortLabel }} · últimos 7 días
+                @if (communityUsesMock()) {
+                  <span class="sg-analytics__badge">preview</span>
+                }
+              </p>
+            </div>
+          </div>
 
           <div class="u-surface-card u-p-5">
             <div class="u-grid-stats sg-analytics__kpi-grid">
               <sg-stat-value label="Partidas" [value]="weekMatchCount()" accent="lime" />
               <sg-stat-value label="Win rate" [value]="platformWeekSummary().winRate" accent="lime" />
               <sg-stat-value label="Victorias" [value]="platformWeekSummary().winCount" accent="lime" />
-              <sg-stat-value label="KDA" [value]="platformWeekSummary().kda" accent="lime" />
+              <sg-stat-value [label]="kdLabel()" [value]="heroKd()" accent="lime" />
               <sg-stat-value label="K/D" [value]="platformWeekSummary().kd" accent="lime" />
               <sg-stat-value [label]="analyticsKillLabel()" [value]="platformWeekSummary().totalKills" accent="lime" />
               @if (showValCs2Extras()) {
@@ -154,13 +202,15 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           </div>
         </section>
 
-        <section class="sg-analytics__section" aria-labelledby="analytics-compare-week">
-          <header class="sg-analytics__section-header">
-            <h2 id="analytics-compare-week" class="sg-analytics__section-title">Comparaciones</h2>
-            <p class="sg-analytics__section-desc">
-              Semana actual vs anterior, y vos vs el promedio de la comunidad.
-            </p>
-          </header>
+        <section class="sg-dashboard__block" aria-labelledby="analytics-compare-week">
+          <div class="sg-dashboard__block-head">
+            <div>
+              <h2 id="analytics-compare-week" class="sg-dashboard__block-title">Comparaciones</h2>
+              <p class="sg-dashboard__block-desc">
+                Semana actual vs anterior, y vos vs el promedio de la comunidad.
+              </p>
+            </div>
+          </div>
 
           <div class="sg-analytics__compare-grid">
             <sg-week-comparison-panel
@@ -183,13 +233,15 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           />
         </section>
 
-        <section class="sg-analytics__section" aria-labelledby="analytics-trends">
-          <header class="sg-analytics__section-header">
-            <h2 id="analytics-trends" class="sg-analytics__section-title">Tendencias</h2>
-            <p class="sg-analytics__section-desc">
-              Actividad diaria, K/D acumulado y perfil normalizado.
-            </p>
-          </header>
+        <section class="sg-dashboard__block" aria-labelledby="analytics-trends">
+          <div class="sg-dashboard__block-head">
+            <div>
+              <h2 id="analytics-trends" class="sg-dashboard__block-title">Tendencias</h2>
+              <p class="sg-dashboard__block-desc">
+                Actividad diaria, K/D acumulado y perfil normalizado.
+              </p>
+            </div>
+          </div>
 
           <div class="sg-analytics-charts">
             <sg-trend-chart
@@ -204,8 +256,8 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
               title="Partidas por día"
               unit="matches"
               variant="bar"
-              color="#3de0f5"
-              areaColor="rgba(61, 224, 245, 0.28)"
+              color="#c89b3c"
+              areaColor="rgba(200, 155, 60, 0.28)"
               [points]="matchesTrend()"
             />
             <sg-trend-chart
@@ -220,8 +272,8 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
               title="Placement medio"
               unit="puesto"
               variant="area"
-              color="#ff4d9a"
-              areaColor="rgba(255, 77, 154, 0.18)"
+              color="#e8a0b0"
+              areaColor="rgba(232, 160, 176, 0.18)"
               [points]="placementTrend()"
             />
             <div class="sg-analytics-charts__radar">
@@ -241,13 +293,15 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           />
         </section>
 
-        <section class="sg-analytics__section" aria-labelledby="analytics-table">
-          <header class="sg-analytics__section-header">
-            <h2 id="analytics-table" class="sg-analytics__section-title">Detalle diario</h2>
-            <p class="sg-analytics__section-desc">
-              Tabla día a día para revisar consistencia y picos.
-            </p>
-          </header>
+        <section class="sg-dashboard__block" aria-labelledby="analytics-table">
+          <div class="sg-dashboard__block-head">
+            <div>
+              <h2 id="analytics-table" class="sg-dashboard__block-title">Detalle diario</h2>
+              <p class="sg-dashboard__block-desc">
+                Tabla día a día para revisar consistencia y picos.
+              </p>
+            </div>
+          </div>
 
           <sg-daily-stats-table
             title="Desglose por día"
@@ -258,13 +312,15 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           />
         </section>
 
-        <section class="sg-analytics__section" aria-labelledby="analytics-community">
-          <header class="sg-analytics__section-header">
-            <h2 id="analytics-community" class="sg-analytics__section-title">Vs comunidad</h2>
-            <p class="sg-analytics__section-desc">
-              Ranking semanal, percentiles y top del leaderboard.
-            </p>
-          </header>
+        <section class="sg-dashboard__block" aria-labelledby="analytics-community">
+          <div class="sg-dashboard__block-head">
+            <div>
+              <h2 id="analytics-community" class="sg-dashboard__block-title">Vs comunidad</h2>
+              <p class="sg-dashboard__block-desc">
+                Ranking semanal, percentiles y top del leaderboard.
+              </p>
+            </div>
+          </div>
 
           <div class="sg-analytics__community-stack">
             @if (communityRank(); as rank) {
@@ -309,6 +365,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
             </div>
           </div>
         </section>
+        </div>
       </div>
     </ion-content>
   `,
@@ -329,10 +386,44 @@ export class AnalyticsPageComponent implements OnInit {
   readonly leaderboardApi = signal<LeaderboardEntryView[]>([]);
   readonly communityUsesMock = signal(true);
   readonly error = signal<string | null>(null);
+  private readonly heroArtFailed = signal(false);
 
   readonly activePlatform = computed((): SelectedGame => this.gameContext.activeGame() ?? 'fortnite');
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.activePlatform()));
+
+  readonly heroArtSrc = computed(() => {
+    const meta = this.platformMeta();
+    if (this.heroArtFailed()) {
+      return meta.portraitFallbackUrl || meta.artUrl;
+    }
+    if (this.activePlatform() === 'league_of_legends') {
+      const seed = (this.gamerTag() || this.auth.userId() || 'lol-evo').length + 17;
+      return lolEvolutionBannerSplashUrl(seed);
+    }
+    return meta.portraitUrl || meta.artUrl;
+  });
+
+  readonly kdLabel = computed(() => {
+    const p = this.activePlatform();
+    return p === 'valorant' ||
+      p === 'league_of_legends' ||
+      p === 'dota2' ||
+      p === 'overwatch2'
+      ? 'KDA'
+      : 'K/D';
+  });
+
+  /** KDA real en LoL-like; K/D en el resto. */
+  readonly heroKd = computed(() => {
+    const s = this.platformWeekSummary();
+    if (!s.matchCount) return '—';
+    return this.kdLabel() === 'KDA' ? s.kda : s.kd;
+  });
+
+  onHeroArtError(): void {
+    this.heroArtFailed.set(true);
+  }
 
   readonly effectiveRecentMatches = computed(() => {
     const userId = this.auth.userId() ?? 'mock-user-demo';
@@ -672,6 +763,13 @@ export class AnalyticsPageComponent implements OnInit {
   );
 
   constructor() {
+    effect(
+      () => {
+        this.activePlatform();
+        this.heroArtFailed.set(false);
+      },
+      { allowSignalWrites: true },
+    );
     effect(() => {
       if (this.gameContext.refreshTick() === 0) return;
       void this.loadStats();

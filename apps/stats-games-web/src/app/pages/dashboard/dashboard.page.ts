@@ -2,7 +2,11 @@ import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal 
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
-import { MOCK_COMMUNITY_BENCHMARKS } from '../../data/community-mock.data';
+import {
+  MOCK_COMMUNITY_BENCHMARKS,
+  type CommunityBenchmarks,
+  type CommunityRankTableView,
+} from '../../data/community-mock.data';
 import {
   buildMockMatchHistory,
   filterMockMatchesByPlatform,
@@ -28,12 +32,15 @@ import { PlayerService, type PlayerProfileView } from '../../services/player.ser
 import {
   StatsService,
   currentWeeklyPeriodIdForStats,
+  type LeaderboardEntryView,
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
-import type { CommunityBenchmarks } from '../../data/community-mock.data';
 import {
+  CommunityRankTableComponent,
   MatchHighlightCardComponent,
   TrackStartPanelComponent,
+  WeekHeroBrandComponent,
+  WeekHeroSearchComponent,
   WeeklyHomeSummaryComponent,
 } from '../../ui';
 import { matchDetailRoute } from '../../utils/match-analysis.util';
@@ -43,8 +50,9 @@ import {
   filterMatchesWithinDays,
   toMatchCardStats,
 } from '../../utils/match-stats.util';
-import { mapCommunityBenchmarksFromApi } from '../../utils/community-stats.util';
+import { formatCommunitySampleSize, mapCommunityBenchmarksFromApi } from '../../utils/community-stats.util';
 import { buildWeeklyAiCoachSummary } from '../../utils/weekly-ai-summary.util';
+import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.util';
 import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
 @Component({
@@ -58,6 +66,9 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     RouterLink,
     TrackStartPanelComponent,
     MatchHighlightCardComponent,
+    CommunityRankTableComponent,
+    WeekHeroBrandComponent,
+    WeekHeroSearchComponent,
     WeeklyHomeSummaryComponent,
   ],
   template: `
@@ -101,6 +112,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
           <div class="sg-dashboard__week-veil" aria-hidden="true"></div>
 
           <div class="sg-dashboard__week-inner">
+            <sg-week-hero-brand [platform]="heroPlatform()" />
             <div class="sg-dashboard__week-main">
               <p class="sg-dashboard__week-eyebrow">
                 {{ platformMeta().label }} Stats
@@ -122,6 +134,8 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                   {{ weekMatchCount() }} partidas · WR {{ weekSummary().winRate }}.
                 }
               </p>
+
+              <sg-week-hero-search [platform]="heroPlatform()" />
 
               <div class="sg-dashboard__week-kpis" aria-label="KPIs de la semana">
                 <div class="sg-dashboard__week-kpi">
@@ -168,6 +182,49 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               />
             }
           </section>
+
+          @if (!needsTrackingSetup()) {
+            <section class="sg-dashboard__block" aria-labelledby="dash-section-community">
+              <div class="sg-dashboard__block-head">
+                <div>
+                  <h2 id="dash-section-community" class="sg-dashboard__block-title">
+                    Vos vs comunidad
+                  </h2>
+                  <p class="sg-dashboard__block-desc">
+                    {{ communityRankSubtitle() }}
+                    @if (communityUsesMock()) {
+                      <span class="sg-analytics__badge">preview</span>
+                    }
+                  </p>
+                </div>
+                <a routerLink="/tabs/analytics" class="sg-dashboard__block-link">
+                  Ver Evolución →
+                </a>
+              </div>
+
+              @if (communityRank(); as rank) {
+                <sg-community-rank-table
+                  title="Tu vecindario en el ranking"
+                  [platform]="heroPlatform()"
+                  [rows]="rank.rows"
+                  [yourRank]="rank.yourRank"
+                  [totalPlayers]="rank.totalPlayers"
+                  [sampleLabel]="communitySampleLabel()"
+                  [subtitle]="communityRankSubtitle()"
+                />
+              } @else {
+                <aside class="sg-weekly-coach__empty-rank" role="status">
+                  <p class="sg-weekly-coach__empty-rank-title u-m-0">
+                    Ranking comunitario aún sin peers
+                  </p>
+                  <p class="sg-weekly-coach__empty-rank-body u-m-0">
+                    No hay jugadores reales en el leaderboard semanal de
+                    {{ platformMeta().label }}. Cuando haya peers esta semana, te comparamos acá.
+                  </p>
+                </aside>
+              }
+            </section>
+          }
 
           <section class="sg-dashboard__block" aria-labelledby="dash-section-latest">
             <div class="sg-dashboard__block-head">
@@ -227,6 +284,7 @@ export class DashboardPageComponent implements OnInit {
   readonly recentMatches = signal<MatchUpdateView[]>([]);
   readonly weekly = signal<PlayerStatsRollupView | null>(null);
   readonly communityBenchmarksApi = signal<CommunityBenchmarks | null>(null);
+  readonly leaderboardApi = signal<LeaderboardEntryView[]>([]);
   readonly latestAiReport = signal<MatchAiReportView | null>(null);
   readonly loading = signal(true);
   /** Evita flash de mocks / onboarding antes de la 1ª hidratación. */
@@ -324,6 +382,8 @@ export class DashboardPageComponent implements OnInit {
         // "conectar" / KPIs del juego anterior).
         this.bootstrapped.set(false);
         this.weekly.set(null);
+        this.leaderboardApi.set([]);
+        this.communityBenchmarksApi.set(null);
         void this.loadData();
       },
       { allowSignalWrites: true },
@@ -436,6 +496,8 @@ export class DashboardPageComponent implements OnInit {
     return filterMockMatchesByPlatform(source, platform);
   });
 
+  readonly communityUsesMock = computed(() => this.communityBenchmarksApi() == null);
+
   readonly weeklyCoach = computed(() => {
     const platform = this.heroPlatform();
     return buildWeeklyAiCoachSummary({
@@ -447,6 +509,46 @@ export class DashboardPageComponent implements OnInit {
         (this.bootstrapped() ? MOCK_COMMUNITY_BENCHMARKS[platform] : undefined),
       kdLabel: this.kdLabel(),
     });
+  });
+
+  readonly communityRank = computed<CommunityRankTableView | null>(() => {
+    const summary = this.weekSummary();
+    const kd =
+      summary.totalDeaths > 0
+        ? summary.totalKills / summary.totalDeaths
+        : summary.totalKills;
+    const winRate =
+      summary.matchCount > 0 ? (summary.winCount / summary.matchCount) * 100 : 0;
+
+    return buildWeeklyCommunityRankView({
+      platform: this.heroPlatform(),
+      userId: this.auth.userId(),
+      apiRows: this.leaderboardApi(),
+      sampleSize: this.communityBenchmarksApi()?.sampleSize ?? null,
+      radius: 3,
+      self: {
+        gamerTag: this.profile()?.gamerTag || 'Vos',
+        kd,
+        winRate,
+        kills: summary.totalKills,
+        matches: summary.matchCount,
+        winCount: summary.winCount,
+      },
+    });
+  });
+
+  readonly communitySampleLabel = computed(() => {
+    const platform = this.heroPlatform();
+    const benchmarks =
+      this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform];
+    return `${gamePlatformMeta(platform).label} · ${formatCommunitySampleSize(benchmarks.sampleSize)} jugadores`;
+  });
+
+  readonly communityRankSubtitle = computed(() => {
+    const rank = this.communityRank();
+    const label = this.platformMeta().label;
+    if (!rank) return `${label} · sin peers reales esta semana`;
+    return `${label} · tu puesto #${rank.yourRank} esta semana`;
   });
 
   readonly aiCtaLabel = computed(() => {
@@ -501,7 +603,7 @@ export class DashboardPageComponent implements OnInit {
       const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
 
-      const [matches, weeklyRows, community, aiReports] = await Promise.all([
+      const [matches, weeklyRows, community, leaderboard, aiReports] = await Promise.all([
         this.matchService.listPlayerMatchesOnce(userId, { limit: 50 }),
         firstValueFrom(
           this.statsService.listPlayerStatsRollups(userId, 'WEEKLY', periodId, platform),
@@ -509,6 +611,9 @@ export class DashboardPageComponent implements OnInit {
         firstValueFrom(
           this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
         ).catch(() => null),
+        firstValueFrom(
+          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 20),
+        ).catch(() => [] as LeaderboardEntryView[]),
         this.matchAi
           .listMatchAiReportsOnce(userId, {
             platform: platform ?? undefined,
@@ -523,6 +628,7 @@ export class DashboardPageComponent implements OnInit {
       this.latestAiReport.set(
         aiReports.find((row) => row.status === 'ready') ?? aiReports[0] ?? null,
       );
+      this.leaderboardApi.set(leaderboard ?? []);
 
       if (community && community.sampleSize > 0) {
         this.communityBenchmarksApi.set(

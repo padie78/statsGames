@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#0c1624"/>
-  <path d="M16 5 L26 12 L22 27 L10 27 L6 12 Z" fill="#c89b3c"/>
-  <circle cx="16" cy="15" r="4" fill="#0a1428"/>
+  <!-- L dorada compacta (menú); el mark grande del panel usa el PNG. -->
+  <path
+    fill="#c89b3c"
+    d="M9.5 5.5c.4-.35.95-.5 1.5-.5h2.2c.85 0 1.4.7 1.4 1.45V22.2h8.1c.75 0 1.35.6 1.35 1.35v2c0 .75-.6 1.35-1.35 1.35H10.2c-.85 0-1.55-.7-1.55-1.55V7c0-.6.25-1.15.85-1.5z"
+  />
+  <path
+    fill="#f0d060"
+    d="M11.4 6.85h1.7v16.7h8.35v1.15H11.4V6.85z"
+  />
 </svg>

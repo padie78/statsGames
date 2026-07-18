@@ -72,7 +72,7 @@ export const PLAYER_SUBNAV_ITEMS: AppSubnavItem[] = [
     description: 'Análisis semanal y por partida',
     route: '/tabs/ai-coach',
     icon: 'coach',
-    tone: 'purple',
+    tone: 'lime',
     badge: 'IA',
   },
   {

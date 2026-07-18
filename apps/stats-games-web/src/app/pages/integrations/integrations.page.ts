@@ -619,7 +619,7 @@ export class IntegrationsPageComponent implements OnInit {
         platform === 'valorant'
           ? `Valorant vinculado: ${trimmedId}. Con historial Público y RIOT_API_KEY activa, en ≤3 min deberían aparecer partidas en /tabs/matches. Si el perfil sigue privado, Riot devolverá 403.`
           : platform === 'league_of_legends'
-            ? `League of Legends vinculado: ${trimmedId}. El poller capturará partidas ranked/normales.`
+            ? `League of Legends vinculado: ${trimmedId}. Con RIOT_API_KEY activa, el poller trae ranked/normales en ≤3 min a Partidas. Revisá que LOL_REGION coincida con tu shard (europe/americas/asia).`
             : platform === 'cs2'
               ? `CS2 vinculado: ${trimmedId}. Stats vía Steam Web API.`
               : `${this.platformLabel(platform)} vinculado: ${trimmedId}`,

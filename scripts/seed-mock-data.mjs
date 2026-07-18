@@ -24,6 +24,7 @@ const MOCK_PLAYERS = [
     primaryPlatform: 'fortnite',
     fortniteId: 'fn-neo-8842',
     robloxId: null,
+    leagueOfLegendsId: null,
   },
   {
     userId: 'mock-user-robloxking',
@@ -31,6 +32,7 @@ const MOCK_PLAYERS = [
     primaryPlatform: 'roblox',
     fortniteId: null,
     robloxId: 'rbx-king-9912',
+    leagueOfLegendsId: null,
   },
   {
     userId: 'mock-user-shadowaim',
@@ -38,6 +40,7 @@ const MOCK_PLAYERS = [
     primaryPlatform: 'fortnite',
     fortniteId: 'fn-shadow-3310',
     robloxId: null,
+    leagueOfLegendsId: null,
   },
   {
     userId: 'mock-user-pixelqueen',
@@ -45,6 +48,7 @@ const MOCK_PLAYERS = [
     primaryPlatform: 'roblox',
     fortniteId: null,
     robloxId: 'rbx-pixel-5521',
+    leagueOfLegendsId: null,
   },
   {
     userId: 'mock-user-trndemo',
@@ -52,6 +56,7 @@ const MOCK_PLAYERS = [
     primaryPlatform: 'fortnite',
     fortniteId: 'fn-trn-demo',
     robloxId: null,
+    leagueOfLegendsId: null,
   },
   {
     userId: 'mock-user-upstats',
@@ -59,8 +64,60 @@ const MOCK_PLAYERS = [
     primaryPlatform: 'roblox',
     fortniteId: null,
     robloxId: 'rbx-upstats-77',
+    leagueOfLegendsId: null,
+  },
+  // Peers LoL reales (seed) para ranking comunitario en Inicio / Evolución
+  {
+    userId: 'mock-user-jinxcarry',
+    gamerTag: 'JinxCarry#LAN',
+    primaryPlatform: 'league_of_legends',
+    fortniteId: null,
+    robloxId: null,
+    leagueOfLegendsId: 'lol-jinx-carry-lan',
+  },
+  {
+    userId: 'mock-user-ahrirose',
+    gamerTag: 'AhriRose#NA1',
+    primaryPlatform: 'league_of_legends',
+    fortniteId: null,
+    robloxId: null,
+    leagueOfLegendsId: 'lol-ahri-rose-na1',
+  },
+  {
+    userId: 'mock-user-zedblade',
+    gamerTag: 'ZedBlade#EUW',
+    primaryPlatform: 'league_of_legends',
+    fortniteId: null,
+    robloxId: null,
+    leagueOfLegendsId: 'lol-zed-blade-euw',
+  },
+  {
+    userId: 'mock-user-threshhook',
+    gamerTag: 'ThreshHook#LAN',
+    primaryPlatform: 'league_of_legends',
+    fortniteId: null,
+    robloxId: null,
+    leagueOfLegendsId: 'lol-thresh-hook-lan',
+  },
+  {
+    userId: 'mock-user-leesinmain',
+    gamerTag: 'LeeSinMain#KR',
+    primaryPlatform: 'league_of_legends',
+    fortniteId: null,
+    robloxId: null,
+    leagueOfLegendsId: 'lol-leesin-main-kr',
+  },
+  {
+    userId: 'mock-user-luxmid',
+    gamerTag: 'LuxMid#NA1',
+    primaryPlatform: 'league_of_legends',
+    fortniteId: null,
+    robloxId: null,
+    leagueOfLegendsId: 'lol-lux-mid-na1',
   },
 ];
+
+const LOL_CHAMPIONS = ['Jinx', 'Ahri', 'Zed', 'Thresh', 'Lee Sin', 'Lux', 'Darius', 'Yasuo'];
 
 function parseArgs(argv) {
   const args = { userId: null, dryRun: false };
@@ -118,6 +175,24 @@ function resolveTableName() {
 }
 
 function randomMatchStats(platform) {
+  if (platform === 'league_of_legends') {
+    const kills = Math.floor(Math.random() * 14) + 2;
+    const deaths = Math.floor(Math.random() * 9) + 1;
+    const assists = Math.floor(Math.random() * 16) + 2;
+    const won = Math.random() > 0.48;
+    return {
+      kills,
+      deaths,
+      assists,
+      won,
+      placement: won ? 1 : 2,
+      champion: LOL_CHAMPIONS[Math.floor(Math.random() * LOL_CHAMPIONS.length)],
+      mode: Math.random() > 0.35 ? 'Ranked Solo/Duo' : 'Normal Draft',
+      cs: Math.floor(Math.random() * 120) + 80,
+      visionScore: Math.floor(Math.random() * 40) + 10,
+    };
+  }
+
   const kills = Math.floor(Math.random() * 12) + 1;
   const deaths = Math.floor(Math.random() * 8);
   const placement =
@@ -141,6 +216,7 @@ function buildProfileItem(player, now) {
     primaryPlatform: player.primaryPlatform,
     fortniteId: player.fortniteId,
     robloxId: player.robloxId,
+    leagueOfLegendsId: player.leagueOfLegendsId ?? null,
     createdAtIso: now,
     updatedAtIso: now,
     versionId: 1,
@@ -371,6 +447,11 @@ function seedPlayerBundle(player, now, matchCount) {
   if (player.robloxId) {
     items.push(buildPlatformLink(player, 'roblox', player.robloxId, now));
   }
+  if (player.leagueOfLegendsId) {
+    items.push(
+      buildPlatformLink(player, 'league_of_legends', player.leagueOfLegendsId, now),
+    );
+  }
 
   const matches = generateMatchesForPlayer(player, matchCount);
   for (const m of matches) {
@@ -403,6 +484,8 @@ function seedCurrentUserMatches(userId, platform, now, matchCount = 18) {
     primaryPlatform: platform,
     fortniteId: platform === 'fortnite' ? `fn-${userId.slice(0, 8)}` : null,
     robloxId: platform === 'roblox' ? `rbx-${userId.slice(0, 8)}` : null,
+    leagueOfLegendsId:
+      platform === 'league_of_legends' ? `lol-${userId.slice(0, 8)}` : null,
   };
 
   const items = [];
@@ -460,6 +543,7 @@ async function main() {
     console.log(`→ Agregando partidas mock para tu cuenta: ${args.userId}`);
     allItems.push(...seedCurrentUserMatches(args.userId, 'fortnite', now, 20));
     allItems.push(...seedCurrentUserMatches(args.userId, 'roblox', now, 8));
+    allItems.push(...seedCurrentUserMatches(args.userId, 'league_of_legends', now, 16));
   }
 
   allItems.push(...buildCommunitySeedItems(allItems, now));
@@ -479,10 +563,11 @@ async function main() {
 
   console.log('\n✓ Seed completado.');
   console.log('\nProbá en la app:');
-  console.log('  • Topbar → buscar "NeoFragger", "UpStatsPro", etc.');
+  console.log('  • Topbar → buscar "NeoFragger", "JinxCarry#LAN", "ZedBlade#EUW", etc.');
+  console.log('  • LoL activo → Inicio / Evolución → ranking vs comunidad');
   console.log('  • /player/NeoFragger → perfil público');
   if (args.userId) {
-    console.log('  • Dashboard / Partidas / Estadísticas con tu userId');
+    console.log('  • Dashboard / Partidas / Estadísticas con tu userId (FN + Roblox + LoL)');
   } else {
     console.log('\nTip: agregá tus partidas con:');
     console.log('  npm run seed:mock -- --user-id <tu-cognito-sub>');
