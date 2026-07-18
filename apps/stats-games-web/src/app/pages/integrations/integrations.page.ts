@@ -181,10 +181,13 @@ type LinkablePlatform =
                     role="tab"
                     class="sg-valorant-access__path"
                     [class.sg-valorant-access__path--active]="valorantAccessMode() === 'rso'"
+                    [class.sg-valorant-access__path--muted]="!riotRsoReady()"
                     [attr.aria-selected]="valorantAccessMode() === 'rso'"
                     (click)="valorantAccessMode.set('rso')"
                   >
-                    <span class="sg-valorant-access__path-kicker">Recomendado</span>
+                    <span class="sg-valorant-access__path-kicker">{{
+                      riotRsoReady() ? 'Recomendado' : 'Falta Client ID'
+                    }}</span>
                     Riot Sign-On
                   </button>
                   <button
@@ -195,12 +198,14 @@ type LinkablePlatform =
                     [attr.aria-selected]="valorantAccessMode() === 'public'"
                     (click)="valorantAccessMode.set('public')"
                   >
-                    <span class="sg-valorant-access__path-kicker">Alternativa</span>
+                    <span class="sg-valorant-access__path-kicker">{{
+                      riotRsoReady() ? 'Alternativa' : 'Disponible ahora'
+                    }}</span>
                     Perfil público
                   </button>
                 </div>
 
-                @if (valorantAccessMode() === 'rso') {
+                @if (valorantAccessMode() === 'rso' && riotRsoReady()) {
                   <div class="sg-valorant-access__panel">
                     <p class="u-m-0">
                       Iniciá sesión en Riot y autorizá a StatsGames. Riot devuelve un token de
@@ -210,23 +215,27 @@ type LinkablePlatform =
                     <button
                       type="button"
                       class="u-btn u-btn--primary u-btn--block"
-                      [disabled]="!auth.userId() || linking() || rsoStarting() || !riotRso.isReady()"
+                      [disabled]="!auth.userId() || linking() || rsoStarting()"
                       (click)="startRiotSignOn()"
                     >
                       {{ rsoStarting() ? 'Redirigiendo a Riot…' : 'Iniciar sesión con Riot' }}
                     </button>
-                    @if (!riotRso.isReady()) {
-                      <p class="sg-valorant-access__note u-m-0">
-                        Falta el RSO Client de Riot (app de producción aprobada). Seteá
-                        <code>environment.riot.clientId</code>
-                        y en Terraform
-                        <code>riot_rso_client_id</code>
-                        /
-                        <code>riot_rso_client_secret</code>,
-                        luego redeploy de la Lambda
-                        <code>riot-rso</code>.
-                      </p>
-                    }
+                  </div>
+                } @else if (valorantAccessMode() === 'rso' && !riotRsoReady()) {
+                  <div class="sg-valorant-access__panel">
+                    <p class="u-m-0">
+                      El botón no se habilita porque todavía no hay un
+                      <strong>RSO Client ID</strong>
+                      de Riot en este entorno. Riot solo entrega ese ID tras aprobar una app de
+                      producción + RSO; sin él no se puede abrir el login oficial.
+                    </p>
+                    <button
+                      type="button"
+                      class="u-btn u-btn--gold u-btn--block"
+                      (click)="valorantAccessMode.set('public')"
+                    >
+                      Continuar con perfil público
+                    </button>
                   </div>
                 } @else {
                   <div class="sg-valorant-access__panel">
@@ -359,8 +368,8 @@ export class IntegrationsPageComponent implements OnInit {
   readonly linkError = signal<string | null>(null);
   readonly linkSuccess = signal<string | null>(null);
   readonly rsoStarting = signal(false);
-  /** Valorant: RSO (recomendado) o historial público + Riot ID. */
-  readonly valorantAccessMode = signal<'rso' | 'public'>('rso');
+  /** Valorant: RSO si hay clientId; si no, perfil público. */
+  readonly valorantAccessMode = signal<'rso' | 'public'>('public');
   readonly valorantPrivacyAck = signal(false);
   readonly selectedPlatform = signal<LinkablePlatform>('valorant');
 
@@ -370,6 +379,7 @@ export class IntegrationsPageComponent implements OnInit {
   readonly valorantPrivacyHelpUrl = environment.riot.valorantPrivacyHelpUrl;
 
   readonly isValorantLink = computed(() => this.selectedPlatform() === 'valorant');
+  readonly riotRsoReady = computed(() => this.riotRso.isReady());
 
   readonly allPlatformOptions: SelectOption<LinkablePlatform>[] = [
     { value: 'valorant', label: 'Valorant' },
@@ -532,7 +542,7 @@ export class IntegrationsPageComponent implements OnInit {
   }
 
   private resetValorantAccessUi(): void {
-    this.valorantAccessMode.set('rso');
+    this.valorantAccessMode.set(this.riotRso.isReady() ? 'rso' : 'public');
     this.valorantPrivacyAck.set(false);
     this.rsoStarting.set(false);
   }
