@@ -68,8 +68,8 @@ export const PLAYER_SUBNAV_ITEMS: AppSubnavItem[] = [
   {
     id: 'coach',
     label: 'Coach',
-    title: 'AI Coach',
-    description: 'Qué entrenar según tu telemetría',
+    title: 'Coach IA',
+    description: 'Análisis semanal y por partida',
     route: '/tabs/ai-coach',
     icon: 'coach',
     tone: 'purple',
@@ -154,6 +154,6 @@ export const APP_ROUTE_TITLES: Record<string, string> = {
   reports: 'Reportes Generados',
   team: 'Gestión de Equipo',
   integrations: 'Integraciones',
-  'ai-coach': 'AI Coach',
+  'ai-coach': 'Coach IA',
   settings: 'Configuración',
 };

@@ -10,7 +10,12 @@ import {
 /**
  * Valorant Route A — Riot Games API (official).
  *
- * Vinculá Riot ID como `Nombre#TAG` en Integraciones.
+ * Privacidad: a diferencia de LoL, los perfiles Valorant nacen privados. Con API key
+ * sola, matchlist/match-v1 fallan (403) si el jugador no puso historial Público o no
+ * autorizó vía Riot Sign-On (RSO). El flujo de producto en Integraciones exige una de
+ * esas dos vías antes de confiar en el vínculo.
+ *
+ * Vinculá Riot ID como `Nombre#TAG` (perfil público) o token RSO cuando esté cableado.
  * Poller: account-v1 → matchlist → match-v1 → enqueue por match nuevo (≤3 min al cerrar).
  *
  * Env:

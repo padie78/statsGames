@@ -27,12 +27,18 @@ import type { SelectedGame } from '../../../core/game/selected-game';
       <div class="sg-track-start__body">
         <div class="sg-track-start__copy">
           <p class="sg-track-start__eyebrow">Primer paso</p>
-          <h2 class="sg-track-start__title">Conectá tu cuenta y empezá a trackear</h2>
+          <h2 class="sg-track-start__title">{{ title() }}</h2>
           <p class="sg-track-start__lede">
-            StatsGames importa tus partidas de
-            <strong>{{ meta().label }}</strong>
-            para armar KPIs, evolución y coaching automático. Sin una cuenta vinculada no hay
-            telemetría en vivo: solo vas a ver previews del producto.
+            @if (platform() === 'valorant') {
+              En Valorant los perfiles nacen privados. Riot bloquea matchlist/match-v1 con API key a
+              menos que uses Riot Sign-On o pongas el historial en Público. StatsGames importa
+              partidas solo con ese permiso.
+            } @else {
+              StatsGames importa tus partidas de
+              <strong>{{ meta().label }}</strong>
+              para armar KPIs, evolución y análisis semanal automático. Sin una cuenta vinculada no
+              hay telemetría en vivo: solo vas a ver previews del producto.
+            }
           </p>
 
           <details
@@ -46,22 +52,40 @@ import type { SelectedGame } from '../../../core/game/selected-game';
                 <span></span>
                 <span></span>
               </span>
-              <span>Cómo funciona en 3 pasos</span>
+              <span>{{ guideSummary() }}</span>
               <span class="sg-track-start__guide-caret" aria-hidden="true"></span>
             </summary>
             <ol class="sg-track-start__steps">
-              <li>
-                <strong>Vinculá</strong>
-                Riot, Steam, Epic o Roblox desde Integraciones (un click por plataforma).
-              </li>
-              <li>
-                <strong>Jugá</strong>
-                una o dos partidas normales; el poller las importa solo, sin subir replays.
-              </li>
-              <li>
-                <strong>Revisá</strong>
-                Inicio, Partidas, Evolución y Coach con tus datos reales de la semana.
-              </li>
+              @if (platform() === 'valorant') {
+                <li>
+                  <strong>Autorizá</strong>
+                  con Riot Sign-On (recomendado) o poné el historial en Público en tu cuenta Riot /
+                  Tracker.
+                </li>
+                <li>
+                  <strong>Vinculá</strong>
+                  desde Integraciones: RSO o Riot ID
+                  <code>Nombre#TAG</code>
+                  con el checkbox de privacidad.
+                </li>
+                <li>
+                  <strong>Jugá</strong>
+                  y revisá Inicio, Partidas y Coach IA cuando el poller importe telemetría (≤3 min).
+                </li>
+              } @else {
+                <li>
+                  <strong>Vinculá</strong>
+                  Riot, Steam, Epic o Roblox desde Integraciones (un click por plataforma).
+                </li>
+                <li>
+                  <strong>Jugá</strong>
+                  una o dos partidas normales; el poller las importa solo, sin subir replays.
+                </li>
+                <li>
+                  <strong>Revisá</strong>
+                  Inicio, Partidas, Evolución y Coach IA con tus datos reales de la semana.
+                </li>
+              }
             </ol>
           </details>
 
@@ -79,7 +103,7 @@ import type { SelectedGame } from '../../../core/game/selected-game';
           </div>
 
           <div class="sg-track-start__actions">
-            <a routerLink="/tabs/integrations" class="u-btn u-btn--primary">Conectar cuenta</a>
+            <a routerLink="/tabs/integrations" class="u-btn u-btn--primary">{{ ctaLabel() }}</a>
             <a routerLink="/tabs/matches" class="u-btn u-btn--ghost">Ver partidas de ejemplo</a>
           </div>
         </div>
@@ -107,6 +131,20 @@ export class TrackStartPanelComponent {
 
   readonly meta = computed(() => gamePlatformMeta(this.platform()));
   readonly artUrl = computed(() => this.meta().portraitUrl || this.meta().artUrl);
+
+  readonly title = computed(() =>
+    this.platform() === 'valorant'
+      ? 'Autorizá Valorant (privado por defecto)'
+      : 'Conectá tu cuenta y empezá a trackear',
+  );
+
+  readonly guideSummary = computed(() =>
+    this.platform() === 'valorant' ? 'Cómo desbloquear Valorant' : 'Cómo funciona en 3 pasos',
+  );
+
+  readonly ctaLabel = computed(() =>
+    this.platform() === 'valorant' ? 'Conectar Valorant' : 'Conectar cuenta',
+  );
 
   onGuideToggle(event: Event): void {
     const el = event.target as HTMLDetailsElement;

@@ -43,7 +43,7 @@ import { PercentileGaugesComponent } from '../percentile-gauges/percentile-gauge
             <h2 class="sg-match-analysis__title">{{ report.headline }}</h2>
             <p class="sg-match-analysis__summary u-m-0">{{ report.summary }}</p>
           </div>
-          <sg-neon-badge tone="purple">AI Coach</sg-neon-badge>
+          <sg-neon-badge tone="purple">Análisis de partida</sg-neon-badge>
         </header>
 
         @if (report.isPreview) {

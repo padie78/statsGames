@@ -119,7 +119,13 @@ export function buildWeeklyAiCoachSummary(input: {
 
   const half = splitHalfWeek(matches);
   const halfWeekRows = buildHalfWeekDeltas(half.early, half.late, kdLabel);
-  const regressions = buildRegressions(halfWeekRows, input.latestAiReport);
+  const regressions = buildRegressions(halfWeekRows, input.latestAiReport, {
+    avgDeaths,
+    lossCount,
+    winCount,
+    kdNumeric,
+    kdLabel,
+  });
 
   const focusFromAi =
     input.latestAiReport?.status === 'ready'
@@ -249,8 +255,8 @@ function emptySummary(kdLabel: string): WeeklyAiCoachSummary {
     headline: 'Todavía no hay semana para analizar',
     body: 'Cuando juegues partidas esta semana, acá vas a ver un resumen completo: record, forma, comparativas y qué mejorar.',
     narrative: [
-      'Aún no hay suficientes partidas esta semana para armar el informe de coaching.',
-      'Vinculá tu cuenta, jugá al menos 3 ranked y volvé: el coach resume wins/losses, tendencias y focos.',
+      'Aún no hay suficientes partidas esta semana para armar el análisis semanal.',
+      'Vinculá tu cuenta, jugá al menos 3 ranked y volvé: el resumen incluye wins/losses, tendencias y focos.',
     ],
     strengths: [],
     improvements: ['Cerrá al menos 3 partidas esta semana para desbloquear el resumen.'],
@@ -490,6 +496,13 @@ function deltaRow(
 function buildRegressions(
   halfWeekRows: WeeklyCoachDeltaRow[],
   latestAiReport?: MatchAiReportView | null,
+  context?: {
+    avgDeaths: number;
+    lossCount: number;
+    winCount: number;
+    kdNumeric: number;
+    kdLabel: string;
+  },
 ): string[] {
   const out: string[] = [];
   for (const row of halfWeekRows) {
@@ -502,9 +515,24 @@ function buildRegressions(
   for (const con of cons) {
     if (con.trim()) out.push(con.trim());
   }
+  if (context) {
+    if (context.avgDeaths >= 5) {
+      out.push(
+        `No overextend: deaths altas (~${context.avgDeaths.toFixed(1)}/partida) están matando tu impacto`,
+      );
+    }
+    if (context.lossCount > context.winCount) {
+      out.push('No chasees fights perdidas ni forcees mid-game sin visión');
+    }
+    if (context.kdNumeric < 1) {
+      out.push(
+        `Evitá pelear 1v1 sin ventaja: tu ${context.kdLabel} está bajo 1.0`,
+      );
+    }
+  }
   if (!out.length && halfWeekRows.some((r) => r.direction === 'flat')) {
     out.push(
-      'No hay caída clara mid-week, pero un 100% WR puede esconder overconfidence — revisá deaths en las últimas 3',
+      'No hay caída clara mid-week, pero evitá overconfidence: revisá deaths en las últimas 3',
     );
   }
   return unique(out);

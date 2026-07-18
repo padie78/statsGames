@@ -2,12 +2,7 @@ import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal 
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
-import { DASHBOARD_QUICK_ACTIONS } from '../../data/dashboard-mock.data';
-import {
-  MOCK_COMMUNITY_BENCHMARKS,
-  type CommunityRankRow,
-  type CommunityRankTableView,
-} from '../../data/community-mock.data';
+import { MOCK_COMMUNITY_BENCHMARKS } from '../../data/community-mock.data';
 import {
   buildMockMatchHistory,
   filterMockMatchesByPlatform,
@@ -15,6 +10,12 @@ import {
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
+import {
+  lolChampionSplashFallbackUrl,
+  lolChampionSplashUrl,
+  lolFallbackSplashUrl,
+} from '../../core/game/lol-ddragon.util';
+import { isGameAccountConnected } from '../../core/game/platform-link.util';
 import {
   matchBackendPlatform,
   selectedGameFromBackend,
@@ -27,17 +28,13 @@ import { PlayerService, type PlayerProfileView } from '../../services/player.ser
 import {
   StatsService,
   currentWeeklyPeriodIdForStats,
-  type LeaderboardEntryView,
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
 import type { CommunityBenchmarks } from '../../data/community-mock.data';
 import {
-  IntegrationStatusCardComponent,
   MatchHighlightCardComponent,
-  QuickActionsBarComponent,
-  PlayerSearchHeroComponent,
   TrackStartPanelComponent,
-  WeeklyAiCoachPanelComponent,
+  WeeklyHomeSummaryComponent,
 } from '../../ui';
 import { matchDetailRoute } from '../../utils/match-analysis.util';
 import {
@@ -59,12 +56,9 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     IonRefresher,
     IonRefresherContent,
     RouterLink,
-    PlayerSearchHeroComponent,
-    WeeklyAiCoachPanelComponent,
     TrackStartPanelComponent,
-    QuickActionsBarComponent,
-    IntegrationStatusCardComponent,
     MatchHighlightCardComponent,
+    WeeklyHomeSummaryComponent,
   ],
   template: `
     <ion-content class="sg-page-content">
@@ -74,120 +68,115 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
       <div
         class="sg-dashboard sg-dashboard--home"
-        [class.sg-dashboard--loading]="loading()"
+        [class.sg-dashboard--loading]="bootstrapped() && loading()"
       >
         @if (error()) {
-          <p class="u-error">{{ error() }}</p>
+          <p class="u-error sg-dashboard__error">{{ error() }}</p>
         }
 
-        <sg-player-search-hero [matches]="effectiveRecentMatches()" />
+        @if (!bootstrapped()) {
+          <div
+            class="sg-dashboard__loading"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label="Cargando"
+          >
+            <span class="sg-dashboard__loading-dots" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </span>
+          </div>
+        } @else {
+        <section
+          class="sg-dashboard__week"
+          [attr.data-game]="heroPlatform()"
+          aria-label="Resumen semanal"
+        >
+          <img
+            class="sg-dashboard__week-art"
+            [src]="weekBannerSrc()"
+            [alt]="platformMeta().label + ' splash'"
+            (error)="onWeekBannerError()"
+          />
+          <div class="sg-dashboard__week-veil" aria-hidden="true"></div>
+
+          <div class="sg-dashboard__week-inner">
+            <div class="sg-dashboard__week-main">
+              <p class="sg-dashboard__week-eyebrow">
+                {{ platformMeta().label }} Stats
+                @if (lastUpdatedLabel()) {
+                  <span>· Actualizado {{ lastUpdatedLabel() }}</span>
+                }
+              </p>
+              <h1 class="sg-dashboard__week-title">
+                {{ profile()?.gamerTag || 'Tu rendimiento' }}
+              </h1>
+              <p class="sg-dashboard__week-lede u-m-0">
+                @if (needsTrackingSetup()) {
+                  Conectá tu cuenta del juego para ver KPIs reales, forma semanal y análisis.
+                } @else if (weekMatchCount() === 0) {
+                  Todavía no hay partidas en la ventana semanal. Cuando juegues, acá aparece el
+                  resumen de forma y el análisis.
+                } @else {
+                  Esta semana: {{ weekSummary().winCount }}V /
+                  {{ weekMatchCount() }} partidas · WR {{ weekSummary().winRate }}.
+                }
+              </p>
+
+              <div class="sg-dashboard__week-kpis" aria-label="KPIs de la semana">
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ weekSummary().winRate }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Win rate</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ weeklyKd() }}</span>
+                  <span class="sg-dashboard__week-kpi-label">{{ kdLabel() }}</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ weekSummary().winCount }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Victorias</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ weekMatchCount() }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Partidas</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div class="sg-dashboard__body">
-          <section class="sg-dashboard__week" aria-label="Resumen semanal">
-            <div class="sg-dashboard__week-identity">
-              <img
-                class="sg-dashboard__week-icon"
-                [src]="platformMeta().iconUrl"
-                [alt]=""
-                width="40"
-                height="40"
-                aria-hidden="true"
-              />
-              <div class="sg-dashboard__week-copy">
-                <p class="sg-dashboard__week-eyebrow">
-                  {{ platformMeta().label }} · Esta semana
-                  @if (lastUpdatedLabel()) {
-                    <span>· Actualizado {{ lastUpdatedLabel() }}</span>
-                  }
-                </p>
-                <h1 class="sg-dashboard__week-title">
-                  {{ profile()?.gamerTag || 'Tu rendimiento' }}
-                </h1>
-              </div>
-            </div>
-
-            <div class="sg-dashboard__week-kpis" aria-label="KPIs de la semana">
-              <div class="sg-dashboard__week-kpi">
-                <span class="sg-dashboard__week-kpi-value">{{ weekSummary().winRate }}</span>
-                <span class="sg-dashboard__week-kpi-label">Win rate</span>
-              </div>
-              <div class="sg-dashboard__week-kpi">
-                <span class="sg-dashboard__week-kpi-value">{{ weeklyKd() }}</span>
-                <span class="sg-dashboard__week-kpi-label">{{ kdLabel() }}</span>
-              </div>
-              <div class="sg-dashboard__week-kpi">
-                <span class="sg-dashboard__week-kpi-value">{{ weekSummary().winCount }}</span>
-                <span class="sg-dashboard__week-kpi-label">Victorias</span>
-              </div>
-              <div class="sg-dashboard__week-kpi">
-                <span class="sg-dashboard__week-kpi-value">{{ weekMatchCount() }}</span>
-                <span class="sg-dashboard__week-kpi-label">Partidas</span>
-              </div>
-            </div>
-          </section>
-
-          <section class="sg-dashboard__block" aria-labelledby="dash-section-now">
-            <div class="sg-dashboard__block-head">
-              <div>
-                <h2 id="dash-section-now" class="sg-dashboard__block-title">Ahora</h2>
-                <p class="sg-dashboard__block-desc">
-                  @if (needsTrackingSetup()) {
-                    Vinculá tu cuenta para desbloquear KPIs en vivo, historial y coaching.
-                  } @else {
-                    Resumen semanal del coach, atajos e integraciones.
-                  }
-                </p>
-              </div>
-            </div>
-
+          <section class="sg-dashboard__block" aria-labelledby="dash-section-analysis">
             @if (needsTrackingSetup()) {
+              <div class="sg-dashboard__block-head">
+                <div>
+                  <h2 id="dash-section-analysis" class="sg-dashboard__block-title">
+                    Análisis semanal
+                  </h2>
+                  <p class="sg-dashboard__block-desc">
+                    Vinculá tu cuenta para ver cómo venís esta semana.
+                  </p>
+                </div>
+              </div>
               <sg-track-start-panel [platform]="heroPlatform()" />
-            }
-
-            @if (!needsTrackingSetup()) {
-              <sg-weekly-ai-coach-panel
+            } @else {
+              <sg-weekly-home-summary
                 [summary]="weeklyCoach()"
-                [communityRank]="weeklyCommunityRank()"
+                [kdLabel]="kdLabel()"
                 [ctaLabel]="aiCtaLabel()"
-                (ctaClick)="onAiCta()"
+                (primaryClick)="onAiCta()"
               />
             }
-
-            <div
-              class="sg-dashboard__now"
-              [class.sg-dashboard__now--setup]="needsTrackingSetup()"
-            >
-              <div class="sg-dashboard__now-side sg-dashboard__now-side--full">
-                <sg-quick-actions-bar
-                  [actions]="quickActions"
-                  [gameLabel]="platformMeta().label"
-                  [needsSetup]="needsTrackingSetup()"
-                  [matchCount]="weekMatchCount()"
-                  [winRate]="weekSummary().winRate"
-                />
-                <sg-integration-status-card
-                  [valorantConnected]="!!profile()?.valorantId"
-                  [leagueOfLegendsConnected]="!!profile()?.leagueOfLegendsId"
-                  [cs2Connected]="!!profile()?.cs2Id"
-                  [dota2Connected]="!!profile()?.dota2Id"
-                  [overwatch2Connected]="!!profile()?.overwatch2Id"
-                  [rocketLeagueConnected]="!!profile()?.rocketLeagueId"
-                  [fortniteConnected]="!!profile()?.fortniteId"
-                  [clashRoyaleConnected]="!!profile()?.clashRoyaleId"
-                  [brawlStarsConnected]="!!profile()?.brawlStarsId"
-                  [robloxConnected]="!!profile()?.robloxId"
-                  [liveActive]="realtime.isLive()"
-                />
-              </div>
-            </div>
           </section>
 
           <section class="sg-dashboard__block" aria-labelledby="dash-section-latest">
             <div class="sg-dashboard__block-head">
               <div>
-                <h2 id="dash-section-latest" class="sg-dashboard__block-title">Última destacada</h2>
+                <h2 id="dash-section-latest" class="sg-dashboard__block-title">
+                  Partida destacada
+                </h2>
                 <p class="sg-dashboard__block-desc">
-                  Una partida para retomar. El historial completo está en Partidas.
+                  Tu mejor resultado de la semana. El historial completo está en Partidas.
                 </p>
               </div>
               <a routerLink="/tabs/matches" class="sg-dashboard__block-link">Ver partidas →</a>
@@ -201,6 +190,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 [updatedAt]="match.updatedAt"
                 [stats]="match.stats"
                 [showHistoryLink]="false"
+                [compact]="true"
               />
             } @else {
               <article class="sg-dashboard__empty-card">
@@ -208,18 +198,17 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                   <h3 class="sg-dashboard__empty-title">Sin partida destacada todavía</h3>
                   <p class="sg-dashboard__empty-copy u-m-0">
                     Cuando vinculés tu cuenta y juegues, acá aparece tu mejor resultado de la
-                    semana (victoria, placement o highlight de kills). Mientras tanto podés
-                    explorar el historial de ejemplo.
+                    semana (victoria, placement o highlight de kills).
                   </p>
                 </div>
                 <div class="sg-dashboard__empty-actions">
-                  <a routerLink="/tabs/matches" class="u-btn u-btn--ghost">Ir a Partidas</a>
-                  <a routerLink="/tabs/integrations" class="u-btn u-btn--primary">Conectar cuenta</a>
+                  <a routerLink="/tabs/matches" class="u-btn u-btn--gold">Ir a Partidas</a>
                 </div>
               </article>
             }
           </section>
         </div>
+        }
       </div>
     </ion-content>
   `,
@@ -238,13 +227,12 @@ export class DashboardPageComponent implements OnInit {
   readonly recentMatches = signal<MatchUpdateView[]>([]);
   readonly weekly = signal<PlayerStatsRollupView | null>(null);
   readonly communityBenchmarksApi = signal<CommunityBenchmarks | null>(null);
-  readonly communityLeaderboardApi = signal<LeaderboardEntryView[]>([]);
   readonly latestAiReport = signal<MatchAiReportView | null>(null);
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  /** Evita flash de mocks / onboarding antes de la 1ª hidratación. */
+  readonly bootstrapped = signal(false);
   readonly lastUpdatedAt = signal<Date | null>(null);
   readonly error = signal<string | null>(null);
-
-  readonly quickActions = DASHBOARD_QUICK_ACTIONS;
 
   readonly heroPlatform = computed(() => {
     const g = this.gameContext.activeGame();
@@ -268,6 +256,89 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.heroPlatform()));
+  private readonly weekBannerFailed = signal(false);
+  /** Tras fallo del splash del campeón, probar splash curado una vez. */
+  private readonly weekBannerRetried = signal(false);
+
+  /** Splash centered (CDragon) → splash campeón / cinematic → SVG. */
+  readonly weekBannerSrc = computed(() => {
+    const meta = this.platformMeta();
+    const localFallback = meta.portraitFallbackUrl || meta.artUrl;
+
+    if (this.weekBannerFailed() && this.weekBannerRetried()) {
+      return localFallback;
+    }
+
+    if (this.heroPlatform() === 'league_of_legends') {
+      if (this.weekBannerFailed()) {
+        // 2º intento: splash Data Dragon del campeón, o cinematic curado
+        const champ =
+          this.highlightMatch()?.stats?.champion ??
+          this.weekMatches().find((m) => m.stats?.champion)?.stats?.champion;
+        return (
+          lolChampionSplashFallbackUrl(champ) ??
+          lolFallbackSplashUrl((this.profile()?.gamerTag ?? 'lol').length + 3)
+        );
+      }
+      return this.weekLolSplashUrl() ?? localFallback;
+    }
+
+    if (this.weekBannerFailed()) {
+      return localFallback;
+    }
+
+    const videoId = meta.officialTrailerVideoId;
+    if (videoId) {
+      return `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
+    }
+    return meta.portraitUrl || meta.artUrl;
+  });
+
+  /** Campeón más relevante de la semana → splash HQ oficial Riot CDN. */
+  private readonly weekLolSplashUrl = computed(() => {
+    if (this.heroPlatform() !== 'league_of_legends') return null;
+
+    const fromHighlight = this.highlightMatch()?.stats?.champion;
+    const fromSplash = lolChampionSplashUrl(fromHighlight);
+    if (fromSplash) return fromSplash;
+
+    const fromRecent = this.weekMatches().find((m) => m.stats?.champion)?.stats?.champion;
+    const recentSplash = lolChampionSplashUrl(fromRecent);
+    if (recentSplash) return recentSplash;
+
+    const seed = (this.profile()?.gamerTag ?? 'lol').length;
+    return lolFallbackSplashUrl(seed);
+  });
+
+  constructor() {
+    effect(() => {
+      this.heroPlatform();
+      this.weekLolSplashUrl();
+      this.weekBannerFailed.set(false);
+      this.weekBannerRetried.set(false);
+    });
+    effect(
+      () => {
+        if (this.gameContext.refreshTick() === 0) return;
+        // Al cambiar de juego: skeleton hasta hidratar el nuevo contexto (evita panel de
+        // "conectar" / KPIs del juego anterior).
+        this.bootstrapped.set(false);
+        this.weekly.set(null);
+        void this.loadData();
+      },
+      { allowSignalWrites: true },
+    );
+  }
+
+  onWeekBannerError(): void {
+    if (!this.weekBannerFailed()) {
+      this.weekBannerFailed.set(true);
+      return;
+    }
+    if (!this.weekBannerRetried()) {
+      this.weekBannerRetried.set(true);
+    }
+  }
 
   readonly kdLabel = computed(() => {
     const platform = this.heroPlatform();
@@ -307,10 +378,13 @@ export class DashboardPageComponent implements OnInit {
     () => this.weekly()?.matchCount ?? this.weekSummary().matchCount,
   );
 
-  /** Sin rollup semanal de API: mostramos onboarding de conexión. */
+  /**
+   * Onboarding de conexión solo si el juego activo no tiene ID vinculado en el perfil.
+   * Un rollup semanal vacío ≠ sin conectar (p. ej. LoL vinculado sin partidas esta semana).
+   */
   readonly needsTrackingSetup = computed(() => {
-    const w = this.weekly();
-    return !w || w.matchCount === 0;
+    if (!this.bootstrapped() || this.loading()) return false;
+    return !isGameAccountConnected(this.heroPlatform(), this.profile());
   });
 
   readonly highlightMatch = computed(() => {
@@ -351,9 +425,13 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly effectiveRecentMatches = computed(() => {
-    const userId = this.auth.userId() ?? 'mock-user-demo';
     const platform = this.heroPlatform();
     const api = this.recentMatches();
+    // Autenticado: nunca mocks (causaban imagen/paneles incorrectos ~2s al entrar a Inicio).
+    if (this.auth.userId()) {
+      return filterMockMatchesByPlatform(api, platform);
+    }
+    const userId = 'mock-user-demo';
     const source = api.length > 0 ? api : buildMockMatchHistory(userId);
     return filterMockMatchesByPlatform(source, platform);
   });
@@ -365,105 +443,23 @@ export class DashboardPageComponent implements OnInit {
       weekMatches: this.weekMatches(),
       latestAiReport: this.latestAiReport(),
       communityBenchmarks:
-        this.communityBenchmarksApi() ?? MOCK_COMMUNITY_BENCHMARKS[platform],
+        this.communityBenchmarksApi() ??
+        (this.bootstrapped() ? MOCK_COMMUNITY_BENCHMARKS[platform] : undefined),
       kdLabel: this.kdLabel(),
     });
-  });
-
-  readonly weeklyCommunityRank = computed<CommunityRankTableView | null>(() => {
-    const platform = this.heroPlatform();
-    const apiRows = this.communityLeaderboardApi();
-    if (apiRows.length === 0) return null;
-
-    const summary = this.weekSummary();
-    const kd =
-      summary.totalDeaths > 0
-        ? summary.totalKills / summary.totalDeaths
-        : summary.totalKills;
-    const winRate =
-      summary.matchCount > 0 ? (summary.winCount / summary.matchCount) * 100 : 0;
-    const gamerTag = this.profile()?.gamerTag || 'Vos';
-    const userId = this.auth.userId();
-
-    const rows: CommunityRankRow[] = apiRows.map((entry) => ({
-      rank: entry.rank,
-      gamerTag:
-        entry.userId === userId
-          ? gamerTag
-          : entry.gamerTag && entry.gamerTag !== entry.userId
-            ? entry.gamerTag
-            : `Jugador ${entry.rank}`,
-      platform,
-      isYou: entry.userId === userId,
-      kd: entry.kd,
-      winRate: entry.winRate,
-      kills: entry.totalKills,
-      matches: entry.matchCount,
-      score: entry.score,
-      delta: entry.delta,
-      trend:
-        entry.trend === 'up' || entry.trend === 'down'
-          ? entry.trend
-          : 'flat',
-    }));
-
-    if (!rows.some((row) => row.isYou) && summary.matchCount > 0) {
-      rows.push({
-        rank: rows.length + 1,
-        gamerTag,
-        platform,
-        isYou: true,
-        kd,
-        winRate,
-        kills: summary.totalKills,
-        matches: summary.matchCount,
-        score:
-          summary.totalKills * 10 +
-          summary.winCount * 100 +
-          summary.matchCount * 5,
-        delta: '—',
-        trend: 'flat',
-      });
-      rows.sort((a, b) => b.score - a.score);
-      rows.forEach((row, index) => {
-        row.rank = index + 1;
-      });
-    }
-
-    const yourIndex = rows.findIndex((row) => row.isYou);
-    const start = Math.max(0, yourIndex >= 0 ? yourIndex - 5 : 0);
-    const end = Math.min(
-      rows.length,
-      yourIndex >= 0 ? yourIndex + 6 : Math.min(rows.length, 11),
-    );
-
-    return {
-      rows: rows.slice(start, end),
-      yourRank: yourIndex >= 0 ? (rows[yourIndex]?.rank ?? 0) : 0,
-      totalPlayers:
-        this.communityBenchmarksApi()?.sampleSize ?? rows.length,
-      platform,
-    };
   });
 
   readonly aiCtaLabel = computed(() => {
     const report = this.latestAiReport();
     if (report?.status === 'ready' && report.matchId) {
-      return 'Ver último análisis';
+      return 'Ver último análisis de partida';
     }
-    return 'Abrir AI Coach';
+    return 'Ver análisis semanal';
   });
 
   ngOnInit(): void {
     void this.loadData();
     this.realtime.ensureConnected();
-  }
-
-  constructor() {
-    effect(() => {
-      if (this.gameContext.refreshTick() === 0) return;
-      void this.loadData();
-    });
   }
 
   async refresh(event: CustomEvent): Promise<void> {
@@ -482,7 +478,11 @@ export class DashboardPageComponent implements OnInit {
 
   private async loadData(): Promise<void> {
     const userId = this.auth.userId();
-    if (!userId) return;
+    if (!userId) {
+      this.loading.set(false);
+      this.bootstrapped.set(true);
+      return;
+    }
 
     this.loading.set(true);
     this.error.set(null);
@@ -501,7 +501,7 @@ export class DashboardPageComponent implements OnInit {
       const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
 
-      const [matches, weeklyRows, community, leaderboard, aiReports] = await Promise.all([
+      const [matches, weeklyRows, community, aiReports] = await Promise.all([
         this.matchService.listPlayerMatchesOnce(userId, { limit: 50 }),
         firstValueFrom(
           this.statsService.listPlayerStatsRollups(userId, 'WEEKLY', periodId, platform),
@@ -509,9 +509,6 @@ export class DashboardPageComponent implements OnInit {
         firstValueFrom(
           this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
         ).catch(() => null),
-        firstValueFrom(
-          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 20),
-        ).catch(() => [] as LeaderboardEntryView[]),
         this.matchAi
           .listMatchAiReportsOnce(userId, {
             platform: platform ?? undefined,
@@ -522,7 +519,6 @@ export class DashboardPageComponent implements OnInit {
 
       this.recentMatches.set(matches);
       this.weekly.set(weeklyRows[0] ?? null);
-      this.communityLeaderboardApi.set(leaderboard);
       this.lastUpdatedAt.set(new Date());
       this.latestAiReport.set(
         aiReports.find((row) => row.status === 'ready') ?? aiReports[0] ?? null,
@@ -549,6 +545,7 @@ export class DashboardPageComponent implements OnInit {
       this.error.set(extractGraphqlErrorMessage(err, 'Error cargando dashboard'));
     } finally {
       this.loading.set(false);
+      this.bootstrapped.set(true);
     }
   }
 }

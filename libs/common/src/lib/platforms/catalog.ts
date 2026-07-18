@@ -53,6 +53,7 @@ export interface PlatformCatalogEntry {
 }
 
 export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
+  /** Perfiles privados por defecto: RSO recomendado, o historial Público + Riot ID. */
   valorant: {
     id: 'valorant',
     label: 'Valorant',
@@ -60,7 +61,7 @@ export const PLATFORM_CATALOG: Record<GamePlatform, PlatformCatalogEntry> = {
     phase: 1,
     integrationMode: 'official_api_poll',
     profileField: 'valorantId',
-    externalIdHint: 'Riot ID (Nombre#TAG)',
+    externalIdHint: 'RSO o Riot ID (Nombre#TAG) con historial Público',
     externalIdPlaceholder: 'ej. Player#NA1',
     statHints: [
       'kills',

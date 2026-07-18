@@ -15,4 +15,14 @@ export const environment = {
   webhookUrlPattern:
     'https://xr1lip3ln0.execute-api.eu-central-1.amazonaws.com/webhooks/{platform}',
   mediaProxyBaseUrl: 'https://xr1lip3ln0.execute-api.eu-central-1.amazonaws.com',
+  /**
+   * Valorant: perfiles privados por defecto. RSO = permiso explícito del jugador.
+   * Cuando haya client_id Riot, completar `rsoAuthorizeUrl` (authorize endpoint).
+   */
+  riot: {
+    rsoAuthorizeUrl: '' as string,
+    accountUrl: 'https://account.riotgames.com/',
+    valorantPrivacyHelpUrl:
+      'https://support-valorant.riotgames.com/hc/en-us/articles/360047241634',
+  },
 };

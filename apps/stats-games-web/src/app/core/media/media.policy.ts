@@ -33,6 +33,10 @@ export const MEDIA_POLICY = {
     'media.fortnite.com',
     'cdn2.unrealengine.com',
     'cdn-live.prm.ol.epicgames.com',
+    'ddragon.leagueoflegends.com',
+    'cdn.communitydragon.org',
+    'raw.communitydragon.org',
+    'i.ytimg.com',
   ] as const,
   maxApiThumbPx: {
     avatar: 150,

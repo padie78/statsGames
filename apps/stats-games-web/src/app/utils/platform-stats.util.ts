@@ -241,13 +241,13 @@ export function buildPlatformKpiItems(
   const winRate: KpiStripItem = {
     label: 'Win rate',
     value: summary.winRate,
-    accent: 'cyan',
+    accent: 'lime',
     icon: 'kd',
   };
   const kd: KpiStripItem = {
     label: 'K/D',
     value: summary.kd,
-    accent: 'cyan',
+    accent: 'lime',
     icon: 'kd',
     delta: d.kd?.note,
     deltaTrend: d.kd?.trend,
@@ -255,7 +255,7 @@ export function buildPlatformKpiItems(
   const kda: KpiStripItem = {
     label: 'KDA',
     value: summary.kda,
-    accent: 'purple',
+    accent: 'lime',
     icon: 'kd',
   };
   const kills: KpiStripItem = {
@@ -283,8 +283,8 @@ export function buildPlatformKpiItems(
         victorias,
         winRate,
         kda,
-        { label: 'CS medio', value: summary.avgCs, accent: 'cyan', icon: 'kills' },
-        { label: 'Visión', value: summary.avgVision, accent: 'purple', icon: 'kd' },
+        { label: 'CS medio', value: summary.avgCs, accent: 'lime', icon: 'kills' },
+        { label: 'Visión', value: summary.avgVision, accent: 'lime', icon: 'kd' },
         partidas,
       ];
     case 'cs2':

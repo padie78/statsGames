@@ -20,6 +20,7 @@ import type { MatchCardStats } from '../match-stat-card/match-stat-card.componen
   @if (matchId) {
     <section
       class="sg-match-highlight"
+      [class.sg-match-highlight--compact]="compact"
       [class.sg-match-highlight--victory]="isVictory"
       [attr.data-game]="platformKey"
       [class.sg-match-highlight--fortnite]="platformKey === 'fortnite'"
@@ -60,13 +61,33 @@ import type { MatchCardStats } from '../match-stat-card/match-stat-card.componen
         </div>
 
         <div class="sg-match-highlight__footer">
-          <span class="sg-match-highlight__meta">{{ matchId }} · {{ updatedAt }}</span>
+          @if (!compact) {
+            <span class="sg-match-highlight__meta">{{ matchId }} · {{ updatedAt }}</span>
+          } @else {
+            <span class="sg-match-highlight__meta">{{ updatedAt }}</span>
+          }
           <div class="sg-match-highlight__actions">
             @if (matchId) {
-              <a [routerLink]="detailLink" class="u-btn u-btn--primary">Ver análisis IA</a>
+              <a
+                [routerLink]="detailLink"
+                class="u-btn"
+                [class.u-btn--sm]="compact"
+                [class.u-btn--gold]="compact"
+                [class.u-btn--primary]="!compact"
+              >
+                {{ compact ? 'Ver partida' : 'Ver análisis IA' }}
+              </a>
             }
             @if (showHistoryLink) {
-              <a routerLink="/tabs/matches" class="u-btn u-btn--ghost">Ver historial</a>
+              <a
+                routerLink="/tabs/matches"
+                class="u-btn"
+                [class.u-btn--sm]="compact"
+                [class.u-btn--ghost-gold]="compact"
+                [class.u-btn--ghost]="!compact"
+              >
+                Ver historial
+              </a>
             }
           </div>
         </div>
@@ -82,6 +103,8 @@ export class MatchHighlightCardComponent {
   @Input() updatedAt = '';
   @Input() stats: MatchCardStats = {};
   @Input() showHistoryLink = true;
+  /** Variante densa para Inicio (menos alto / menos padding). */
+  @Input() compact = false;
 
   get isVictory(): boolean {
     return isMatchWin(this.stats);

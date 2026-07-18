@@ -32,14 +32,39 @@ import type { CommunityComparisonItem } from '../../../utils/community-stats.uti
       </header>
 
       @if (!gaugeItems.length) {
-        <p class="sg-trend-chart__empty u-m-0">Sin percentiles para graficar.</p>
+        <p class="sg-trend-chart__empty u-m-0">
+          Sin percentiles para graficar. Jugá partidas esta semana para comparar vs la comunidad.
+        </p>
       } @else {
-        <div
-          class="sg-percentile-gauges__canvas"
-          echarts
-          [options]="chartOptions"
-          [autoResize]="true"
-        ></div>
+        <!-- Remount echarts when data arrives (evita canvas vacío tras options {}). -->
+        @for (key of [chartKey]; track key) {
+          <div
+            class="sg-percentile-gauges__canvas"
+            echarts
+            [options]="chartOptions"
+            [autoResize]="true"
+          ></div>
+        }
+
+        <ul class="sg-percentile-gauges__bars" aria-label="Detalle de percentiles">
+          @for (item of gaugeItems; track item.name) {
+            <li class="sg-percentile-gauges__bar" [attr.data-tone]="item.tone ?? 'strong'">
+              <div class="sg-percentile-gauges__bar-head">
+                <span class="sg-percentile-gauges__bar-name">{{ item.name }}</span>
+                <strong class="sg-percentile-gauges__bar-value">{{ item.value }}%</strong>
+              </div>
+              <div class="sg-percentile-gauges__bar-track" aria-hidden="true">
+                <span
+                  class="sg-percentile-gauges__bar-fill"
+                  [style.width.%]="item.value"
+                ></span>
+              </div>
+              <p class="sg-percentile-gauges__bar-hint u-m-0">
+                Mejor que el {{ item.value }}% de la comunidad
+              </p>
+            </li>
+          }
+        </ul>
       }
     </section>
   `,
@@ -51,6 +76,7 @@ export class PercentileGaugesComponent implements OnInit, OnChanges {
 
   gaugeItems: PercentileGaugeItem[] = [];
   chartOptions: EChartsOption = {};
+  chartKey = '';
 
   ngOnInit(): void {
     this.refresh();
@@ -61,11 +87,18 @@ export class PercentileGaugesComponent implements OnInit, OnChanges {
   }
 
   private refresh(): void {
-    this.gaugeItems = this.items.slice(0, 4).map((item) => ({
-      name: item.label.replace(' / semana', ''),
-      value: item.betterThanPct,
-      tone: item.tone,
-    }));
-    this.chartOptions = buildPercentileGaugesOptions(this.gaugeItems);
+    this.gaugeItems = (this.items ?? [])
+      .filter((item) => Number.isFinite(item.betterThanPct))
+      .slice(0, 4)
+      .map((item) => ({
+        name: item.label.replace(' / semana', ''),
+        value: Math.max(0, Math.min(100, Math.round(item.betterThanPct))),
+        tone: item.tone,
+      }));
+
+    this.chartKey = this.gaugeItems.map((item) => `${item.name}:${item.value}`).join('|');
+    this.chartOptions = this.gaugeItems.length
+      ? buildPercentileGaugesOptions(this.gaugeItems)
+      : {};
   }
 }

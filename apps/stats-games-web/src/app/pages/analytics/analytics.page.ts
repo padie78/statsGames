@@ -3,7 +3,6 @@ import { IonContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import {
   MOCK_COMMUNITY_BENCHMARKS,
-  type CommunityRankRow,
   type CommunityRankTableView,
 } from '../../data/community-mock.data';
 import {
@@ -68,6 +67,7 @@ import {
   parsePlayerWinRateForCommunity,
 } from '../../utils/community-stats.util';
 import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
+import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.util';
 
 @Component({
   standalone: true,
@@ -123,33 +123,33 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
           <div class="u-surface-card u-p-5">
             <div class="u-grid-stats sg-analytics__kpi-grid">
-              <sg-stat-value label="Partidas" [value]="weekMatchCount()" />
+              <sg-stat-value label="Partidas" [value]="weekMatchCount()" accent="lime" />
               <sg-stat-value label="Win rate" [value]="platformWeekSummary().winRate" accent="lime" />
               <sg-stat-value label="Victorias" [value]="platformWeekSummary().winCount" accent="lime" />
-              <sg-stat-value label="KDA" [value]="platformWeekSummary().kda" accent="purple" />
-              <sg-stat-value label="K/D" [value]="platformWeekSummary().kd" accent="cyan" />
-              <sg-stat-value [label]="analyticsKillLabel()" [value]="platformWeekSummary().totalKills" accent="cyan" />
+              <sg-stat-value label="KDA" [value]="platformWeekSummary().kda" accent="lime" />
+              <sg-stat-value label="K/D" [value]="platformWeekSummary().kd" accent="lime" />
+              <sg-stat-value [label]="analyticsKillLabel()" [value]="platformWeekSummary().totalKills" accent="lime" />
               @if (showValCs2Extras()) {
                 <sg-stat-value label="HS%" [value]="platformWeekSummary().avgHeadshotPct" accent="lime" />
               }
               @if (showValorantExtras()) {
-                <sg-stat-value label="ACS" [value]="platformWeekSummary().avgScore" accent="cyan" />
+                <sg-stat-value label="ACS" [value]="platformWeekSummary().avgScore" accent="lime" />
               }
               @if (showLolExtras()) {
-                <sg-stat-value label="CS medio" [value]="platformWeekSummary().avgCs" accent="cyan" />
-                <sg-stat-value label="Visión" [value]="platformWeekSummary().avgVision" accent="purple" />
+                <sg-stat-value label="CS medio" [value]="platformWeekSummary().avgCs" accent="lime" />
+                <sg-stat-value label="Visión" [value]="platformWeekSummary().avgVision" accent="lime" />
               }
               @if (showCs2Extras()) {
-                <sg-stat-value label="ADR" [value]="platformWeekSummary().avgAdr" accent="cyan" />
+                <sg-stat-value label="ADR" [value]="platformWeekSummary().avgAdr" accent="lime" />
               }
               @if (showRlExtras()) {
-                <sg-stat-value label="Saves" [value]="platformWeekSummary().totalSaves" accent="cyan" />
-                <sg-stat-value label="Shot %" [value]="platformWeekSummary().avgShotPct" />
+                <sg-stat-value label="Saves" [value]="platformWeekSummary().totalSaves" accent="lime" />
+                <sg-stat-value label="Shot %" [value]="platformWeekSummary().avgShotPct" accent="lime" />
               }
               @if (showFortniteExtras()) {
-                <sg-stat-value label="Placement medio" [value]="avgPlacementLabel()" />
+                <sg-stat-value label="Placement medio" [value]="avgPlacementLabel()" accent="lime" />
               }
-              <sg-stat-value label="Racha días" [value]="playStreak()" accent="cyan" />
+              <sg-stat-value label="Racha días" [value]="playStreak()" accent="lime" />
             </div>
           </div>
         </section>
@@ -196,8 +196,8 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               title="Kills por día"
               unit="kills"
               variant="area"
-              color="#b8ff3c"
-              areaColor="rgba(184, 255, 60, 0.22)"
+              color="#f0d060"
+              areaColor="rgba(240, 208, 96, 0.22)"
               [points]="killsTrend()"
             />
             <sg-trend-chart
@@ -469,17 +469,37 @@ export class AnalyticsPageComponent implements OnInit {
     const summary = this.weekSummary();
     const platformSummary = this.platformWeekSummary();
     const weekly = this.weeklyForCharts();
-    const matchCount = weekly?.matchCount || summary.matchCount;
-    const kills = weekly?.totalKills || summary.totalKills;
-    const useKda = platform === 'valorant' || platform === 'league_of_legends';
+    const matchCount =
+      weekly?.matchCount || summary.matchCount || platformSummary.matchCount;
+    const kills = weekly?.totalKills || summary.totalKills || platformSummary.totalKills;
+    const useKda =
+      platform === 'valorant' ||
+      platform === 'league_of_legends' ||
+      platform === 'dota2';
     const kd = useKda ? platformSummary.kda : this.weeklyKd();
+    const winRate = platformSummary.winRate || summary.winRate;
+    const winRateNumeric =
+      parsePlayerWinRateForCommunity(winRate) ??
+      (matchCount > 0
+        ? Math.round((platformSummary.winCount / matchCount) * 100)
+        : null);
+    const kdNumeric =
+      parsePlayerKdForCommunity(kd) ??
+      (matchCount > 0
+        ? Number(
+            (
+              platformSummary.totalKills /
+              Math.max(platformSummary.totalDeaths, 1)
+            ).toFixed(2),
+          )
+        : null);
 
     return buildCommunityComparison({
       benchmarks,
-      winRate: platformSummary.winRate,
-      winRateNumeric: parsePlayerWinRateForCommunity(platformSummary.winRate),
+      winRate,
+      winRateNumeric,
       kd,
-      kdNumeric: parsePlayerKdForCommunity(kd),
+      kdNumeric,
       kills,
       matchCount,
       kdLabel: useKda ? 'KDA' : 'K/D',
@@ -541,75 +561,28 @@ export class AnalyticsPageComponent implements OnInit {
   );
 
   readonly communityRank = computed<CommunityRankTableView | null>(() => {
-    const platform = this.activePlatform();
-    const apiRows = this.leaderboardApi();
-    if (apiRows.length === 0) return null;
-
     const summary = this.weekSummary();
     const weekly = this.weeklyForCharts();
     const kd = parsePlayerKdForCommunity(this.weeklyKd()) ?? 1.0;
     const winRate = parsePlayerWinRateForCommunity(summary.winRate) ?? 0;
     const kills = weekly?.totalKills || summary.totalKills || 0;
     const matches = weekly?.matchCount || summary.matchCount || 0;
-    const gamerTag = this.gamerTag() || 'Vos';
-    const userId = this.auth.userId();
 
-    const rows: CommunityRankRow[] = apiRows.map((entry) => ({
-      rank: entry.rank,
-      gamerTag:
-        entry.userId === userId
-          ? gamerTag
-          : entry.gamerTag && entry.gamerTag !== entry.userId
-            ? entry.gamerTag
-            : `Jugador ${entry.rank}`,
-      platform,
-      isYou: entry.userId === userId,
-      kd: entry.kd,
-      winRate: entry.winRate,
-      kills: entry.totalKills,
-      matches: entry.matchCount,
-      score: entry.score,
-      delta: entry.delta,
-      trend:
-        entry.trend === 'up' || entry.trend === 'down'
-          ? entry.trend
-          : 'flat',
-    }));
-
-    if (!rows.some((row) => row.isYou) && matches > 0) {
-      rows.push({
-        rank: rows.length + 1,
-        gamerTag,
-        platform,
-        isYou: true,
+    return buildWeeklyCommunityRankView({
+      platform: this.activePlatform(),
+      userId: this.auth.userId(),
+      apiRows: this.leaderboardApi(),
+      sampleSize: this.communityBenchmarksApi()?.sampleSize ?? null,
+      radius: 3,
+      self: {
+        gamerTag: this.gamerTag() || 'Vos',
         kd,
         winRate,
         kills,
         matches,
-        score: kills * 10 + summary.winCount * 100 + matches * 5,
-        delta: '—',
-        trend: 'flat',
-      });
-      rows.sort((a, b) => b.score - a.score);
-      rows.forEach((row, index) => {
-        row.rank = index + 1;
-      });
-    }
-
-    const yourIndex = rows.findIndex((row) => row.isYou);
-    const start = Math.max(0, yourIndex >= 0 ? yourIndex - 3 : 0);
-    const end = Math.min(
-      rows.length,
-      yourIndex >= 0 ? yourIndex + 4 : Math.min(rows.length, 7),
-    );
-
-    return {
-      rows: rows.slice(start, end),
-      yourRank: yourIndex >= 0 ? (rows[yourIndex]?.rank ?? 0) : 0,
-      totalPlayers:
-        this.communityBenchmarksApi()?.sampleSize ?? rows.length,
-      platform,
-    };
+        winCount: summary.winCount,
+      },
+    });
   });
 
   readonly communityRankSubtitle = computed(() => {

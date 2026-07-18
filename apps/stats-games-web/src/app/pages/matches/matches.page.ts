@@ -13,11 +13,12 @@ import {
   PlatformPageBannerComponent,
   type KpiStripItem,
   type MatchDateFilter,
-  type MatchPlatformFilter,
+  type MatchResultFilter,
 } from '../../ui';
 import {
   formatMatchRelativeTime,
   groupMatchesByDay,
+  isMatchWin,
   mergeMatchUpdates,
   sortMatches,
   toMatchCardStats,
@@ -57,14 +58,28 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
         />
 
         <sg-match-filters-toolbar
-          [platform]="platformFilter()"
           [dateRange]="dateFilter()"
+          [result]="resultFilter()"
           [sort]="sortKey()"
+          [query]="searchQuery()"
+          [mode]="modeFilter()"
+          [identity]="identityFilter()"
+          [map]="mapFilter()"
+          [modeOptions]="modeOptions()"
+          [identityOptions]="identityOptions()"
+          [mapOptions]="mapOptions()"
+          [identityLabel]="identityLabel()"
           [resultCount]="filteredMatches().length"
           [usingMockData]="usingMockData()"
-          (platformChange)="setPlatformFilter($event)"
+          [hasActiveFilters]="hasActiveFilters()"
           (dateRangeChange)="setDateFilter($event)"
+          (resultChange)="setResultFilter($event)"
           (sortChange)="setSortKey($event)"
+          (queryChange)="setSearchQuery($event)"
+          (modeChange)="setModeFilter($event)"
+          (identityChange)="setIdentityFilter($event)"
+          (mapChange)="setMapFilter($event)"
+          (clearFilters)="clearFilters()"
         />
 
         @if (error()) {
@@ -101,7 +116,8 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
           <section class="sg-match-history__empty u-surface-card u-p-5">
             <h2 class="sg-page-header__title u-text-md u-mb-2">Sin partidas</h2>
             <p class="u-hint u-m-0">
-              No hay resultados con los filtros actuales. Probá ampliar el período o conectá tu cuenta en Integraciones.
+              No hay resultados con los filtros actuales. Probá ampliar la búsqueda o conectá tu
+              cuenta en Integraciones.
             </p>
           </section>
         }
@@ -116,27 +132,75 @@ export class MatchesPageComponent implements OnInit {
   private readonly realtime = inject(AppSyncRealtimeService);
 
   readonly allMatches = signal<MatchUpdateView[]>([]);
-  readonly platformFilter = signal<MatchPlatformFilter>('all');
   readonly dateFilter = signal<MatchDateFilter>('all');
+  readonly resultFilter = signal<MatchResultFilter>('all');
   readonly sortKey = signal<MatchSortKey>('newest');
+  readonly searchQuery = signal('');
+  readonly modeFilter = signal('all');
+  readonly identityFilter = signal('all');
+  readonly mapFilter = signal('all');
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
 
-  readonly bannerPlatform = computed((): SelectedGame => {
-    const filter = this.platformFilter();
-    if (filter !== 'all') return filter;
-    return this.gameContext.activeGame() ?? 'fortnite';
+  readonly bannerPlatform = computed(
+    (): SelectedGame => this.gameContext.activeGame() ?? 'fortnite',
+  );
+
+  /** Solo partidas del juego activo (selector del chrome). */
+  readonly platformScopedMatches = computed(() => {
+    const userId = this.auth.userId() ?? 'mock-user-demo';
+    return resolveMatchHistory(this.allMatches(), userId, this.bannerPlatform());
+  });
+
+  readonly modeOptions = computed(() =>
+    this.uniqueSorted(
+      this.platformScopedMatches()
+        .map((m) => m.stats?.mode?.trim())
+        .filter((v): v is string => !!v),
+    ),
+  );
+
+  readonly identityOptions = computed(() =>
+    this.uniqueSorted(
+      this.platformScopedMatches()
+        .map((m) => (m.stats?.champion || m.stats?.agent || m.stats?.role || '').trim())
+        .filter((v): v is string => !!v),
+    ),
+  );
+
+  readonly mapOptions = computed(() =>
+    this.uniqueSorted(
+      this.platformScopedMatches()
+        .map((m) => m.stats?.map?.trim())
+        .filter((v): v is string => !!v),
+    ),
+  );
+
+  readonly identityLabel = computed(() => {
+    const platform = this.bannerPlatform();
+    if (platform === 'league_of_legends') return 'Campeón';
+    if (platform === 'valorant') return 'Agente';
+    if (platform === 'overwatch2') return 'Héroe';
+    return 'Personaje';
   });
 
   readonly usingMockData = computed(
     () => this.allMatches().length === 0 && this.filteredMatches().length > 0,
   );
 
+  readonly hasActiveFilters = computed(
+    () =>
+      this.dateFilter() !== 'all' ||
+      this.resultFilter() !== 'all' ||
+      this.searchQuery().trim().length > 0 ||
+      this.modeFilter() !== 'all' ||
+      this.identityFilter() !== 'all' ||
+      this.mapFilter() !== 'all' ||
+      this.sortKey() !== 'newest',
+  );
+
   readonly filteredMatches = computed(() => {
-    const userId = this.auth.userId() ?? 'mock-user-demo';
-    const platform = this.platformFilter();
-    const platformFilter = platform === 'all' ? null : platform;
-    let rows = resolveMatchHistory(this.allMatches(), userId, platformFilter);
+    let rows = this.platformScopedMatches();
 
     const range = this.dateFilter();
     if (range !== 'all') {
@@ -145,12 +209,42 @@ export class MatchesPageComponent implements OnInit {
       rows = rows.filter((m) => new Date(m.updatedAt).getTime() >= cutoff);
     }
 
+    const result = this.resultFilter();
+    if (result === 'wins') {
+      rows = rows.filter((m) => isMatchWin(m.stats));
+    } else if (result === 'losses') {
+      rows = rows.filter((m) => !isMatchWin(m.stats));
+    }
+
+    const mode = this.modeFilter();
+    if (mode !== 'all') {
+      rows = rows.filter((m) => (m.stats?.mode ?? '') === mode);
+    }
+
+    const identity = this.identityFilter();
+    if (identity !== 'all') {
+      rows = rows.filter((m) => {
+        const value = m.stats?.champion || m.stats?.agent || m.stats?.role || '';
+        return value === identity;
+      });
+    }
+
+    const map = this.mapFilter();
+    if (map !== 'all') {
+      rows = rows.filter((m) => (m.stats?.map ?? '') === map);
+    }
+
+    const query = this.searchQuery().trim().toLowerCase();
+    if (query) {
+      rows = rows.filter((m) => this.matchSearchHaystack(m).includes(query));
+    }
+
     return sortMatches(rows, this.sortKey());
   });
 
   readonly summaryKpis = computed<KpiStripItem[]>(() => {
     const matches = this.filteredMatches();
-    const platform = this.gameContext.activeGame() ?? matches[0]?.platform ?? 'fortnite';
+    const platform = this.bannerPlatform() ?? matches[0]?.platform ?? 'fortnite';
     const summary = aggregatePlatformMatchStats(matches);
     return buildPlatformKpiItems(platform, summary);
   });
@@ -194,12 +288,12 @@ export class MatchesPageComponent implements OnInit {
       () => {
         const tick = this.gameContext.refreshTick();
         if (tick === 0) return;
-
-        const active = this.gameContext.activeGame();
-        if (active) {
-          this.platformFilter.set(active);
-          void this.loadMatches();
-        }
+        this.searchQuery.set('');
+        this.dateFilter.set('all');
+        this.resultFilter.set('all');
+        this.sortKey.set('newest');
+        this.resetDetailFilters();
+        void this.loadMatches();
       },
       { allowSignalWrites: true },
     );
@@ -214,18 +308,7 @@ export class MatchesPageComponent implements OnInit {
         const liveMatches = this.realtime.liveMatches();
         if (!liveMatches.length) return;
 
-        const newest = liveMatches[0];
         this.allMatches.update((current) => mergeMatchUpdates(liveMatches, current));
-
-        // Si el filtro activo oculta la partida nueva, abrí ese juego / "all".
-        const filter = this.platformFilter();
-        if (
-          newest?.platform &&
-          filter !== 'all' &&
-          filter !== newest.platform
-        ) {
-          this.platformFilter.set(newest.platform as MatchPlatformFilter);
-        }
 
         if (this.loading()) {
           this.loading.set(false);
@@ -236,26 +319,75 @@ export class MatchesPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const active = this.gameContext.activeGame();
-    if (active) this.platformFilter.set(active);
     void this.loadMatches();
-  }
-
-  setPlatformFilter(value: MatchPlatformFilter): void {
-    this.platformFilter.set(value);
   }
 
   setDateFilter(value: MatchDateFilter): void {
     this.dateFilter.set(value);
   }
 
+  setResultFilter(value: MatchResultFilter): void {
+    this.resultFilter.set(value);
+  }
+
   setSortKey(value: MatchSortKey): void {
     this.sortKey.set(value);
+  }
+
+  setSearchQuery(value: string): void {
+    this.searchQuery.set(value);
+  }
+
+  setModeFilter(value: string): void {
+    this.modeFilter.set(value);
+  }
+
+  setIdentityFilter(value: string): void {
+    this.identityFilter.set(value);
+  }
+
+  setMapFilter(value: string): void {
+    this.mapFilter.set(value);
+  }
+
+  clearFilters(): void {
+    this.dateFilter.set('all');
+    this.resultFilter.set('all');
+    this.sortKey.set('newest');
+    this.searchQuery.set('');
+    this.resetDetailFilters();
   }
 
   async refresh(event: CustomEvent): Promise<void> {
     await this.loadMatches();
     (event.target as HTMLIonRefresherElement).complete();
+  }
+
+  private resetDetailFilters(): void {
+    this.modeFilter.set('all');
+    this.identityFilter.set('all');
+    this.mapFilter.set('all');
+  }
+
+  private matchSearchHaystack(match: MatchUpdateView): string {
+    const s = match.stats;
+    return [
+      match.summary,
+      match.matchId,
+      match.platform,
+      s?.mode,
+      s?.map,
+      s?.champion,
+      s?.agent,
+      s?.role,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+  }
+
+  private uniqueSorted(values: string[]): string[] {
+    return [...new Set(values)].sort((a, b) => a.localeCompare(b, 'es'));
   }
 
   private async loadMatches(): Promise<void> {
@@ -275,4 +407,3 @@ export class MatchesPageComponent implements OnInit {
     }
   }
 }
-

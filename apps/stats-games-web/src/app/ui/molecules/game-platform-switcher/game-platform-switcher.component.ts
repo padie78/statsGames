@@ -46,18 +46,19 @@ import { NotificationsBellComponent } from '../notifications-bell/notifications-
           </span>
         </a>
 
-        <div class="sg-games-bar__games" #gamesHost role="tablist" aria-label="Juegos">
+        <div class="sg-games-bar__games" #gameHost role="tablist" aria-label="Juegos">
           @for (platform of visiblePlatforms(); track platform.id) {
             <button
               type="button"
               role="tab"
               class="sg-games-bar__item"
-              [class.sg-games-bar__item--active]="auth.selectedGame() === platform.id"
+              [class.sg-games-bar__item--active]="isCurrentGame(platform.id)"
               [attr.data-game]="platform.id"
-              [attr.aria-selected]="auth.selectedGame() === platform.id"
+              [attr.aria-selected]="isCurrentGame(platform.id)"
+              [attr.aria-current]="isCurrentGame(platform.id) ? 'page' : null"
               [attr.title]="platform.label"
               [attr.aria-label]="platform.label"
-              [disabled]="gameContext.switching()"
+              [disabled]="gameContext.switching() || isCurrentGame(platform.id)"
               (click)="select(platform.id)"
             >
               <span class="sg-games-bar__item-body">
@@ -108,9 +109,9 @@ import { NotificationsBellComponent } from '../notifications-bell/notifications-
                         type="button"
                         role="option"
                         class="sg-games-bar__more-item"
-                        [class.sg-games-bar__more-item--active]="auth.selectedGame() === platform.id"
-                        [attr.aria-selected]="auth.selectedGame() === platform.id"
-                        [disabled]="gameContext.switching()"
+                        [class.sg-games-bar__more-item--active]="isCurrentGame(platform.id)"
+                        [attr.aria-selected]="isCurrentGame(platform.id)"
+                        [disabled]="gameContext.switching() || isCurrentGame(platform.id)"
                         (click)="selectFromMore(platform.id)"
                       >
                         <img
@@ -163,7 +164,7 @@ export class GamePlatformSwitcherComponent implements AfterViewInit, OnDestroy {
 
   @Output() readonly logout = new EventEmitter<void>();
 
-  @ViewChild('gamesHost') private readonly gamesHost?: ElementRef<HTMLElement>;
+  @ViewChild('gameHost') private readonly gamesHost?: ElementRef<HTMLElement>;
   @ViewChild('measureHost') private readonly measureHost?: ElementRef<HTMLElement>;
 
   readonly moreOpen = signal(false);
@@ -221,7 +222,12 @@ export class GamePlatformSwitcherComponent implements AfterViewInit, OnDestroy {
     this.moreOpen.set(false);
   }
 
+  isCurrentGame(game: SelectedGame): boolean {
+    return this.auth.selectedGame() === game;
+  }
+
   select(game: SelectedGame): void {
+    if (this.isCurrentGame(game) || this.gameContext.switching()) return;
     void this.gameContext.switchPlatform(game);
   }
 

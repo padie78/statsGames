@@ -122,10 +122,12 @@ type LinkablePlatform =
           <h2 class="sg-page-header__title u-text-md u-mb-0">Roadmap de datos</h2>
           <ul class="sg-integrations__list u-m-0">
             <li>
-              <strong>Valorant:</strong> Riot ID → matchlist (≤3 min) → KDA, HS%, mapa, agente + Bedrock.
+              <strong>Valorant:</strong> perfiles privados por defecto → Riot Sign-On (recomendado) o
+              historial Público + Riot ID → matchlist (≤3 min) → KDA, HS%, mapa, agente + Bedrock.
             </li>
             <li>
-              <strong>League of Legends:</strong> Riot ID → match-v5 → KDA, CS, visión, campeón.
+              <strong>League of Legends:</strong> Riot ID → match-v5 → KDA, CS, visión, campeón
+              (historial mayormente público; no requiere RSO).
             </li>
             <li>
               <strong>CS2:</strong> SteamID64 → validación Steam; partidas vía webhook / companion.
@@ -162,38 +164,153 @@ type LinkablePlatform =
               [options]="allPlatformOptions"
             />
 
-            <ion-list lines="none" class="u-m-0">
-              <ion-item>
-                <ion-input
-                  [label]="externalIdLabel()"
-                  labelPlacement="stacked"
-                  [placeholder]="externalIdPlaceholder()"
-                  formControlName="externalId"
-                  inputmode="text"
-                  autocomplete="off"
-                />
-              </ion-item>
-            </ion-list>
+            @if (isValorantLink()) {
+              <aside class="sg-valorant-access" aria-label="Acceso a Valorant">
+                <p class="sg-valorant-access__eyebrow">Privacidad Riot · Valorant</p>
+                <h3 class="sg-valorant-access__title">Los perfiles nacen privados</h3>
+                <p class="sg-valorant-access__lede">
+                  A diferencia de League of Legends (partidas mayormente públicas), en Valorant Riot
+                  bloquea matchlist / match-v1 con API key si el jugador no dio permiso. Sin
+                  historial Público o Riot Sign-On, la petición vuelve con error de seguridad.
+                </p>
 
-            <div class="sg-integrations-help">
-              <p class="sg-integrations-help__title u-m-0">{{ helpTitle() }}</p>
-              <p class="u-hint u-m-0">{{ helpBody() }}</p>
-            </div>
+                <div class="sg-valorant-access__paths" role="tablist" aria-label="Método de acceso">
+                  <button
+                    type="button"
+                    role="tab"
+                    class="sg-valorant-access__path"
+                    [class.sg-valorant-access__path--active]="valorantAccessMode() === 'rso'"
+                    [attr.aria-selected]="valorantAccessMode() === 'rso'"
+                    (click)="valorantAccessMode.set('rso')"
+                  >
+                    <span class="sg-valorant-access__path-kicker">Recomendado</span>
+                    Riot Sign-On
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    class="sg-valorant-access__path"
+                    [class.sg-valorant-access__path--active]="valorantAccessMode() === 'public'"
+                    [attr.aria-selected]="valorantAccessMode() === 'public'"
+                    (click)="valorantAccessMode.set('public')"
+                  >
+                    <span class="sg-valorant-access__path-kicker">Alternativa</span>
+                    Perfil público
+                  </button>
+                </div>
 
-            @if (linkError()) {
-              <p class="u-error">{{ linkError() }}</p>
+                @if (valorantAccessMode() === 'rso') {
+                  <div class="sg-valorant-access__panel">
+                    <p class="u-m-0">
+                      Las plataformas grandes no piden el Riot ID en un formulario: el jugador inicia
+                      sesión en Riot y autoriza a StatsGames. Riot devuelve un token de acceso para
+                      ese jugador; con ese permiso la API de Valorant entrega la telemetría.
+                    </p>
+                    <button
+                      type="button"
+                      class="u-btn u-btn--primary u-btn--block"
+                      [disabled]="!auth.userId() || linking()"
+                      (click)="startRiotSignOn()"
+                    >
+                      Iniciar sesión con Riot
+                    </button>
+                    @if (!riotRsoReady()) {
+                      <p class="sg-valorant-access__note u-m-0">
+                        RSO se habilita cuando
+                        <code>environment.riot.rsoAuthorizeUrl</code> está configurada. Mientras
+                        tanto podés usar la alternativa de perfil público.
+                      </p>
+                    }
+                  </div>
+                } @else {
+                  <div class="sg-valorant-access__panel">
+                    <ol class="sg-valorant-access__steps">
+                      <li>
+                        Entrá a tu
+                        <a [href]="riotAccountUrl" target="_blank" rel="noopener noreferrer"
+                          >cuenta Riot</a
+                        >
+                        (o a una plataforma que ya uses, p. ej. Tracker.gg) y poné el historial de
+                        partidas de Valorant en
+                        <strong>Público</strong>.
+                        <a
+                          [href]="valorantPrivacyHelpUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          >Guía oficial</a
+                        >.
+                      </li>
+                      <li>Pegá tu Riot ID abajo (<code>Nombre#TAG</code>).</li>
+                      <li>
+                        Confirmá el checkbox: sin historial público, el poller recibe 403 aunque el
+                        ID sea correcto.
+                      </li>
+                    </ol>
+
+                    <label class="sg-valorant-access__check">
+                      <input
+                        type="checkbox"
+                        [checked]="valorantPrivacyAck()"
+                        (change)="onValorantPrivacyAck($event)"
+                      />
+                      <span>
+                        Confirmé que mi historial de partidas de Valorant está en
+                        <strong>Público</strong>.
+                      </span>
+                    </label>
+                  </div>
+                }
+              </aside>
             }
-            @if (linkSuccess()) {
-              <p class="u-success">{{ linkSuccess() }}</p>
-            }
 
-            <button
-              type="submit"
-              class="u-btn u-btn--primary u-btn--block"
-              [disabled]="linkForm.invalid || linking() || !auth.userId()"
-            >
-              {{ linking() ? 'Vinculando…' : submitLabel() }}
-            </button>
+            @if (!isValorantLink() || valorantAccessMode() === 'public') {
+              <ion-list lines="none" class="u-m-0">
+                <ion-item>
+                  <ion-input
+                    [label]="externalIdLabel()"
+                    labelPlacement="stacked"
+                    [placeholder]="externalIdPlaceholder()"
+                    formControlName="externalId"
+                    inputmode="text"
+                    autocomplete="off"
+                  />
+                </ion-item>
+              </ion-list>
+
+              @if (!isValorantLink()) {
+                <div class="sg-integrations-help">
+                  <p class="sg-integrations-help__title u-m-0">{{ helpTitle() }}</p>
+                  <p class="u-hint u-m-0">{{ helpBody() }}</p>
+                </div>
+              }
+
+              @if (linkError()) {
+                <p class="u-error">{{ linkError() }}</p>
+              }
+              @if (linkSuccess()) {
+                <p class="u-success">{{ linkSuccess() }}</p>
+              }
+
+              <button
+                type="submit"
+                class="u-btn u-btn--primary u-btn--block"
+                [disabled]="
+                  linkForm.invalid ||
+                  linking() ||
+                  !auth.userId() ||
+                  (isValorantLink() && !valorantPrivacyAck())
+                "
+              >
+                {{ linking() ? 'Vinculando…' : submitLabel() }}
+              </button>
+            } @else {
+              @if (linkError()) {
+                <p class="u-error">{{ linkError() }}</p>
+              }
+              @if (linkSuccess()) {
+                <p class="u-success">{{ linkSuccess() }}</p>
+              }
+            }
           </form>
         </section>
 
@@ -216,7 +333,7 @@ type LinkablePlatform =
     `
       .sg-integrations-avatar {
         border-radius: 12px;
-        border: 1px solid rgba(163, 230, 53, 0.35);
+        border: 1px solid rgba(200, 155, 60, 0.35);
         background: #0b1220;
       }
     `,
@@ -234,9 +351,18 @@ export class IntegrationsPageComponent implements OnInit {
   readonly linking = signal(false);
   readonly linkError = signal<string | null>(null);
   readonly linkSuccess = signal<string | null>(null);
+  /** Valorant: RSO (recomendado) o historial público + Riot ID. */
+  readonly valorantAccessMode = signal<'rso' | 'public'>('rso');
+  readonly valorantPrivacyAck = signal(false);
+  readonly selectedPlatform = signal<LinkablePlatform>('valorant');
 
   readonly webhookBase = environment.webhookUrlPattern ?? '';
   readonly webhookUrl = this.webhookBase || '…/webhooks/{platform}';
+  readonly riotAccountUrl = environment.riot.accountUrl;
+  readonly valorantPrivacyHelpUrl = environment.riot.valorantPrivacyHelpUrl;
+
+  readonly isValorantLink = computed(() => this.selectedPlatform() === 'valorant');
+  readonly riotRsoReady = computed(() => Boolean(environment.riot.rsoAuthorizeUrl?.trim()));
 
   readonly allPlatformOptions: SelectOption<LinkablePlatform>[] = [
     { value: 'valorant', label: 'Valorant' },
@@ -328,13 +454,13 @@ export class IntegrationsPageComponent implements OnInit {
   readonly helpBody = computed(() => {
     switch (this.linkForm.controls.platform.value) {
       case 'valorant':
-        return 'Formato obligatorio: Nombre#TAG (ej. Player#NA1). Tras vincular, el poller (EventBridge ~3 min) captura partidas al cerrar si RIOT_API_KEY está en infra. Región/shard: VALORANT_REGION / VALORANT_SHARD.';
+        return 'Valorant exige historial Público o Riot Sign-On. Con API key sola, Riot bloquea matchlist/match-v1 si el perfil está privado.';
       case 'rocket_league':
         return 'Nombre visible en replays/ballchasing o companion. API oficial Psyonix no está abierta: webhook o ballchasing.';
       case 'fortnite':
         return 'Stats públicas en Epic. Preferí account id 32-hex. Poller cada ~3 min.';
       case 'league_of_legends':
-        return 'Formato obligatorio: Nombre#TAG (mismo Riot ID que Valorant). Tras vincular, el poller captura partidas ranked/normales.';
+        return 'Formato obligatorio: Nombre#TAG. En LoL el historial es mayormente público: alcanza con el Riot ID (sin RSO). El poller captura ranked/normales.';
       case 'cs2':
         return 'SteamID64 de 17 dígitos que empieza con 7656119. Perfil Steam → Account details, o steamid.io.';
       case 'dota2':
@@ -364,16 +490,41 @@ export class IntegrationsPageComponent implements OnInit {
     this.linkForm.controls.platform.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((platform) => {
+        this.selectedPlatform.set(platform);
         this.applyExternalIdValidators(platform);
         this.prefillExternalId(platform);
         this.linkSuccess.set(null);
         this.linkError.set(null);
+        if (platform === 'valorant') {
+          this.valorantAccessMode.set('rso');
+          this.valorantPrivacyAck.set(false);
+        }
       });
+    this.selectedPlatform.set(this.linkForm.controls.platform.value);
     this.applyExternalIdValidators(this.linkForm.controls.platform.value);
   }
 
   ngOnInit(): void {
     void this.loadProfile();
+  }
+
+  onValorantPrivacyAck(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.valorantPrivacyAck.set(input.checked);
+  }
+
+  startRiotSignOn(): void {
+    this.linkError.set(null);
+    this.linkSuccess.set(null);
+    const authorizeUrl = environment.riot.rsoAuthorizeUrl?.trim();
+    if (!authorizeUrl) {
+      this.linkError.set(
+        'Riot Sign-On todavía no está configurado en este entorno. Usá “Perfil público” o pedí que se complete environment.riot.rsoAuthorizeUrl.',
+      );
+      this.valorantAccessMode.set('public');
+      return;
+    }
+    window.location.assign(authorizeUrl);
   }
 
   async submitLinkPlatform(): Promise<void> {
@@ -391,6 +542,19 @@ export class IntegrationsPageComponent implements OnInit {
     try {
       const { platform, externalId } = this.linkForm.getRawValue();
       const trimmedId = externalId.trim();
+
+      if (platform === 'valorant') {
+        if (this.valorantAccessMode() === 'rso') {
+          this.linkError.set('Usá “Iniciar sesión con Riot” o cambiá a Perfil público.');
+          return;
+        }
+        if (!this.valorantPrivacyAck()) {
+          this.linkError.set(
+            'Confirmá que tu historial de Valorant está en Público. Si sigue privado, Riot bloquea match-v1.',
+          );
+          return;
+        }
+      }
 
       if (
         (platform === 'valorant' || platform === 'league_of_legends') &&
@@ -433,7 +597,7 @@ export class IntegrationsPageComponent implements OnInit {
       this.loadError.set(null);
       this.linkSuccess.set(
         platform === 'valorant'
-          ? `Valorant vinculado: ${trimmedId}. Si RIOT_API_KEY está activa, en ≤3 min deberían aparecer partidas en /tabs/matches.`
+          ? `Valorant vinculado: ${trimmedId}. Con historial Público y RIOT_API_KEY activa, en ≤3 min deberían aparecer partidas en /tabs/matches. Si el perfil sigue privado, Riot devolverá 403.`
           : platform === 'league_of_legends'
             ? `League of Legends vinculado: ${trimmedId}. El poller capturará partidas ranked/normales.`
             : platform === 'cs2'
@@ -518,7 +682,13 @@ export class IntegrationsPageComponent implements OnInit {
       } else {
         const platform = this.preferredPlatform(profile);
         this.linkForm.patchValue({ platform }, { emitEvent: false });
+        this.selectedPlatform.set(platform);
+        this.applyExternalIdValidators(platform);
         this.prefillExternalId(platform);
+        if (platform === 'valorant') {
+          this.valorantAccessMode.set('rso');
+          this.valorantPrivacyAck.set(false);
+        }
       }
     } catch (err) {
       this.loadError.set(extractGraphqlErrorMessage(err, 'Error cargando el perfil'));

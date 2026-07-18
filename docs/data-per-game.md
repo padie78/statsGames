@@ -89,16 +89,25 @@ Fuente de verdad del catálogo: `libs/common/src/lib/platforms/catalog.ts`
 
 ### Valorant
 
-1. Crear key en [developer.riotgames.com](https://developer.riotgames.com/).
+A diferencia de LoL (historial mayormente público), en Valorant los perfiles nacen **privados**.
+Con solo `RIOT_API_KEY`, Riot rechaza matchlist / match-v1 salvo que se cumpla una de estas vías:
+
+| Vía | Qué hace el jugador | Qué usa StatsGames |
+|---|---|---|
+| **Riot Sign-On (RSO)** — recomendada | “Iniciar sesión con Riot” (OAuth en riotgames.com) | Token de acceso del jugador → telemetría autorizada |
+| **Perfil público** | Pone historial de partidas en Público (cuenta Riot / Tracker) + pega Riot ID | Poller con API key sobre PUUID público |
+
+1. Crear key / app RSO en [developer.riotgames.com](https://developer.riotgames.com/).
 2. Configurar `RIOT_API_KEY` + vars `VALORANT_REGION` / `VALORANT_SHARD`.
-3. Vincular Riot ID en Integraciones (`valorantId`).
-4. Poller: `lambda_code/ingestion/valorant_match_poller/` — account-v1 → matchlist → match-v1.
-5. Latencia típica: ≤ 1 ciclo EventBridge (~3 min) tras partida cerrada.
-6. IA: Bedrock vía `match_ai_analyzer` tras guardar la partida.
+3. Frontend: `environment.riot.rsoAuthorizeUrl` (RSO) y flujo en Integraciones (`/tabs/integrations`).
+4. Vincular: RSO **o** `valorantId` (`Nombre#TAG`) con checkbox de historial Público.
+5. Poller: `lambda_code/ingestion/valorant_match_poller/` — account-v1 → matchlist → match-v1.
+6. Latencia típica: ≤ 1 ciclo EventBridge (~3 min) tras partida cerrada.
+7. IA: Bedrock vía `match_ai_analyzer` tras guardar la partida.
 
 **Stats típicas:** `kills`, `deaths`, `assists`, `headshotPct`, `roundsWon`, `roundsLost`, `map`, `agent`, `score`, `acs`, `won`, `mode`.
 
-**Nota:** keys de desarrollo personal pueden devolver 403 en `val/match`; la cuenta API de producción necesita acceso al endpoint.
+**Nota:** keys de desarrollo personal pueden devolver 403 en `val/match` si el perfil sigue privado o la app no tiene acceso de producción al endpoint.
 
 ---
 

@@ -39,6 +39,7 @@ export { TrendingRailComponent, type TrendingItem } from './molecules/trending-r
 export { IntegrationStatusCardComponent } from './molecules/integration-status-card/integration-status-card.component';
 export { AiInsightCardComponent } from './molecules/ai-insight-card/ai-insight-card.component';
 export { WeeklyAiCoachPanelComponent } from './molecules/weekly-ai-coach-panel/weekly-ai-coach-panel.component';
+export { WeeklyHomeSummaryComponent } from './molecules/weekly-home-summary/weekly-home-summary.component';
 export {
   LiveMatchFeedComponent,
   type LiveMatchFeedItem,
@@ -61,7 +62,7 @@ export { CommunityRankTableComponent } from './molecules/community-rank-table/co
 export { WeekComparisonPanelComponent } from './molecules/week-comparison-panel/week-comparison-panel.component';
 export { MatchFiltersToolbarComponent,
   type MatchDateFilter,
-  type MatchPlatformFilter,
+  type MatchResultFilter,
 } from './molecules/match-filters-toolbar/match-filters-toolbar.component';
 export { YoutubeTipCardComponent } from './molecules/youtube-tip-card/youtube-tip-card.component';
 export { MatchAnalysisPanelComponent } from './molecules/match-analysis-panel/match-analysis-panel.component';

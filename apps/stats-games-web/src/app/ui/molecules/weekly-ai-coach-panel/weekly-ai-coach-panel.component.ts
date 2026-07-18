@@ -28,8 +28,7 @@ import { TrendChartComponent } from '../trend-chart/trend-chart.component';
       <header class="sg-weekly-coach__header">
         <div>
           <div class="sg-weekly-coach__badges">
-            <sg-neon-badge tone="purple">AI Coach</sg-neon-badge>
-            <sg-neon-badge tone="cyan">Resumen semanal</sg-neon-badge>
+            <sg-neon-badge tone="purple">Análisis semanal</sg-neon-badge>
           </div>
           <h2 class="sg-weekly-coach__title">{{ summary.headline }}</h2>
           <p class="sg-weekly-coach__lead u-m-0">{{ summary.body }}</p>
@@ -150,8 +149,8 @@ import { TrendChartComponent } from '../trend-chart/trend-chart.component';
             unit="W/L"
             [points]="summary.resultTrend"
             variant="area"
-            color="#b8ff3c"
-            areaColor="rgba(184, 255, 60, 0.18)"
+            color="#f0d060"
+            areaColor="rgba(240, 208, 96, 0.18)"
           />
         }
 
@@ -208,7 +207,7 @@ import { TrendChartComponent } from '../trend-chart/trend-chart.component';
 export class WeeklyAiCoachPanelComponent {
   @Input({ required: true }) summary!: WeeklyAiCoachSummary;
   @Input() communityRank: CommunityRankTableView | null = null;
-  @Input() ctaLabel = 'Abrir AI Coach';
+  @Input() ctaLabel = 'Ver análisis semanal';
   @Output() readonly ctaClick = new EventEmitter<void>();
 
   get killsKdChartOptions(): EChartsOption {
@@ -231,8 +230,8 @@ export class WeeklyAiCoachPanelComponent {
   }
 
   metricAccent(tone: string): 'lime' | 'cyan' | 'default' {
-    if (tone === 'lime') return 'lime';
-    if (tone === 'cyan') return 'cyan';
-    return 'default';
+    if (tone === 'danger' || tone === 'muted') return 'default';
+    // lime / cyan / gold → acento oro unificado
+    return 'lime';
   }
 }
