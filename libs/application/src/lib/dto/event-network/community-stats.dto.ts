@@ -16,10 +16,13 @@ export interface LeaderboardEntryDto {
   rank: number;
   userId: string;
   gamerTag: string;
+  avatarUrl?: string;
   platform: 'fortnite' | 'roblox' | 'valorant' | 'league_of_legends' | 'cs2' | 'dota2' | 'overwatch2' | 'rocket_league' | 'clash_royale' | 'brawl_stars';
   score: number;
   totalKills: number;
   totalDeaths: number;
+  totalAssists?: number;
+  leaguePoints?: number;
   winCount: number;
   winRate: number;
   kd: number;

@@ -1,6 +1,6 @@
 import { Component, Input, ViewEncapsulation } from '@angular/core';
 
-export type NeonBadgeTone = 'lime' | 'purple' | 'pink' | 'cyan' | 'muted';
+export type NeonBadgeTone = 'lime' | 'purple' | 'pink' | 'cyan' | 'muted' | 'gold';
 
 /**
  * Átomo — Badge neón estilo Tracker Network.

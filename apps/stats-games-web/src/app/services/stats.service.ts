@@ -34,10 +34,13 @@ export interface LeaderboardEntryView {
   rank: number;
   userId: string;
   gamerTag: string;
+  avatarUrl?: string | null;
   platform: string;
   score: number;
   totalKills: number;
   totalDeaths: number;
+  totalAssists?: number | null;
+  leaguePoints?: number | null;
   winCount: number;
   winRate: number;
   kd: number;
@@ -128,10 +131,13 @@ const LIST_WEEKLY_LEADERBOARD = /* GraphQL */ `
       rank
       userId
       gamerTag
+      avatarUrl
       platform
       score
       totalKills
       totalDeaths
+      totalAssists
+      leaguePoints
       winCount
       winRate
       kd

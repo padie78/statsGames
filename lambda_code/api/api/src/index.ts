@@ -2,15 +2,18 @@ import type { AppSyncResolverEvent, AppSyncResolverHandler } from 'aws-lambda';
 import type { MatchStatsRollupDto, MatchUpdateDto } from '@stats-games/application';
 import {
   getCommunityBenchmarks,
+  getEvolutionAiReport,
   getMatchAiReport,
   getPlayerProfile,
   getProfileByGamerTag,
   linkPlatformAccount,
+  listEvolutionAiReports,
   listMatchAiReports,
   listPlayerDailyTrend,
   listPlayerMatches,
   listPlayerStatsRollups,
   listWeeklyLeaderboard,
+  requestEvolutionAiReport,
   searchPlayers,
   upsertPlayerProfile,
 } from './composition-root';
@@ -31,6 +34,18 @@ type ResolverArgs =
   | {
       fieldName: 'listMatchAiReports';
       args: { userId: string; platform?: string | null; limit?: number | null };
+    }
+  | {
+      fieldName: 'getEvolutionAiReport';
+      args: { userId: string; platform: string; periodId: string };
+    }
+  | {
+      fieldName: 'listEvolutionAiReports';
+      args: { userId: string; platform?: string | null; limit?: number | null };
+    }
+  | {
+      fieldName: 'requestEvolutionAiReport';
+      args: { input: { userId: string; platform: string; periodId: string; force?: boolean | null } };
     }
   | {
       fieldName: 'listPlayerStatsRollups';
@@ -119,6 +134,34 @@ async function dispatch(op: ResolverArgs): Promise<unknown> {
         platform: asPlatform(op.args.platform),
         limit: op.args.limit ?? undefined,
       });
+
+    case 'getEvolutionAiReport': {
+      const platform = asPlatform(op.args.platform);
+      if (!platform) throw new Error('platform requerido.');
+      return getEvolutionAiReport.execute({
+        userId: op.args.userId,
+        platform,
+        periodId: op.args.periodId,
+      });
+    }
+
+    case 'listEvolutionAiReports':
+      return listEvolutionAiReports.execute({
+        userId: op.args.userId,
+        platform: asPlatform(op.args.platform),
+        limit: op.args.limit ?? undefined,
+      });
+
+    case 'requestEvolutionAiReport': {
+      const platform = asPlatform(op.args.input.platform);
+      if (!platform) throw new Error('platform requerido.');
+      return requestEvolutionAiReport.execute({
+        userId: op.args.input.userId,
+        platform,
+        periodId: op.args.input.periodId,
+        force: op.args.input.force ?? undefined,
+      });
+    }
 
     case 'listPlayerStatsRollups': {
       const rows = await listPlayerStatsRollups.execute({

@@ -188,23 +188,25 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               <div class="sg-dashboard__block-head">
                 <div>
                   <h2 id="dash-section-community" class="sg-dashboard__block-title">
-                    Vos vs comunidad
+                    Tu puesto esta semana
                   </h2>
                   <p class="sg-dashboard__block-desc">
-                    {{ communityRankSubtitle() }}
+                    Snapshot rápido: quién está justo arriba y abajo tuyo.
                     @if (communityUsesMock()) {
                       <span class="sg-analytics__badge">preview</span>
                     }
                   </p>
                 </div>
                 <a routerLink="/tabs/analytics" class="sg-dashboard__block-link">
-                  Ver Evolución →
+                  Ranking completo →
                 </a>
               </div>
 
               @if (communityRank(); as rank) {
                 <sg-community-rank-table
-                  title="Tu vecindario en el ranking"
+                  variant="snapshot"
+                  title="Vecindario cercano"
+                  deepLink="/tabs/analytics"
                   [platform]="heroPlatform()"
                   [rows]="rank.rows"
                   [yourRank]="rank.yourRank"
@@ -525,9 +527,11 @@ export class DashboardPageComponent implements OnInit {
       userId: this.auth.userId(),
       apiRows: this.leaderboardApi(),
       sampleSize: this.communityBenchmarksApi()?.sampleSize ?? null,
-      radius: 3,
+      // Inicio: solo rivales inmediatos (±2). El board completo vive en Evolución.
+      radius: 2,
       self: {
         gamerTag: this.profile()?.gamerTag || 'Vos',
+        avatarUrl: this.profile()?.avatarUrl ?? undefined,
         kd,
         winRate,
         kills: summary.totalKills,
@@ -548,7 +552,7 @@ export class DashboardPageComponent implements OnInit {
     const rank = this.communityRank();
     const label = this.platformMeta().label;
     if (!rank) return `${label} · sin peers reales esta semana`;
-    return `${label} · tu puesto #${rank.yourRank} esta semana`;
+    return `${label} · #${rank.yourRank} · rivales ±2 puestos`;
   });
 
   readonly aiCtaLabel = computed(() => {
@@ -612,7 +616,7 @@ export class DashboardPageComponent implements OnInit {
           this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
         ).catch(() => null),
         firstValueFrom(
-          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 20),
+          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 40),
         ).catch(() => [] as LeaderboardEntryView[]),
         this.matchAi
           .listMatchAiReportsOnce(userId, {

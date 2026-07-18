@@ -24,7 +24,12 @@ export type { TrendChartPoint };
   template: `
     <section class="sg-trend-chart u-surface-card" [attr.aria-label]="title">
       <header class="sg-trend-chart__header">
-        <h3 class="sg-trend-chart__title">{{ title }}</h3>
+        <div class="sg-trend-chart__heading">
+          <h3 class="sg-trend-chart__title">{{ title }}</h3>
+          @if (subtitle) {
+            <p class="sg-trend-chart__subtitle u-m-0">{{ subtitle }}</p>
+          }
+        </div>
         @if (unit) {
           <span class="sg-trend-chart__unit">{{ unit }}</span>
         }
@@ -45,11 +50,12 @@ export type { TrendChartPoint };
 })
 export class TrendChartComponent implements OnInit, OnChanges {
   @Input() title = 'Tendencia';
+  @Input() subtitle = '';
   @Input() unit = '';
   @Input() points: TrendChartPoint[] = [];
   @Input() variant: TrendChartVariant = 'bar';
-  @Input() color = '#3de0f5';
-  @Input() areaColor = 'rgba(61, 224, 245, 0.2)';
+  @Input() color = '#f0d060';
+  @Input() areaColor = 'rgba(240, 208, 96, 0.2)';
 
   chartOptions: EChartsOption = {};
 

@@ -18,12 +18,17 @@ export interface CommunityBenchmarks {
 export interface CommunityRankRow {
   rank: number;
   gamerTag: string;
+  avatarUrl?: string;
   platform: SelectedGame;
   isYou: boolean;
   kd: number;
   winRate: number;
   kills: number;
+  deaths: number;
+  assists: number;
+  killsPerGame: number;
   matches: number;
+  leaguePoints?: number;
   score: number;
   delta: string;
   trend: 'up' | 'down' | 'flat';

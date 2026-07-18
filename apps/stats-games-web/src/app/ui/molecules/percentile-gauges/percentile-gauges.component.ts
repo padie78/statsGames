@@ -6,62 +6,54 @@ import {
   SimpleChanges,
   ViewEncapsulation,
 } from '@angular/core';
-import { NgxEchartsDirective } from 'ngx-echarts';
-import type { EChartsOption } from 'echarts';
-import {
-  buildPercentileGaugesOptions,
-  type PercentileGaugeItem,
-} from '../../../core/charts/echart-theme.util';
+import type { PercentileGaugeItem } from '../../../core/charts/echart-theme.util';
 import type { CommunityComparisonItem } from '../../../utils/community-stats.util';
 
 @Component({
   standalone: true,
   selector: 'sg-percentile-gauges',
   encapsulation: ViewEncapsulation.None,
-  imports: [NgxEchartsDirective],
   template: `
-    <section class="sg-percentile-gauges u-surface-card u-p-5" aria-label="Gauges de percentiles">
+    <section class="sg-percentile-gauges u-surface-card u-p-5" aria-label="Percentiles de un vistazo">
       <header class="sg-percentile-gauges__header">
         <div>
-          <p class="sg-percentile-gauges__eyebrow">Vista gráfica</p>
+          <p class="sg-percentile-gauges__eyebrow">Vs comunidad</p>
           <h3 class="sg-percentile-gauges__title">{{ title }}</h3>
+          @if (subtitle) {
+            <p class="sg-percentile-gauges__subtitle u-m-0">{{ subtitle }}</p>
+          }
         </div>
-        @if (subtitle) {
-          <p class="sg-percentile-gauges__subtitle u-m-0">{{ subtitle }}</p>
+        @if (gaugeItems.length) {
+          <div class="sg-percentile-gauges__overall" [attr.data-tone]="overallTone">
+            <span class="sg-percentile-gauges__overall-value">{{ overallPct }}%</span>
+            <span class="sg-percentile-gauges__overall-label">promedio</span>
+          </div>
         }
       </header>
 
       @if (!gaugeItems.length) {
-        <p class="sg-trend-chart__empty u-m-0">
+        <p class="sg-percentile-gauges__empty u-m-0">
           Sin percentiles para graficar. Jugá partidas esta semana para comparar vs la comunidad.
         </p>
       } @else {
-        <!-- Remount echarts when data arrives (evita canvas vacío tras options {}). -->
-        @for (key of [chartKey]; track key) {
-          <div
-            class="sg-percentile-gauges__canvas"
-            echarts
-            [options]="chartOptions"
-            [autoResize]="true"
-          ></div>
-        }
-
-        <ul class="sg-percentile-gauges__bars" aria-label="Detalle de percentiles">
+        <ul class="sg-percentile-gauges__rings" aria-label="Percentiles">
           @for (item of gaugeItems; track item.name) {
-            <li class="sg-percentile-gauges__bar" [attr.data-tone]="item.tone ?? 'strong'">
-              <div class="sg-percentile-gauges__bar-head">
-                <span class="sg-percentile-gauges__bar-name">{{ item.name }}</span>
-                <strong class="sg-percentile-gauges__bar-value">{{ item.value }}%</strong>
+            <li class="sg-percentile-gauges__ring" [attr.data-tone]="item.tone ?? 'strong'">
+              <div
+                class="sg-percentile-gauges__dial"
+                [style.--pct]="item.value"
+                role="meter"
+                [attr.aria-valuenow]="item.value"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-label]="item.name + ': mejor que el ' + item.value + '%'"
+              >
+                <span class="sg-percentile-gauges__dial-value">{{ item.value }}%</span>
               </div>
-              <div class="sg-percentile-gauges__bar-track" aria-hidden="true">
-                <span
-                  class="sg-percentile-gauges__bar-fill"
-                  [style.width.%]="item.value"
-                ></span>
+              <div class="sg-percentile-gauges__ring-copy">
+                <span class="sg-percentile-gauges__ring-name">{{ item.name }}</span>
+                <span class="sg-percentile-gauges__ring-hint">Mejor que el {{ item.value }}%</span>
               </div>
-              <p class="sg-percentile-gauges__bar-hint u-m-0">
-                Mejor que el {{ item.value }}% de la comunidad
-              </p>
             </li>
           }
         </ul>
@@ -75,8 +67,8 @@ export class PercentileGaugesComponent implements OnInit, OnChanges {
   @Input() items: CommunityComparisonItem[] = [];
 
   gaugeItems: PercentileGaugeItem[] = [];
-  chartOptions: EChartsOption = {};
-  chartKey = '';
+  overallPct = 0;
+  overallTone: PercentileGaugeItem['tone'] = 'strong';
 
   ngOnInit(): void {
     this.refresh();
@@ -96,9 +88,18 @@ export class PercentileGaugesComponent implements OnInit, OnChanges {
         tone: item.tone,
       }));
 
-    this.chartKey = this.gaugeItems.map((item) => `${item.name}:${item.value}`).join('|');
-    this.chartOptions = this.gaugeItems.length
-      ? buildPercentileGaugesOptions(this.gaugeItems)
-      : {};
+    if (!this.gaugeItems.length) {
+      this.overallPct = 0;
+      this.overallTone = 'strong';
+      return;
+    }
+
+    this.overallPct = Math.round(
+      this.gaugeItems.reduce((sum, item) => sum + item.value, 0) / this.gaugeItems.length,
+    );
+    if (this.overallPct >= 85) this.overallTone = 'elite';
+    else if (this.overallPct >= 60) this.overallTone = 'strong';
+    else if (this.overallPct >= 40) this.overallTone = 'average';
+    else this.overallTone = 'weak';
   }
 }

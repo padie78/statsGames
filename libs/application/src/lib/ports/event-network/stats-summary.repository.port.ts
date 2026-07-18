@@ -9,16 +9,18 @@ export interface IStatsSummaryRepository {
   aggregateMatchEvent(event: ProcessedMatchEventDto): Promise<AggregateMatchStatsResultDto>;
 }
 
+type StatsPlatformFilter = MatchStatsRollupDto['platform'];
+
 export interface IStatsRollupReader {
   listByPlayerGranularity(
     userId: string,
     granularity: StatsGranularity,
     periodId: string,
-    options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league'; limit?: number },
+    options?: { platform?: StatsPlatformFilter; limit?: number },
   ): Promise<MatchStatsRollupDto[]>;
 
   listRecentDailyRollups(
     userId: string,
-    options?: { platform?: 'fortnite' | 'roblox' | 'valorant' | 'rocket_league'; days?: number },
+    options?: { platform?: StatsPlatformFilter; days?: number },
   ): Promise<MatchStatsRollupDto[]>;
 }

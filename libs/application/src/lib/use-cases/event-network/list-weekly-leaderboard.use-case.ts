@@ -36,6 +36,7 @@ export class ListWeeklyLeaderboardUseCase {
         return {
           ...row,
           gamerTag: profile?.gamerTag ?? row.gamerTag,
+          avatarUrl: profile?.avatarUrl ?? row.avatarUrl,
         };
       }),
     );

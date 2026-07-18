@@ -174,9 +174,11 @@ import { TrendChartComponent } from '../trend-chart/trend-chart.component';
 
       @if (communityRank; as rank) {
         <sg-community-rank-table
-          title="Tu comparación con jugadores de la comunidad"
+          variant="deep"
+          title="Comparación con la muestra semanal"
           subtitle="Solo jugadores reales sincronizados esta semana en la misma plataforma."
           sampleLabel="Leaderboard semanal"
+          [deepLink]="null"
           [rows]="rank.rows"
           [yourRank]="rank.yourRank"
           [totalPlayers]="rank.totalPlayers"

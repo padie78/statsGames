@@ -18,6 +18,11 @@ export {
   type StatsComparisonRow,
 } from './molecules/stats-comparison-chart/stats-comparison-chart.component';
 export {
+  PeerBenchmarkPanelComponent,
+  type PeerBenchmarkPoint,
+} from './molecules/peer-benchmark-panel/peer-benchmark-panel.component';
+export { EvolutionAiReportPanelComponent } from './molecules/evolution-ai-report-panel/evolution-ai-report-panel.component';
+export {
   DailyStatsTableComponent,
   type DailyStatsTableRow,
 } from './molecules/daily-stats-table/daily-stats-table.component';

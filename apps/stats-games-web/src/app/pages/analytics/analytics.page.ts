@@ -1,6 +1,6 @@
-import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
 import { IonContent } from '@ionic/angular/standalone';
-import { firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import {
   MOCK_COMMUNITY_BENCHMARKS,
   type CommunityRankTableView,
@@ -21,6 +21,10 @@ import {
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { PlayerService } from '../../services/player.service';
 import {
+  EvolutionAiService,
+  type EvolutionAiReportView,
+} from '../../services/evolution-ai.service';
+import {
   StatsService,
   currentWeeklyPeriodIdForStats,
   previousWeeklyPeriodIdForStats,
@@ -37,9 +41,8 @@ import {
   CommunityComparisonPanelComponent,
   CommunityRankTableComponent,
   DailyStatsTableComponent,
-  LeaderboardMiniComponent,
-  MatchTrendsPanelComponent,
-  PercentileGaugesComponent,
+  EvolutionAiReportPanelComponent,
+  PeerBenchmarkPanelComponent,
   StatValueComponent,
   WeekHeroBrandComponent,
   StatsComparisonChartComponent,
@@ -48,6 +51,7 @@ import {
   WeekComparisonPanelComponent,
   type DailyStatsTableRow,
   type LeaderboardEntry,
+  type PeerBenchmarkPoint,
   type StatsComparisonRow,
   type TrendChartPoint,
 } from '../../ui';
@@ -58,6 +62,7 @@ import {
   computePlayStreakFromDailyTrend,
   filterMatchesInDayRange,
   filterMatchesWithinDays,
+  isMatchWin,
 } from '../../utils/match-stats.util';
 import { aggregatePlatformMatchStats } from '../../utils/platform-stats.util';
 import {
@@ -66,6 +71,7 @@ import {
   mapCommunityBenchmarksFromApi,
   parsePlayerKdForCommunity,
   parsePlayerWinRateForCommunity,
+  summarizeCommunityComparison,
 } from '../../utils/community-stats.util';
 import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.util';
@@ -83,11 +89,10 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
     WeekComparisonPanelComponent,
     CommunityComparisonPanelComponent,
     CommunityRankTableComponent,
-    PercentileGaugesComponent,
     StatsComparisonChartComponent,
+    PeerBenchmarkPanelComponent,
+    EvolutionAiReportPanelComponent,
     DailyStatsTableComponent,
-    MatchTrendsPanelComponent,
-    LeaderboardMiniComponent,
   ],
   template: `
     <ion-content class="sg-page-content">
@@ -116,8 +121,8 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
               </p>
               <h1 class="sg-dashboard__week-title">Evolución</h1>
               <p class="sg-dashboard__week-lede u-m-0">
-                Forma semanal, percentiles vs comunidad y curvas de progreso — no el historial de
-                partidas.
+                Cómo cambió tu forma esta semana: KPIs, curvas diarias y tu lugar entre jugadores
+                reales. El historial de partidas está en Partidas.
               </p>
 
               <div class="sg-dashboard__week-kpis" aria-label="KPIs semanales">
@@ -136,6 +141,14 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">{{ weekMatchCount() }}</span>
                   <span class="sg-dashboard__week-kpi-label">Partidas</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ killsPerGameLabel() }}</span>
+                  <span class="sg-dashboard__week-kpi-label">{{ analyticsKillLabel() }}/p</span>
+                </div>
+                <div class="sg-dashboard__week-kpi">
+                  <span class="sg-dashboard__week-kpi-value">{{ communityOverallTop() }}</span>
+                  <span class="sg-dashboard__week-kpi-label">Vs comunidad</span>
                 </div>
               </div>
             </div>
@@ -156,12 +169,24 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           </section>
         }
 
+        <section class="sg-dashboard__block" aria-label="Informe IA de evolución">
+          <sg-evolution-ai-report-panel
+            title="Informe IA de la semana"
+            [subtitle]="evolutionAiSubtitle()"
+            [report]="evolutionAiReport()"
+            [loading]="evolutionAiLoading()"
+            (generate)="onRequestEvolutionAi(false)"
+            (regenerate)="onRequestEvolutionAi(true)"
+          />
+        </section>
+
         <section class="sg-dashboard__block" aria-labelledby="analytics-overview">
           <div class="sg-dashboard__block-head">
             <div>
-              <h2 id="analytics-overview" class="sg-dashboard__block-title">Resumen semanal</h2>
+              <h2 id="analytics-overview" class="sg-dashboard__block-title">Números de la semana</h2>
               <p class="sg-dashboard__block-desc">
-                {{ platformMeta().shortLabel }} · últimos 7 días
+                Totales de los últimos 7 días en {{ platformMeta().shortLabel }}. El hero arriba
+                muestra el resumen rápido; acá está el desglose completo.
                 @if (communityUsesMock()) {
                   <span class="sg-analytics__badge">preview</span>
                 }
@@ -169,7 +194,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
             </div>
           </div>
 
-          <div class="u-surface-card u-p-5">
+          <div class="u-surface-card u-p-5 sg-analytics__kpi-card">
             <div class="u-grid-stats sg-analytics__kpi-grid">
               <sg-stat-value label="Partidas" [value]="weekMatchCount()" accent="lime" />
               <sg-stat-value label="Win rate" [value]="platformWeekSummary().winRate" accent="lime" />
@@ -177,6 +202,11 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
               <sg-stat-value [label]="kdLabel()" [value]="heroKd()" accent="lime" />
               <sg-stat-value label="K/D" [value]="platformWeekSummary().kd" accent="lime" />
               <sg-stat-value [label]="analyticsKillLabel()" [value]="platformWeekSummary().totalKills" accent="lime" />
+              <sg-stat-value label="Muertes" [value]="platformWeekSummary().totalDeaths" accent="lime" />
+              <sg-stat-value label="Asistencias" [value]="platformWeekSummary().totalAssists" accent="lime" />
+              <sg-stat-value [label]="analyticsKillLabel() + '/partida'" [value]="killsPerGameLabel()" accent="lime" />
+              <sg-stat-value label="Mejor que %" [value]="communityOverallPct()" accent="lime" />
+              <sg-stat-value label="Puesto muestra" [value]="communityRankLabel()" accent="gold" />
               @if (showValCs2Extras()) {
                 <sg-stat-value label="HS%" [value]="platformWeekSummary().avgHeadshotPct" accent="lime" />
               }
@@ -202,50 +232,47 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           </div>
         </section>
 
-        <section class="sg-dashboard__block" aria-labelledby="analytics-compare-week">
+        <section class="sg-dashboard__block sg-analytics__section" aria-labelledby="analytics-compare-week">
           <div class="sg-dashboard__block-head">
             <div>
-              <h2 id="analytics-compare-week" class="sg-dashboard__block-title">Comparaciones</h2>
+              <h2 id="analytics-compare-week" class="sg-dashboard__block-title">Compará tu semana</h2>
               <p class="sg-dashboard__block-desc">
-                Semana actual vs anterior, y vos vs el promedio de la comunidad.
+                Izquierda: subiste o bajaste vs la semana pasada. Derecha: tus KPIs frente al
+                promedio de la muestra (no percentiles).
               </p>
             </div>
           </div>
 
           <div class="sg-analytics__compare-grid">
             <sg-week-comparison-panel
-              title="Vs semana pasada"
-              subtitle="Delta de KPIs clave respecto a los 7 días anteriores."
+              title="Esta semana vs la anterior"
+              subtitle="Delta de partidas, kills y resultados respecto a los 7 días previos."
               [items]="weekComparison()"
             />
 
             <sg-stats-comparison-chart
-              title="Vos vs comunidad"
-              subtitle="Valores semanales frente al promedio de la muestra."
+              title="Vos vs promedio de la muestra"
+              subtitle="Barras: tu valor semanal (oro) frente a la media de la comunidad (gris)."
               [rows]="communityChartRows()"
             />
           </div>
-
-          <sg-percentile-gauges
-            title="Percentiles de un vistazo"
-            subtitle="Qué tanto de la comunidad superás en cada KPI."
-            [items]="communityComparison()"
-          />
         </section>
 
         <section class="sg-dashboard__block" aria-labelledby="analytics-trends">
           <div class="sg-dashboard__block-head">
             <div>
-              <h2 id="analytics-trends" class="sg-dashboard__block-title">Tendencias</h2>
+              <h2 id="analytics-trends" class="sg-dashboard__block-title">Curvas diarias</h2>
               <p class="sg-dashboard__block-desc">
-                Actividad diaria, K/D acumulado y perfil normalizado.
+                Cada gráfico muestra un KPI por día de la semana. Sirve para ver picos,
+                rachas y días flojos — no es el ranking de jugadores.
               </p>
             </div>
           </div>
 
           <div class="sg-analytics-charts">
             <sg-trend-chart
-              title="Kills por día"
+              [title]="analyticsKillLabel() + ' por día'"
+              subtitle="Volumen ofensivo diario."
               unit="kills"
               variant="area"
               color="#f0d060"
@@ -254,6 +281,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
             />
             <sg-trend-chart
               title="Partidas por día"
+              subtitle="Cuántas partidas jugaste cada día."
               unit="matches"
               variant="bar"
               color="#c89b3c"
@@ -261,51 +289,85 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
               [points]="matchesTrend()"
             />
             <sg-trend-chart
-              title="K/D acumulado"
+              title="Muertes por día"
+              subtitle="Cuántas veces caíste; menos suele ser mejor."
+              unit="deaths"
+              variant="bar"
+              color="#e8a0b0"
+              areaColor="rgba(232, 160, 176, 0.22)"
+              [points]="deathsTrend()"
+            />
+            <sg-trend-chart
+              title="Victorias por día"
+              subtitle="Wins diarias en la ventana semanal."
+              unit="wins"
+              variant="bar"
+              color="#f0d060"
+              areaColor="rgba(240, 208, 96, 0.2)"
+              [points]="winsTrend()"
+            />
+            <sg-trend-chart
+              title="Win rate diario"
+              subtitle="% de partidas ganadas ese día."
+              unit="%"
+              variant="line"
+              color="#f0d060"
+              areaColor="rgba(240, 208, 96, 0.18)"
+              [points]="winRateTrend()"
+            />
+            <sg-trend-chart
+              title="Asistencias por día"
+              subtitle="Impacto de apoyo / teamfight por día."
+              unit="assists"
+              variant="area"
+              color="#c89b3c"
+              areaColor="rgba(200, 155, 60, 0.22)"
+              [points]="assistsTrend()"
+            />
+            <sg-trend-chart
+              [title]="kdLabel() + ' acumulado'"
+              subtitle="Ratio acumulado a lo largo de la semana."
               unit="ratio"
               variant="line"
               color="#f5d075"
               areaColor="rgba(245, 208, 117, 0.2)"
               [points]="kdTrend()"
             />
-            <sg-trend-chart
-              title="Placement medio"
-              unit="puesto"
-              variant="area"
-              color="#e8a0b0"
-              areaColor="rgba(232, 160, 176, 0.18)"
-              [points]="placementTrend()"
-            />
+            @if (showFortniteExtras()) {
+              <sg-trend-chart
+                title="Placement medio"
+                subtitle="Puesto medio por día (más bajo = mejor)."
+                unit="puesto"
+                variant="area"
+                color="#e8a0b0"
+                areaColor="rgba(232, 160, 176, 0.18)"
+                [points]="placementTrend()"
+              />
+            }
             <div class="sg-analytics-charts__radar">
               <sg-stats-radar-chart
-                title="Perfil de rendimiento"
-                subtitle="Normalizado 0–100 vs objetivos semanales."
+                title="Perfil semanal (radar)"
+                subtitle="Forma normalizada 0–100 frente a objetivos de la semana. Más área = mejor balance."
                 [weekly]="weeklyForCharts()"
                 [dailyTrend]="chartDailyTrend()"
               />
             </div>
           </div>
-
-          <sg-match-trends-panel
-            [killsTrend]="killsTrend()"
-            [matchesTrend]="matchesTrend()"
-            [placementTrend]="placementTrend()"
-          />
         </section>
 
         <section class="sg-dashboard__block" aria-labelledby="analytics-table">
           <div class="sg-dashboard__block-head">
             <div>
-              <h2 id="analytics-table" class="sg-dashboard__block-title">Detalle diario</h2>
+              <h2 id="analytics-table" class="sg-dashboard__block-title">Tabla día a día</h2>
               <p class="sg-dashboard__block-desc">
-                Tabla día a día para revisar consistencia y picos.
+                Los mismos datos de las curvas, en números. Útil para contrastar un día puntual.
               </p>
             </div>
           </div>
 
           <sg-daily-stats-table
-            title="Desglose por día"
-            subtitle="Partidas, kills, K/D y placement de cada día."
+            title="Desglose numérico por día"
+            subtitle="Partidas, kills, muertes y ratio de cada día con actividad."
             [footnote]="dailyTableFootnote()"
             [rows]="dailyTableRows()"
             [totals]="dailyTableTotals()"
@@ -315,9 +377,10 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
         <section class="sg-dashboard__block" aria-labelledby="analytics-community">
           <div class="sg-dashboard__block-head">
             <div>
-              <h2 id="analytics-community" class="sg-dashboard__block-title">Vs comunidad</h2>
+              <h2 id="analytics-community" class="sg-dashboard__block-title">Tu lugar en la comunidad</h2>
               <p class="sg-dashboard__block-desc">
-                Ranking semanal, percentiles y top del leaderboard.
+                Jugadores reales de la muestra semanal: tabla de puestos, gráficos vs peers y
+                percentiles (qué % de la muestra superás).
               </p>
             </div>
           </div>
@@ -325,7 +388,9 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           <div class="sg-analytics__community-stack">
             @if (communityRank(); as rank) {
               <sg-community-rank-table
-                title="Tu vecindario en el ranking"
+                variant="deep"
+                title="Tabla de jugadores de la muestra"
+                [deepLink]="null"
                 [platform]="activePlatform()"
                 [rows]="rank.rows"
                 [yourRank]="rank.yourRank"
@@ -336,33 +401,29 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
             } @else {
               <aside class="sg-weekly-coach__empty-rank" role="status">
                 <p class="sg-weekly-coach__empty-rank-title u-m-0">
-                  Ranking comunitario aún sin peers
+                  Todavía no hay peers reales esta semana
                 </p>
                 <p class="sg-weekly-coach__empty-rank-body u-m-0">
-                  No hay jugadores reales en el leaderboard semanal de esta plataforma.
-                  No se muestran rivales inventados.
+                  Sin leaderboard semanal no hay rivales inventados: la tabla y los gráficos
+                  aparecen cuando hay jugadores reales en la muestra.
                 </p>
               </aside>
             }
 
-            <div class="sg-analytics__community-row">
-              <sg-community-comparison-panel
-                title="Tus percentiles"
-                subtitle="Top %, cuántos jugadores superás y dónde está la media."
-                [items]="communityComparison()"
-                [sampleLabel]="communitySampleLabel()"
-                [disclaimer]="communityDisclaimer()"
-              />
+            <sg-peer-benchmark-panel
+              title="Vos entre peers (gráficos)"
+              subtitle="Misma muestra que la tabla: mapa WR×KDA y barras de score. No es el promedio abstracto de arriba."
+              [sampleLabel]="communitySampleLabel()"
+              [peers]="peerBenchmarkPoints()"
+            />
 
-              @if (leaderboardEntries().length) {
-                <sg-leaderboard-mini
-                  title="Top semanal"
-                  [subtitle]="platformMeta().shortLabel"
-                  [entries]="leaderboardEntries()"
-                  [highlightGamerTag]="gamerTag()"
-                />
-              }
-            </div>
+            <sg-community-comparison-panel
+              title="Tus percentiles por métrica"
+              subtitle="Por cada KPI: top %, cuánto de la muestra superás y dónde queda el promedio."
+              [items]="communityComparison()"
+              [sampleLabel]="communitySampleLabel()"
+              [disclaimer]="communityDisclaimer()"
+            />
           </div>
         </section>
         </div>
@@ -370,27 +431,37 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
     </ion-content>
   `,
 })
-export class AnalyticsPageComponent implements OnInit {
+export class AnalyticsPageComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly gameContext = inject(GameContextService);
   private readonly statsService = inject(StatsService);
   private readonly matchService = inject(MatchService);
   private readonly playerService = inject(PlayerService);
+  private readonly evolutionAi = inject(EvolutionAiService);
+  private evolutionReadySub: Subscription | null = null;
 
   readonly weekly = signal<PlayerStatsRollupView | null>(null);
   readonly previousWeekly = signal<PlayerStatsRollupView | null>(null);
   readonly dailyTrend = signal<PlayerStatsRollupView[]>([]);
   readonly recentMatches = signal<MatchUpdateView[]>([]);
   readonly gamerTag = signal('');
+  readonly avatarUrl = signal<string | undefined>(undefined);
   readonly communityBenchmarksApi = signal<CommunityBenchmarks | null>(null);
   readonly leaderboardApi = signal<LeaderboardEntryView[]>([]);
   readonly communityUsesMock = signal(true);
+  readonly evolutionAiReport = signal<EvolutionAiReportView | null>(null);
+  readonly evolutionAiLoading = signal(false);
   readonly error = signal<string | null>(null);
   private readonly heroArtFailed = signal(false);
 
   readonly activePlatform = computed((): SelectedGame => this.gameContext.activeGame() ?? 'fortnite');
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.activePlatform()));
+
+  readonly evolutionAiSubtitle = computed(() => {
+    const periodId = currentWeeklyPeriodIdForStats();
+    return `${this.platformMeta().label} · ${periodId} · lectura macro de tu progreso (guardada en historial)`;
+  });
 
   readonly heroArtSrc = computed(() => {
     const meta = this.platformMeta();
@@ -617,6 +688,14 @@ export class AnalyticsPageComponent implements OnInit {
     const killsLabel =
       platform === 'rocket_league' ? 'Goles' : platform === 'fortnite' ? 'Elims' : 'Kills';
 
+    const matches = this.weekMatchCount();
+    const killsPerGame = matches > 0 ? this.weekKills() / matches : 0;
+    const benchKpg =
+      benchmarks.avgMatchesPerWeek > 0
+        ? benchmarks.avgKillsPerWeek / benchmarks.avgMatchesPerWeek
+        : 0;
+    const summary = this.platformWeekSummary();
+
     return [
       { label: kdLabel, you: Number(kd.toFixed(2)), benchmark: Number(benchmarks.avgKd.toFixed(2)) },
       {
@@ -630,9 +709,26 @@ export class AnalyticsPageComponent implements OnInit {
         benchmark: Math.round(benchmarks.avgKillsPerWeek),
       },
       {
+        label: `${killsLabel}/p`,
+        you: Number(killsPerGame.toFixed(1)),
+        benchmark: Number(benchKpg.toFixed(1)),
+      },
+      {
         label: 'Partidas',
-        you: this.weekMatchCount(),
+        you: matches,
         benchmark: Math.round(benchmarks.avgMatchesPerWeek),
+      },
+      {
+        label: 'Muertes',
+        you: summary.totalDeaths,
+        benchmark: Math.round(
+          Math.max(1, benchmarks.avgKillsPerWeek / Math.max(benchmarks.avgKd, 0.5)),
+        ),
+      },
+      {
+        label: 'Asistencias',
+        you: summary.totalAssists,
+        benchmark: Math.round(benchmarks.avgKillsPerWeek * 0.85),
       },
     ];
   });
@@ -664,9 +760,10 @@ export class AnalyticsPageComponent implements OnInit {
       userId: this.auth.userId(),
       apiRows: this.leaderboardApi(),
       sampleSize: this.communityBenchmarksApi()?.sampleSize ?? null,
-      radius: 3,
+      radius: 14,
       self: {
         gamerTag: this.gamerTag() || 'Vos',
+        avatarUrl: this.avatarUrl(),
         kd,
         winRate,
         kills,
@@ -680,7 +777,7 @@ export class AnalyticsPageComponent implements OnInit {
     const rank = this.communityRank();
     const label = gamePlatformMeta(this.activePlatform()).label;
     if (!rank) return `${label} · sin peers reales esta semana`;
-    return `${label} · tu puesto #${rank.yourRank} esta semana`;
+    return `${label} · estás #${rank.yourRank} de ${rank.totalPlayers}. Columnas: ratio, WR, K/D/A, score justo y cambio de puesto.`;
   });
 
   readonly leaderboardEntries = computed<LeaderboardEntry[]>(() =>
@@ -721,6 +818,112 @@ export class AnalyticsPageComponent implements OnInit {
   readonly placementTrend = computed<TrendChartPoint[]>(() =>
     buildPlacementTrend(this.chartDailyTrend()),
   );
+
+  readonly deathsTrend = computed<TrendChartPoint[]>(() =>
+    this.chartDailyTrend().map((d) => ({
+      label: d.periodId.slice(5),
+      value: d.totalDeaths,
+    })),
+  );
+
+  /** Agrega wins/assists/WR desde partidas reales alineadas al daily trend. */
+  private readonly matchDayBuckets = computed(() => {
+    const days = this.chartDailyTrend();
+    const buckets = new Map<
+      string,
+      { wins: number; assists: number; matches: number }
+    >();
+    for (const day of days) {
+      buckets.set(day.periodId, { wins: 0, assists: 0, matches: 0 });
+    }
+    for (const match of this.weekMatches()) {
+      const stamp = new Date(match.updatedAt);
+      if (Number.isNaN(stamp.getTime())) continue;
+      const y = stamp.getFullYear();
+      const m = String(stamp.getMonth() + 1).padStart(2, '0');
+      const d = String(stamp.getDate()).padStart(2, '0');
+      const periodId = `${y}-${m}-${d}`;
+      const bucket = buckets.get(periodId);
+      if (!bucket) continue;
+      bucket.matches += 1;
+      bucket.assists += match.stats?.assists ?? 0;
+      if (isMatchWin(match.stats)) bucket.wins += 1;
+    }
+    return buckets;
+  });
+
+  readonly winsTrend = computed<TrendChartPoint[]>(() => {
+    const buckets = this.matchDayBuckets();
+    return this.chartDailyTrend().map((day) => ({
+      label: day.periodId.slice(5),
+      value: buckets.get(day.periodId)?.wins ?? 0,
+    }));
+  });
+
+  readonly assistsTrend = computed<TrendChartPoint[]>(() => {
+    const buckets = this.matchDayBuckets();
+    return this.chartDailyTrend().map((day) => ({
+      label: day.periodId.slice(5),
+      value: buckets.get(day.periodId)?.assists ?? 0,
+    }));
+  });
+
+  readonly winRateTrend = computed<TrendChartPoint[]>(() => {
+    const buckets = this.matchDayBuckets();
+    return this.chartDailyTrend().map((day) => {
+      const bucket = buckets.get(day.periodId);
+      const matches = bucket?.matches ?? day.matchCount;
+      const wins = bucket?.wins ?? 0;
+      return {
+        label: day.periodId.slice(5),
+        value: matches > 0 ? Math.round((wins / matches) * 100) : 0,
+      };
+    });
+  });
+
+  readonly killsPerGameLabel = computed(() => {
+    const matches = this.weekMatchCount();
+    if (matches <= 0) return '—';
+    return (this.weekKills() / matches).toFixed(1);
+  });
+
+  readonly communityOverallSummary = computed(() =>
+    summarizeCommunityComparison(this.communityComparison()),
+  );
+
+  readonly communityOverallTop = computed(
+    () => this.communityOverallSummary()?.overallTopLabel ?? '—',
+  );
+
+  readonly communityOverallPct = computed(() => {
+    const pct = this.communityOverallSummary()?.overallBetterThanPct;
+    return pct == null ? '—' : `${pct}%`;
+  });
+
+  readonly communityRankLabel = computed(() => {
+    const rank = this.communityRank();
+    if (!rank?.yourRank) return '—';
+    return `#${rank.yourRank}`;
+  });
+
+  readonly peerBenchmarkPoints = computed<PeerBenchmarkPoint[]>(() => {
+    const userId = this.auth.userId();
+    const youTag = this.gamerTag() || 'Vos';
+    return this.leaderboardApi().map((entry) => {
+      const isYou = entry.userId === userId;
+      return {
+        gamerTag: isYou
+          ? youTag
+          : entry.gamerTag && entry.gamerTag !== entry.userId
+            ? entry.gamerTag
+            : `Jugador ${entry.rank}`,
+        kd: entry.kd,
+        winRate: entry.winRate,
+        score: entry.score,
+        isYou,
+      };
+    });
+  });
 
   readonly dailyTableRows = computed<DailyStatsTableRow[]>(() =>
     this.chartDailyTrend().map((day) => toDailyRow(day)),
@@ -780,6 +983,49 @@ export class AnalyticsPageComponent implements OnInit {
     void this.loadStats();
   }
 
+  ngOnDestroy(): void {
+    this.evolutionReadySub?.unsubscribe();
+  }
+
+  async onRequestEvolutionAi(force: boolean): Promise<void> {
+    const userId = this.auth.userId();
+    const platform = matchBackendPlatform(this.activePlatform());
+    if (!userId || !platform) return;
+    this.evolutionAiLoading.set(true);
+    try {
+      const report = await this.evolutionAi.requestEvolutionAiReport({
+        userId,
+        platform,
+        periodId: currentWeeklyPeriodIdForStats(),
+        force,
+      });
+      this.evolutionAiReport.set(report);
+      this.bindEvolutionReady(userId, platform, currentWeeklyPeriodIdForStats());
+    } catch (err) {
+      this.error.set(extractGraphqlErrorMessage(err) ?? 'No se pudo pedir el informe IA.');
+    } finally {
+      this.evolutionAiLoading.set(false);
+    }
+  }
+
+  private bindEvolutionReady(
+    userId: string,
+    platform: NonNullable<ReturnType<typeof matchBackendPlatform>>,
+    periodId: string,
+  ): void {
+    this.evolutionReadySub?.unsubscribe();
+    this.evolutionReadySub = this.evolutionAi.onEvolutionAiReady(userId).subscribe({
+      next: (event) => {
+        if (event.platform !== platform || event.periodId !== periodId) return;
+        void this.evolutionAi
+          .getEvolutionAiReport(userId, platform, periodId)
+          .then((report) => this.evolutionAiReport.set(report))
+          .catch(() => undefined);
+      },
+      error: () => undefined,
+    });
+  }
+
   private async loadStats(): Promise<void> {
     const userId = this.auth.userId();
     if (!userId) return;
@@ -791,7 +1037,7 @@ export class AnalyticsPageComponent implements OnInit {
       const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
 
-      const [profile, matches, weeklyRows, previousWeeklyRows, daily, community, leaderboard] =
+      const [profile, matches, weeklyRows, previousWeeklyRows, daily, community, leaderboard, evoReport] =
         await Promise.all([
           this.playerService.getPlayerProfileOrNull(userId).catch(() => null),
           this.matchService.listPlayerMatchesOnce(userId, { limit: 50 }).catch(() => [] as MatchUpdateView[]),
@@ -811,15 +1057,30 @@ export class AnalyticsPageComponent implements OnInit {
             this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
           ).catch(() => null),
           firstValueFrom(
-            this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 20),
+            this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 40),
           ).catch(() => [] as LeaderboardEntryView[]),
+          platform
+            ? this.evolutionAi
+                .getEvolutionAiReport(userId, platform, periodId)
+                .catch(() => null)
+            : Promise.resolve(null),
         ]);
 
       this.gamerTag.set(profile?.gamerTag ?? '');
+      this.avatarUrl.set(profile?.avatarUrl ?? undefined);
       this.recentMatches.set(matches);
       this.weekly.set(weeklyRows[0] ?? null);
       this.previousWeekly.set(previousWeeklyRows[0] ?? null);
       this.dailyTrend.set(daily);
+      this.evolutionAiReport.set(evoReport);
+
+      if (platform) {
+        if (!evoReport) {
+          void this.onRequestEvolutionAi(false);
+        } else if (evoReport.status === 'pending') {
+          this.bindEvolutionReady(userId, platform, periodId);
+        }
+      }
 
       if (community && community.sampleSize > 0) {
         this.communityBenchmarksApi.set(

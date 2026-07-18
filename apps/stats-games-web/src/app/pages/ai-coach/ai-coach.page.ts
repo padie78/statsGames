@@ -336,8 +336,10 @@ export class AiCoachPageComponent implements OnInit {
       userId: this.auth.userId(),
       apiRows: this.communityLeaderboardApi(),
       sampleSize: this.communityBenchmarksApi()?.sampleSize ?? null,
+      radius: 14,
       self: {
         gamerTag: this.profile()?.gamerTag || 'Vos',
+        avatarUrl: this.profile()?.avatarUrl ?? undefined,
         kd,
         winRate,
         kills: summary.totalKills,
@@ -416,7 +418,7 @@ export class AiCoachPageComponent implements OnInit {
           this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
         ).catch(() => null),
         firstValueFrom(
-          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 20),
+          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 40),
         ).catch(() => [] as LeaderboardEntryView[]),
       ]);
 

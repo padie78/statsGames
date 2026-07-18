@@ -19,7 +19,7 @@ export interface DailyStatsTableRow {
     <section class="sg-daily-table u-surface-card u-p-5" [attr.aria-label]="title">
       <header class="sg-daily-table__header">
         <div>
-          <p class="sg-daily-table__eyebrow">Detalle diario</p>
+          <p class="sg-daily-table__eyebrow">Números por día</p>
           <h3 class="sg-daily-table__title">{{ title }}</h3>
           @if (subtitle) {
             <p class="sg-daily-table__subtitle u-m-0">{{ subtitle }}</p>

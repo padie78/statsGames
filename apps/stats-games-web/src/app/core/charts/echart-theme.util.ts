@@ -5,14 +5,19 @@ import type { TrendChartPoint } from './chart.types';
 export type TrendChartVariant = 'bar' | 'line' | 'area';
 
 const CHART_COLORS = {
-  primary: '#3de0f5',
-  primarySoft: 'rgba(61, 224, 245, 0.2)',
+  /** Paleta alineada a Inicio / LoL (oro). Sin cyan. */
+  primary: '#f0d060',
+  primarySoft: 'rgba(240, 208, 96, 0.2)',
   lime: '#f0d060',
   limeSoft: 'rgba(240, 208, 96, 0.18)',
   gold: '#f0d060',
   goldSoft: 'rgba(240, 208, 96, 0.22)',
-  cyan: '#3de0f5',
-  cyanSoft: 'rgba(61, 224, 245, 0.18)',
+  /** Peers / benchmark secundario (bronce, no cyan). */
+  muted: '#c89b3c',
+  mutedSoft: 'rgba(200, 155, 60, 0.22)',
+  /** Alias legacy → oro (evita cyan en charts compartidos). */
+  cyan: '#c89b3c',
+  cyanSoft: 'rgba(200, 155, 60, 0.2)',
   pink: '#ff4d9a',
   text: '#a8b2c6',
   textMuted: '#738095',
@@ -208,7 +213,7 @@ export function buildYouVsBenchmarkChartOptions(
         barWidth: '28%',
         data: rows.map((row) => row.benchmark),
         itemStyle: {
-          color: softGradient(CHART_COLORS.cyan, CHART_COLORS.cyanSoft),
+          color: softGradient(CHART_COLORS.muted, CHART_COLORS.mutedSoft),
           borderRadius: [7, 7, 2, 2],
         },
       },
@@ -290,10 +295,10 @@ export function buildDualTrendChartOptions(
         symbol: 'circle',
         symbolSize: 7,
         data: secondary.map((point) => point.value),
-        lineStyle: { width: 3, color: CHART_COLORS.cyan },
-        itemStyle: { color: CHART_COLORS.cyan, borderColor: '#0a1020', borderWidth: 2 },
+        lineStyle: { width: 3, color: CHART_COLORS.muted },
+        itemStyle: { color: CHART_COLORS.muted, borderColor: '#0a1020', borderWidth: 2 },
         areaStyle: {
-          color: softGradient(CHART_COLORS.cyanSoft, 'rgba(10, 16, 32, 0)'),
+          color: softGradient(CHART_COLORS.mutedSoft, 'rgba(10, 16, 32, 0)'),
         },
       },
     ],
@@ -462,8 +467,8 @@ export function buildPercentileGaugesOptions(items: PercentileGaugeItem[]): ECha
   if (items.length === 0) return {};
 
   const colors: Record<string, string> = {
-    elite: CHART_COLORS.lime,
-    strong: CHART_COLORS.cyan,
+    elite: CHART_COLORS.gold,
+    strong: CHART_COLORS.muted,
     average: '#8fa3c4',
     weak: CHART_COLORS.pink,
   };
@@ -487,7 +492,7 @@ export function buildPercentileGaugesOptions(items: PercentileGaugeItem[]): ECha
       },
     },
     series: items.map((item, index) => {
-      const color = colors[item.tone ?? 'strong'] ?? CHART_COLORS.cyan;
+      const color = colors[item.tone ?? 'strong'] ?? CHART_COLORS.gold;
       return {
         type: 'gauge',
         center: centers[index],
@@ -530,5 +535,185 @@ export function buildPercentileGaugesOptions(items: PercentileGaugeItem[]): ECha
         data: [{ value: item.value, name: item.name }],
       };
     }),
+  };
+}
+
+export interface PeerBenchmarkPoint {
+  gamerTag: string;
+  kd: number;
+  winRate: number;
+  score: number;
+  isYou?: boolean;
+}
+
+/** Scatter WR × KDA de peers; resalta al usuario. */
+export function buildPeerBenchmarkScatterOptions(
+  peers: PeerBenchmarkPoint[],
+): EChartsOption {
+  if (!peers.length) return {};
+
+  const others = peers.filter((p) => !p.isYou);
+  const you = peers.find((p) => p.isYou);
+
+  return {
+    animationDuration: 720,
+    grid: { left: 12, right: 16, top: 36, bottom: 8, containLabel: true },
+    legend: {
+      top: 0,
+      right: 0,
+      textStyle: { color: CHART_COLORS.text, fontSize: 11 },
+      itemWidth: 10,
+      itemHeight: 10,
+    },
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(10, 14, 24, 0.94)',
+      borderColor: CHART_COLORS.border,
+      textStyle: { color: '#f2f5fb', fontSize: 12 },
+      formatter: (params: unknown) => {
+        const p = params as {
+          seriesName?: string;
+          data?: { value?: number[]; name?: string };
+        };
+        const value = p.data?.value ?? [];
+        const tag = p.data?.name ?? p.seriesName ?? '';
+        return `${tag}<br/>WR ${Number(value[0] ?? 0).toFixed(0)}%<br/>KDA ${Number(value[1] ?? 0).toFixed(2)}<br/>Score ${Number(value[2] ?? 0)}`;
+      },
+    },
+    xAxis: {
+      type: 'value',
+      name: 'Win rate %',
+      nameLocation: 'middle',
+      nameGap: 28,
+      min: 0,
+      max: 100,
+      nameTextStyle: { color: CHART_COLORS.textMuted, fontSize: 11 },
+      splitLine: { lineStyle: { color: CHART_COLORS.grid, type: 'dashed' } },
+      axisLabel: { color: CHART_COLORS.textMuted, fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      name: 'KDA',
+      nameTextStyle: { color: CHART_COLORS.textMuted, fontSize: 11 },
+      splitLine: { lineStyle: { color: CHART_COLORS.grid, type: 'dashed' } },
+      axisLabel: { color: CHART_COLORS.textMuted, fontSize: 11 },
+    },
+    series: [
+      {
+        name: 'Peers',
+        type: 'scatter',
+        symbolSize: (val: number[]) => Math.max(10, Math.min(28, 8 + (val[2] ?? 0) / 80)),
+        data: others.map((p) => ({
+          name: p.gamerTag,
+          value: [p.winRate, p.kd, p.score],
+        })),
+        itemStyle: {
+          color: CHART_COLORS.muted,
+          opacity: 0.72,
+          borderColor: 'rgba(10, 16, 32, 0.8)',
+          borderWidth: 1,
+        },
+        emphasis: {
+          scale: 1.15,
+          itemStyle: { shadowBlur: 14, shadowColor: CHART_COLORS.mutedSoft },
+        },
+      },
+      ...(you
+        ? [
+            {
+              name: 'Vos',
+              type: 'scatter' as const,
+              symbolSize: 22,
+              data: [
+                {
+                  name: you.gamerTag,
+                  value: [you.winRate, you.kd, you.score],
+                },
+              ],
+              itemStyle: {
+                color: CHART_COLORS.gold,
+                borderColor: '#c89b3c',
+                borderWidth: 2,
+                shadowBlur: 16,
+                shadowColor: CHART_COLORS.goldSoft,
+              },
+              label: {
+                show: true,
+                formatter: 'Vos',
+                position: 'top' as const,
+                color: CHART_COLORS.gold,
+                fontSize: 11,
+                fontWeight: 700 as const,
+              },
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
+/** Barras horizontales de score vs peers (muestra). */
+export function buildPeerScoreBarOptions(
+  peers: PeerBenchmarkPoint[],
+  limit = 12,
+): EChartsOption {
+  if (!peers.length) return {};
+
+  const sorted = [...peers].sort((a, b) => b.score - a.score).slice(0, limit);
+  const labels = sorted.map((p) => (p.isYou ? `${p.gamerTag} · Vos` : p.gamerTag));
+  const values = sorted.map((p) => p.score);
+  const colors = sorted.map((p) =>
+    p.isYou
+      ? softGradient(CHART_COLORS.gold, CHART_COLORS.goldSoft)
+      : softGradient(CHART_COLORS.muted, CHART_COLORS.mutedSoft),
+  );
+
+  return {
+    animationDuration: 680,
+    grid: { left: 8, right: 16, top: 8, bottom: 0, containLabel: true },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(10, 14, 24, 0.94)',
+      borderColor: CHART_COLORS.border,
+      textStyle: { color: '#f2f5fb', fontSize: 12 },
+      axisPointer: { type: 'shadow' },
+    },
+    xAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: CHART_COLORS.grid, type: 'dashed' } },
+      axisLabel: { color: CHART_COLORS.textMuted, fontSize: 11 },
+    },
+    yAxis: {
+      type: 'category',
+      data: labels,
+      inverse: true,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: CHART_COLORS.textMuted,
+        fontSize: 10,
+        width: 110,
+        overflow: 'truncate',
+      },
+    },
+    series: [
+      {
+        type: 'bar',
+        barWidth: '58%',
+        data: values.map((value, index) => ({
+          value,
+          itemStyle: {
+            color: colors[index],
+            borderRadius: [0, 6, 6, 0],
+          },
+        })),
+        label: {
+          show: true,
+          position: 'right',
+          color: CHART_COLORS.text,
+          fontSize: 10,
+        },
+      },
+    ],
   };
 }

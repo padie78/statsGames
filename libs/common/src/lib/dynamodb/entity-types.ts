@@ -13,6 +13,7 @@ export const EntityType = {
   LeaderboardEntry: 'LEADERBOARD_ENTRY',
   CommunityPlayerSeen: 'COMMUNITY_PLAYER_SEEN',
   MatchAiReport: 'MATCH_AI_REPORT',
+  EvolutionAiReport: 'EVOLUTION_AI_REPORT',
 } as const;
 
 export type EntityTypeName = (typeof EntityType)[keyof typeof EntityType];

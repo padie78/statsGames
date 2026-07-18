@@ -10,6 +10,8 @@ import {
   communityBenchmarkPk,
   communityBenchmarkSk,
   communityPlayerSeenSk,
+  computeFairLeaderboardScore,
+  computeTrueKda,
   leaderboardPk,
   leaderboardUserSk,
   statsPlayerPk,
@@ -28,10 +30,6 @@ const DEFAULT_STD = {
   clash_royale: { winRateStd: 14, kdStd: 0.3, killsStd: 8 },
   brawl_stars: { winRateStd: 14, kdStd: 0.35, killsStd: 12 },
 } as const;
-
-function computeLeaderboardScore(input: SyncWeeklyCommunityInput): number {
-  return input.totalKills * 10 + input.winCount * 100 + input.matchCount * 5;
-}
 
 export class DynamoDbCommunityStatsRepository implements ICommunityStatsRepository {
   private readonly tableName: string;
@@ -75,7 +73,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
 
     await this.recomputeCommunityBenchmarkTotals(input.platform, input.periodId);
 
-    const score = computeLeaderboardScore(input);
+    const score = computeFairLeaderboardScore(input);
     await client.send(
       new PutCommand({
         TableName: this.tableName,
@@ -91,6 +89,7 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
           matchCount: input.matchCount,
           winCount: input.winCount,
           totalDeaths: input.totalDeaths,
+          totalAssists: 0,
           lastUpdatedIso: now,
         },
       }),
@@ -158,17 +157,36 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
     );
 
     const rows = (result.Items ?? [])
-      .map((item) => ({
-        userId: String(item['userId'] ?? ''),
-        platform,
-        score: Number(item['score'] ?? 0),
-        totalKills: Number(item['totalKills'] ?? 0),
-        totalDeaths: Number(item['totalDeaths'] ?? 0),
-        winCount: Number(item['winCount'] ?? 0),
-        matchCount: Number(item['matchCount'] ?? 0),
-      }))
+      .map((item) => {
+        const totalKills = Number(item['totalKills'] ?? 0);
+        const totalDeaths = Number(item['totalDeaths'] ?? 0);
+        const totalAssists = Number(item['totalAssists'] ?? 0);
+        const winCount = Number(item['winCount'] ?? 0);
+        const matchCount = Number(item['matchCount'] ?? 0);
+        const leaguePointsRaw = item['leaguePoints'];
+        return {
+          userId: String(item['userId'] ?? ''),
+          platform,
+          totalKills,
+          totalDeaths,
+          totalAssists,
+          winCount,
+          matchCount,
+          leaguePoints:
+            leaguePointsRaw === undefined || leaguePointsRaw === null
+              ? undefined
+              : Number(leaguePointsRaw),
+          score: computeFairLeaderboardScore({
+            totalKills,
+            totalDeaths,
+            totalAssists,
+            winCount,
+            matchCount,
+          }),
+        };
+      })
       .filter((row) => row.userId)
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.score - a.score || b.totalKills - a.totalKills)
       .slice(0, Math.min(Math.max(limit, 1), 50));
 
     return rows.map((row, index) => ({
@@ -179,13 +197,16 @@ export class DynamoDbCommunityStatsRepository implements ICommunityStatsReposito
       score: row.score,
       totalKills: row.totalKills,
       totalDeaths: row.totalDeaths,
+      totalAssists: row.totalAssists,
+      leaguePoints: row.leaguePoints,
       winCount: row.winCount,
       winRate:
         row.matchCount > 0 ? round1((row.winCount / row.matchCount) * 100) : 0,
-      kd:
-        row.totalDeaths > 0
-          ? round2(row.totalKills / row.totalDeaths)
-          : row.totalKills,
+      kd: computeTrueKda({
+        totalKills: row.totalKills,
+        totalDeaths: row.totalDeaths,
+        totalAssists: row.totalAssists,
+      }),
       matchCount: row.matchCount,
       delta: '—',
       trend: 'flat' as const,

@@ -76,6 +76,14 @@ export const DynamoKeys = {
     return 'MATCH_AI_REPORT#';
   },
 
+  evolutionAiReportSk(periodId: string, platform: string): string {
+    return `EVOLUTION_AI_REPORT#WEEKLY#${periodId}#${platform}`;
+  },
+
+  evolutionAiReportSkPrefix(): string {
+    return 'EVOLUTION_AI_REPORT#';
+  },
+
   gamerTagPk(normalizedTag: string): string {
     return `${KeyPrefix.GamerTag}${normalizedTag}`;
   },

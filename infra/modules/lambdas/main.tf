@@ -102,8 +102,9 @@ resource "aws_lambda_function" "appsync_api" {
 
   environment {
     variables = {
-      TABLE_NAME = var.table_name
-      LOG_LEVEL  = "INFO"
+      TABLE_NAME                   = var.table_name
+      MATCH_AI_ANALYSIS_QUEUE_URL  = var.match_ai_analysis_queue_url
+      LOG_LEVEL                    = "INFO"
     }
   }
 }

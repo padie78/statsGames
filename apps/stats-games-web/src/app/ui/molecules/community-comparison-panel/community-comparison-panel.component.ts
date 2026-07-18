@@ -16,11 +16,11 @@ import {
       <header class="sg-community-comparison__header">
         <div class="sg-community-comparison__headline">
           <div>
-            <p class="sg-community-comparison__eyebrow">Percentiles</p>
+            <p class="sg-community-comparison__eyebrow">Percentiles por métrica</p>
             <h2 class="sg-community-comparison__title">{{ title }}</h2>
           </div>
           @if (sampleLabel) {
-            <sg-neon-badge tone="cyan">{{ sampleLabel }}</sg-neon-badge>
+            <sg-neon-badge tone="gold">{{ sampleLabel }}</sg-neon-badge>
           }
         </div>
         <p class="sg-community-comparison__subtitle">{{ subtitle }}</p>

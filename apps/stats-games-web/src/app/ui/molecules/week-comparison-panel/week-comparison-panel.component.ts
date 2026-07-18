@@ -8,6 +8,7 @@ import type { WeekComparisonItem } from '../../../utils/match-stats.util';
   template: `
     <section class="sg-week-comparison u-surface-card u-p-5" [attr.aria-label]="title">
       <header class="sg-week-comparison__header">
+        <p class="sg-week-comparison__eyebrow">Progreso temporal</p>
         <h2 class="sg-week-comparison__title">{{ title }}</h2>
         <p class="sg-week-comparison__subtitle">{{ subtitle }}</p>
       </header>

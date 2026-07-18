@@ -7,4 +7,7 @@ export * from './get-community-benchmarks.use-case';
 export * from './list-weekly-leaderboard.use-case';
 export * from './match-ai-report.use-case';
 export * from './analyze-match-with-ai.use-case';
+export * from './evolution-ai-report.use-case';
+export * from './analyze-evolution-with-ai.use-case';
+export * from './evolution-analysis-prompt.registry';
 export * from './stats-period.util';

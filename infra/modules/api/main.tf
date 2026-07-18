@@ -167,6 +167,23 @@ resource "aws_appsync_resolver" "publish_match_ai_ready" {
   VTPL
 }
 
+resource "aws_appsync_resolver" "publish_evolution_ai_ready" {
+  api_id      = aws_appsync_graphql_api.this.id
+  type        = "Mutation"
+  field       = "publishEvolutionAiReady"
+  data_source = aws_appsync_datasource.none.name
+
+  request_template  = <<-VTPL
+    {
+      "version": "2018-05-29",
+      "payload": $util.toJson($ctx.args.input)
+    }
+  VTPL
+  response_template = <<-VTPL
+    $util.toJson($ctx.result)
+  VTPL
+}
+
 # ─────────── API Lambda resolvers ───────────
 
 resource "aws_appsync_resolver" "get_player_profile" {
@@ -223,6 +240,36 @@ resource "aws_appsync_resolver" "list_match_ai_reports" {
   api_id            = aws_appsync_graphql_api.this.id
   type              = "Query"
   field             = "listMatchAiReports"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
+resource "aws_appsync_resolver" "get_evolution_ai_report" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Query"
+  field             = "getEvolutionAiReport"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
+resource "aws_appsync_resolver" "list_evolution_ai_reports" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Query"
+  field             = "listEvolutionAiReports"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
+resource "aws_appsync_resolver" "request_evolution_ai_report" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Mutation"
+  field             = "requestEvolutionAiReport"
   data_source       = aws_appsync_datasource.api.name
   depends_on        = [terraform_data.appsync_datasources_ready]
   request_template  = local.direct_lambda_request_template
