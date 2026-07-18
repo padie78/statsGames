@@ -39,6 +39,15 @@ output "media_proxy_base_url" {
   value       = aws_apigatewayv2_api.webhooks.api_endpoint
 }
 
+output "riot_rso_name" {
+  value = aws_lambda_function.riot_rso.function_name
+}
+
+output "riot_rso_exchange_url" {
+  description = "POST code→token→Riot ID (Valorant RSO)."
+  value       = "${aws_apigatewayv2_api.webhooks.api_endpoint}/integrations/riot/rso/exchange"
+}
+
 output "fortnite_stats_poller_name" {
   value = aws_lambda_function.fortnite_stats_poller.function_name
 }

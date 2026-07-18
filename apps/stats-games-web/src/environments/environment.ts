@@ -16,11 +16,16 @@ export const environment = {
     'https://xr1lip3ln0.execute-api.eu-central-1.amazonaws.com/webhooks/{platform}',
   mediaProxyBaseUrl: 'https://xr1lip3ln0.execute-api.eu-central-1.amazonaws.com',
   /**
-   * Valorant: perfiles privados por defecto. RSO = permiso explícito del jugador.
-   * Cuando haya client_id Riot, completar `rsoAuthorizeUrl` (authorize endpoint).
+   * Riot Sign-On (Valorant). Completá `clientId` con el RSO Client de producción.
+   * El secret vive solo en Lambda (`riot_rso_client_secret`).
    */
   riot: {
-    rsoAuthorizeUrl: '' as string,
+    clientId: '' as string,
+    redirectUri: 'http://localhost:4200/integrations/riot/callback',
+    authorizeUrl: 'https://auth.riotgames.com/authorize',
+    scopes: 'openid offline_access',
+    tokenExchangeUrl:
+      'https://xr1lip3ln0.execute-api.eu-central-1.amazonaws.com/integrations/riot/rso/exchange',
     accountUrl: 'https://account.riotgames.com/',
     valorantPrivacyHelpUrl:
       'https://support-valorant.riotgames.com/hc/en-us/articles/360047241634',

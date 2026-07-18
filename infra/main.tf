@@ -43,6 +43,8 @@ module "lambdas" {
   webhook_secret              = var.webhook_secret
   fortnite_api_key            = var.fortnite_api_key
   riot_api_key                = var.riot_api_key
+  riot_rso_client_id          = var.riot_rso_client_id
+  riot_rso_client_secret      = var.riot_rso_client_secret
   valorant_region             = var.valorant_region
   valorant_shard              = var.valorant_shard
   ballchasing_api_key         = var.ballchasing_api_key

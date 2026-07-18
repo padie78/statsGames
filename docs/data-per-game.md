@@ -94,16 +94,17 @@ Con solo `RIOT_API_KEY`, Riot rechaza matchlist / match-v1 salvo que se cumpla u
 
 | Vía | Qué hace el jugador | Qué usa StatsGames |
 |---|---|---|
-| **Riot Sign-On (RSO)** — recomendada | “Iniciar sesión con Riot” (OAuth en riotgames.com) | Token de acceso del jugador → telemetría autorizada |
-| **Perfil público** | Pone historial de partidas en Público (cuenta Riot / Tracker) + pega Riot ID | Poller con API key sobre PUUID público |
+| **Riot Sign-On (RSO)** — recomendada | “Iniciar sesión con Riot” | Authorize → `/integrations/riot/callback` → Lambda exchange → `linkPlatformAccount` |
+| **Perfil público** | Historial Público + Riot ID + checkbox | Poller con API key sobre PUUID |
 
-1. Crear key / app RSO en [developer.riotgames.com](https://developer.riotgames.com/).
-2. Configurar `RIOT_API_KEY` + vars `VALORANT_REGION` / `VALORANT_SHARD`.
-3. Frontend: `environment.riot.rsoAuthorizeUrl` (RSO) y flujo en Integraciones (`/tabs/integrations`).
-4. Vincular: RSO **o** `valorantId` (`Nombre#TAG`) con checkbox de historial Público.
-5. Poller: `lambda_code/ingestion/valorant_match_poller/` — account-v1 → matchlist → match-v1.
-6. Latencia típica: ≤ 1 ciclo EventBridge (~3 min) tras partida cerrada.
-7. IA: Bedrock vía `match_ai_analyzer` tras guardar la partida.
+1. App de producción + RSO Client en [developer.riotgames.com](https://developer.riotgames.com/).
+2. Terraform: `riot_rso_client_id`, `riot_rso_client_secret` → Lambda `*-riot-rso`.
+3. Frontend: `environment.riot.clientId` + `redirectUri` + `tokenExchangeUrl`.
+4. Redirect URI registrada en Riot: `{origin}/integrations/riot/callback`.
+5. Flujo: authorize (`openid offline_access` + PKCE) → POST `/integrations/riot/rso/exchange` → `accounts/me` → `valorantId`.
+6. Poller: `lambda_code/ingestion/valorant_match_poller/` — account-v1 → matchlist → match-v1.
+7. Latencia típica: ≤ 1 ciclo EventBridge (~3 min) tras partida cerrada.
+8. IA: Bedrock vía `match_ai_analyzer` tras guardar la partida.
 
 **Stats típicas:** `kills`, `deaths`, `assists`, `headshotPct`, `roundsWon`, `roundsLost`, `map`, `agent`, `score`, `acs`, `won`, `mode`.
 

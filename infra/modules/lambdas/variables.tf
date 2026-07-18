@@ -71,6 +71,19 @@ variable "riot_api_key" {
   description = "API key Riot Games (Valorant match poller)."
 }
 
+variable "riot_rso_client_id" {
+  type        = string
+  default     = ""
+  description = "Client ID del RSO Client (Riot Sign-On / OAuth)."
+}
+
+variable "riot_rso_client_secret" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Client secret del RSO Client (solo backend)."
+}
+
 variable "valorant_region" {
   type        = string
   default     = "americas"

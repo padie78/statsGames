@@ -17,7 +17,12 @@ export const environment = {
   /** Mismo host que webhook_api_endpoint (sin /webhooks). */
   mediaProxyBaseUrl: 'https://REPLACE.execute-api.eu-central-1.amazonaws.com',
   riot: {
-    rsoAuthorizeUrl: '' as string,
+    clientId: '' as string,
+    redirectUri: 'https://REPLACE.cloudfront.net/integrations/riot/callback',
+    authorizeUrl: 'https://auth.riotgames.com/authorize',
+    scopes: 'openid offline_access',
+    tokenExchangeUrl:
+      'https://REPLACE.execute-api.eu-central-1.amazonaws.com/integrations/riot/rso/exchange',
     accountUrl: 'https://account.riotgames.com/',
     valorantPrivacyHelpUrl:
       'https://support-valorant.riotgames.com/hc/en-us/articles/360047241634',

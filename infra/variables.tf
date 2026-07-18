@@ -42,6 +42,19 @@ variable "riot_api_key" {
   description = "API key Riot Games (poller Valorant)."
 }
 
+variable "riot_rso_client_id" {
+  type        = string
+  default     = ""
+  description = "Client ID Riot Sign-On (RSO). Requiere app de producción aprobada."
+}
+
+variable "riot_rso_client_secret" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Client secret Riot Sign-On (solo Lambda; no va al frontend)."
+}
+
 variable "valorant_region" {
   type    = string
   default = "americas"

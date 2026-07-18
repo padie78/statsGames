@@ -40,6 +40,12 @@ export const APP_ROUTES: Routes = [
       import('./pages/auth/onboarding.page').then((m) => m.OnboardingPageComponent),
   },
   {
+    path: 'integrations/riot/callback',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/integrations/riot-callback.page').then((m) => m.RiotCallbackPageComponent),
+  },
+  {
     path: 'tabs',
     canActivate: [authGuard, profileGuard],
     loadComponent: () => import('./pages/shell/shell.page').then((m) => m.ShellPageComponent),

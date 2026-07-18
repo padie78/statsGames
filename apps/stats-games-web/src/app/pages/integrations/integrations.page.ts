@@ -10,6 +10,7 @@ import {
 } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { RiotRsoService } from '../../core/game/riot-rso.service';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
 import { MatchNotificationsStore } from '../../stores/match-notifications.store';
 import { extractGraphqlErrorMessage, mapLinkPlatformError } from '../../utils/graphql-error.util';
@@ -202,23 +203,28 @@ type LinkablePlatform =
                 @if (valorantAccessMode() === 'rso') {
                   <div class="sg-valorant-access__panel">
                     <p class="u-m-0">
-                      Las plataformas grandes no piden el Riot ID en un formulario: el jugador inicia
-                      sesión en Riot y autoriza a StatsGames. Riot devuelve un token de acceso para
-                      ese jugador; con ese permiso la API de Valorant entrega la telemetría.
+                      Iniciá sesión en Riot y autorizá a StatsGames. Riot devuelve un token de
+                      acceso; con ese permiso obtenemos tu Riot ID y la API puede entregar
+                      telemetría sin depender del historial público.
                     </p>
                     <button
                       type="button"
                       class="u-btn u-btn--primary u-btn--block"
-                      [disabled]="!auth.userId() || linking()"
+                      [disabled]="!auth.userId() || linking() || rsoStarting() || !riotRso.isReady()"
                       (click)="startRiotSignOn()"
                     >
-                      Iniciar sesión con Riot
+                      {{ rsoStarting() ? 'Redirigiendo a Riot…' : 'Iniciar sesión con Riot' }}
                     </button>
-                    @if (!riotRsoReady()) {
+                    @if (!riotRso.isReady()) {
                       <p class="sg-valorant-access__note u-m-0">
-                        RSO se habilita cuando
-                        <code>environment.riot.rsoAuthorizeUrl</code> está configurada. Mientras
-                        tanto podés usar la alternativa de perfil público.
+                        Falta el RSO Client de Riot (app de producción aprobada). Seteá
+                        <code>environment.riot.clientId</code>
+                        y en Terraform
+                        <code>riot_rso_client_id</code>
+                        /
+                        <code>riot_rso_client_secret</code>,
+                        luego redeploy de la Lambda
+                        <code>riot-rso</code>.
                       </p>
                     }
                   </div>
@@ -341,6 +347,7 @@ type LinkablePlatform =
 })
 export class IntegrationsPageComponent implements OnInit {
   readonly auth = inject(AuthService);
+  readonly riotRso = inject(RiotRsoService);
   private readonly playerService = inject(PlayerService);
   private readonly notifications = inject(MatchNotificationsStore);
   private readonly fb = inject(FormBuilder);
@@ -351,6 +358,7 @@ export class IntegrationsPageComponent implements OnInit {
   readonly linking = signal(false);
   readonly linkError = signal<string | null>(null);
   readonly linkSuccess = signal<string | null>(null);
+  readonly rsoStarting = signal(false);
   /** Valorant: RSO (recomendado) o historial público + Riot ID. */
   readonly valorantAccessMode = signal<'rso' | 'public'>('rso');
   readonly valorantPrivacyAck = signal(false);
@@ -362,7 +370,6 @@ export class IntegrationsPageComponent implements OnInit {
   readonly valorantPrivacyHelpUrl = environment.riot.valorantPrivacyHelpUrl;
 
   readonly isValorantLink = computed(() => this.selectedPlatform() === 'valorant');
-  readonly riotRsoReady = computed(() => Boolean(environment.riot.rsoAuthorizeUrl?.trim()));
 
   readonly allPlatformOptions: SelectOption<LinkablePlatform>[] = [
     { value: 'valorant', label: 'Valorant' },
@@ -496,8 +503,7 @@ export class IntegrationsPageComponent implements OnInit {
         this.linkSuccess.set(null);
         this.linkError.set(null);
         if (platform === 'valorant') {
-          this.valorantAccessMode.set('rso');
-          this.valorantPrivacyAck.set(false);
+          this.resetValorantAccessUi();
         }
       });
     this.selectedPlatform.set(this.linkForm.controls.platform.value);
@@ -513,18 +519,22 @@ export class IntegrationsPageComponent implements OnInit {
     this.valorantPrivacyAck.set(input.checked);
   }
 
-  startRiotSignOn(): void {
+  async startRiotSignOn(): Promise<void> {
     this.linkError.set(null);
     this.linkSuccess.set(null);
-    const authorizeUrl = environment.riot.rsoAuthorizeUrl?.trim();
-    if (!authorizeUrl) {
-      this.linkError.set(
-        'Riot Sign-On todavía no está configurado en este entorno. Usá “Perfil público” o pedí que se complete environment.riot.rsoAuthorizeUrl.',
-      );
-      this.valorantAccessMode.set('public');
-      return;
+    this.rsoStarting.set(true);
+    try {
+      await this.riotRso.startLogin();
+    } catch (err) {
+      this.linkError.set(err instanceof Error ? err.message : 'No se pudo iniciar Riot Sign-On');
+      this.rsoStarting.set(false);
     }
-    window.location.assign(authorizeUrl);
+  }
+
+  private resetValorantAccessUi(): void {
+    this.valorantAccessMode.set('rso');
+    this.valorantPrivacyAck.set(false);
+    this.rsoStarting.set(false);
   }
 
   async submitLinkPlatform(): Promise<void> {
@@ -686,8 +696,7 @@ export class IntegrationsPageComponent implements OnInit {
         this.applyExternalIdValidators(platform);
         this.prefillExternalId(platform);
         if (platform === 'valorant') {
-          this.valorantAccessMode.set('rso');
-          this.valorantPrivacyAck.set(false);
+          this.resetValorantAccessUi();
         }
       }
     } catch (err) {
