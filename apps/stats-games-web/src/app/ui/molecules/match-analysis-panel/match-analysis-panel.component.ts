@@ -176,7 +176,7 @@ import { PercentileGaugesComponent } from '../percentile-gauges/percentile-gauge
         </section>
 
         @if (report.economyTimeline; as economy) {
-          <section class="sg-match-analysis__chart u-surface-card u-p-4 sg-match-analysis__chart--wide">
+          <section class="sg-match-analysis__chart u-surface-card u-p-4">
             <header class="sg-trend-chart__header">
               <div>
                 <h3 class="sg-trend-chart__title">Timeline económico LoL</h3>
@@ -206,7 +206,7 @@ import { PercentileGaugesComponent } from '../percentile-gauges/percentile-gauge
         }
 
         @if (report.comparisonRows.length) {
-          <section class="sg-match-analysis__chart u-surface-card u-p-4 sg-match-analysis__chart--wide">
+          <section class="sg-match-analysis__chart u-surface-card u-p-4">
             <header class="sg-trend-chart__header">
               <h3 class="sg-trend-chart__title">Esta partida vs tus partidas recientes</h3>
               <p class="sg-trend-chart__subtitle u-m-0">
@@ -223,7 +223,7 @@ import { PercentileGaugesComponent } from '../percentile-gauges/percentile-gauge
         }
 
         @if (report.communityBenchmarkRows.length) {
-          <section class="sg-match-analysis__chart u-surface-card u-p-4 sg-match-analysis__chart--wide">
+          <section class="sg-match-analysis__chart u-surface-card u-p-4">
             <header class="sg-trend-chart__header">
               <h3 class="sg-trend-chart__title">Esta partida vs comunidad</h3>
               <p class="sg-trend-chart__subtitle u-m-0">

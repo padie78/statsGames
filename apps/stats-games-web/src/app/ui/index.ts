@@ -1,3 +1,12 @@
+export {
+  sgFadeSlideIn,
+  sgListItem,
+  sgListStagger,
+  sgModalIn,
+  sgPulseOnce,
+  sgStaggerChildren,
+  sgToastPop,
+} from './animations/sg-motion';
 export { AnimatedValueComponent } from './atoms/animated-value/animated-value.component';
 export { NeonBadgeComponent, type NeonBadgeTone } from './atoms/neon-badge/neon-badge.component';
 export { SelectComponent, type SelectOption } from './atoms/select/select.component';
@@ -20,8 +29,13 @@ export {
 export {
   PeerBenchmarkPanelComponent,
   type PeerBenchmarkPoint,
+  type PeerBenchmarkVisualMode,
 } from './molecules/peer-benchmark-panel/peer-benchmark-panel.component';
 export { EvolutionAiReportPanelComponent } from './molecules/evolution-ai-report-panel/evolution-ai-report-panel.component';
+export {
+  WeeklyFormChartComponent,
+  type WeeklyFormChartVariant,
+} from './molecules/weekly-form-chart/weekly-form-chart.component';
 export {
   DailyStatsTableComponent,
   type DailyStatsTableRow,
@@ -74,7 +88,12 @@ export { MatchFiltersToolbarComponent,
 export { YoutubeTipCardComponent } from './molecules/youtube-tip-card/youtube-tip-card.component';
 export { MatchAnalysisPanelComponent } from './molecules/match-analysis-panel/match-analysis-panel.component';
 export { MatchMapPanelComponent } from './molecules/match-map-panel/match-map-panel.component';
-export { MatchHistoryListComponent } from './organisms/match-history-list/match-history-list.component';
+export { MatchPreviewModalComponent } from './molecules/match-preview-modal/match-preview-modal.component';
+export { MatchAnalysisViewComponent } from './organisms/match-analysis-view/match-analysis-view.component';
+export {
+  MatchHistoryListComponent,
+  type MatchHistoryListItem,
+} from './organisms/match-history-list/match-history-list.component';
 export { DualPlatformStripComponent } from './molecules/dual-platform-strip/dual-platform-strip.component';
 export { PlatformCosmeticsRailComponent } from './molecules/platform-cosmetics-rail/platform-cosmetics-rail.component';
 export { OfficialNewsRailComponent } from './molecules/official-news-rail/official-news-rail.component';

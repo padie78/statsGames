@@ -1,6 +1,7 @@
 export interface TrendChartPoint {
   label: string;
-  value: number;
+  /** null = gap (día/semana sin data). */
+  value: number | null;
 }
 
 export interface MatchDailyTrendSeries {

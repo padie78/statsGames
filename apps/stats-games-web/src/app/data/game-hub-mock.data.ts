@@ -202,7 +202,7 @@ export function gameHubSearchHint(platform: SelectedGame): string {
   switch (platform) {
     case 'league_of_legends':
     case 'valorant':
-      return 'Enter Riot ID, ie. player#NA1';
+      return 'Riot ID, ej. jugador#LAN';
     case 'cs2':
     case 'dota2':
       return 'Search Steam name or ID…';

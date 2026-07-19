@@ -72,7 +72,7 @@ import {
           </div>
         </section>
 
-        <div class="sg-profile__body page-shell page-shell--fluid u-flex u-flex-col u-gap-6">
+        <div class="sg-profile__body page-shell page-shell--fluid">
           <section class="sg-dashboard__block" aria-labelledby="profile-preview">
             <div class="sg-dashboard__block-head">
               <div>

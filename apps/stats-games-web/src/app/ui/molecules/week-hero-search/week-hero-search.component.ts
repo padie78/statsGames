@@ -11,7 +11,6 @@ import {
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
-import { gamePlatformMeta } from '../../../core/game/game-platform.config';
 import type { SelectedGame } from '../../../core/game/selected-game';
 import { gameHubSearchHint } from '../../../data/game-hub-mock.data';
 import { PlayerService, type PlayerSearchHitView } from '../../../services/player.service';
@@ -26,14 +25,19 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
   template: `
     <div class="sg-dashboard__week-search">
       <label class="sg-dashboard__week-search-field">
-        <img
-          class="sg-dashboard__week-search-icon"
-          [src]="meta().iconUrl"
-          alt=""
-          width="22"
-          height="22"
+        <svg
+          class="sg-dashboard__week-search-glyph"
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
           aria-hidden="true"
-        />
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
         <input
           type="search"
           [attr.placeholder]="placeholder()"
@@ -42,20 +46,18 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
           (input)="onInput($event)"
           (focus)="open.set(true)"
           autocomplete="off"
+          spellcheck="false"
         />
-        <svg
-          class="sg-dashboard__week-search-glyph"
-          viewBox="0 0 24 24"
-          width="18"
-          height="18"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
+        @if (query().trim()) {
+          <button
+            type="button"
+            class="sg-dashboard__week-search-clear"
+            aria-label="Limpiar búsqueda"
+            (click)="clearQuery($event)"
+          >
+            ×
+          </button>
+        }
       </label>
 
       @if (open() && (searching() || results().length > 0 || showEmpty())) {
@@ -77,7 +79,7 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
                   (click)="goToPlayer(hit)"
                 >
                   <span>{{ hit.gamerTag }}</span>
-                  <sg-neon-badge tone="muted">{{ hit.primaryPlatform }}</sg-neon-badge>
+                  <sg-neon-badge tone="gold">{{ hit.primaryPlatform }}</sg-neon-badge>
                 </button>
               </li>
             }
@@ -94,7 +96,6 @@ export class WeekHeroSearchComponent {
 
   readonly platform = input.required<SelectedGame>();
 
-  readonly meta = computed(() => gamePlatformMeta(this.platform()));
   readonly placeholder = computed(() => gameHubSearchHint(this.platform()));
 
   readonly query = signal('');
@@ -164,6 +165,15 @@ export class WeekHeroSearchComponent {
     this.query.set(value);
     this.open.set(true);
     this.search$.next(value);
+  }
+
+  clearQuery(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.query.set('');
+    this.results.set([]);
+    this.searching.set(false);
+    this.search$.next('');
   }
 
   goToPlayer(hit: PlayerSearchHitView): void {

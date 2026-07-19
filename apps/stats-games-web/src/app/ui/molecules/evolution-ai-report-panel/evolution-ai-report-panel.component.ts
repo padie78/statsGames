@@ -1,5 +1,8 @@
 import { Component, EventEmitter, Input, Output, ViewEncapsulation } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import type { EvolutionAiReportView } from '../../../services/evolution-ai.service';
+import { copyToClipboard } from '../../../utils/match-stats.util';
+import { downloadTextFile } from '../../../utils/download-text.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 type MarkdownBlock =
@@ -7,23 +10,27 @@ type MarkdownBlock =
   | { kind: 'ul'; items: string[] }
   | { kind: 'ol'; items: string[] };
 
+type FocusAction = {
+  text: string;
+  route: string;
+  queryParams?: Record<string, string>;
+  cta: string;
+};
+
 @Component({
   standalone: true,
   selector: 'sg-evolution-ai-report-panel',
   encapsulation: ViewEncapsulation.None,
-  imports: [NeonBadgeComponent],
+  imports: [NeonBadgeComponent, RouterLink],
   template: `
-    <section
-      class="sg-evo-ai"
-      [class.sg-evo-ai--ready]="report?.status === 'ready'"
-      [class.sg-evo-ai--pending]="report?.status === 'pending' || (loading && !report)"
-      [class.sg-evo-ai--failed]="report?.status === 'failed'"
+    <article
+      class="sg-evo-ai u-surface-card u-p-5"
+      [class.sg-evo-ai--ready]="!!displayReport && displayReport.status !== 'failed'"
+      [class.sg-evo-ai--pending]="isHardPending"
+      [class.sg-evo-ai--failed]="isHardFailed"
       aria-label="Informe IA de evolución"
     >
-      <div class="sg-evo-ai__glow" aria-hidden="true"></div>
-      <div class="sg-evo-ai__grid" aria-hidden="true"></div>
-
-      @if (loading && !report) {
+      @if (loading && !displayReport) {
         <div class="sg-evo-ai__state sg-evo-ai__state--loading">
           <span class="sg-evo-ai__pulse" aria-hidden="true"></span>
           <div>
@@ -33,17 +40,7 @@ type MarkdownBlock =
             </p>
           </div>
         </div>
-      } @else if (!report) {
-        <header class="sg-evo-ai__empty-head">
-          <div class="sg-evo-ai__badges">
-            <sg-neon-badge tone="gold">Coach IA</sg-neon-badge>
-            <sg-neon-badge tone="muted">Evolución semanal</sg-neon-badge>
-          </div>
-          <h2 class="sg-evo-ai__title">{{ title }}</h2>
-          @if (subtitle) {
-            <p class="sg-evo-ai__subtitle u-m-0">{{ subtitle }}</p>
-          }
-        </header>
+      } @else if (!displayReport) {
         <div class="sg-evo-ai__state">
           <div>
             <p class="sg-evo-ai__state-title u-m-0">Todavía no hay informe esta semana</p>
@@ -51,96 +48,95 @@ type MarkdownBlock =
               Generá un análisis IA de tu evolución táctica y lo guardamos en tu historial.
             </p>
           </div>
-          <button type="button" class="sg-evo-ai__btn" (click)="generate.emit()">
+          <button type="button" class="u-btn u-btn--gold u-btn--sm" (click)="generate.emit()">
             Generar informe con IA
           </button>
         </div>
-      } @else if (report.status === 'pending') {
-        <header class="sg-evo-ai__empty-head">
-          <div class="sg-evo-ai__badges">
-            <sg-neon-badge tone="gold">Coach IA</sg-neon-badge>
-            <sg-neon-badge tone="gold">Generando</sg-neon-badge>
-          </div>
-          <h2 class="sg-evo-ai__title">{{ title }}</h2>
-        </header>
+      } @else if (isHardPending) {
         <div class="sg-evo-ai__state sg-evo-ai__state--loading">
           <span class="sg-evo-ai__pulse" aria-hidden="true"></span>
           <div>
-            <p class="sg-evo-ai__state-title u-m-0">{{ report.headline || 'Analizando tu semana…' }}</p>
+            <p class="sg-evo-ai__state-title u-m-0">
+              {{ report?.headline || 'Analizando tu semana…' }}
+            </p>
             <p class="sg-evo-ai__state-body u-m-0">
-              {{ report.summary || 'Bedrock está armando el informe con tus tendencias.' }}
+              {{ report?.summary || 'Bedrock está armando el informe con tus tendencias.' }}
             </p>
             <p class="sg-evo-ai__state-hint u-m-0">Se actualiza solo cuando termina.</p>
           </div>
         </div>
-      } @else if (report.status === 'failed') {
-        <header class="sg-evo-ai__empty-head">
-          <div class="sg-evo-ai__badges">
-            <sg-neon-badge tone="gold">Coach IA</sg-neon-badge>
-            <sg-neon-badge tone="muted">Falló</sg-neon-badge>
-          </div>
-          <h2 class="sg-evo-ai__title">{{ title }}</h2>
-        </header>
+      } @else if (isHardFailed) {
         <div class="sg-evo-ai__state sg-evo-ai__state--failed">
           <div>
             <p class="sg-evo-ai__state-title u-m-0">No se pudo generar el informe</p>
             <p class="sg-evo-ai__state-body u-m-0">
-              {{ report.summary || 'Hubo un error al procesar el análisis. Probá de nuevo.' }}
+              {{ report?.summary || 'Hubo un error al procesar el análisis. Probá de nuevo.' }}
             </p>
           </div>
-          <button type="button" class="sg-evo-ai__btn" (click)="regenerate.emit()">
+          <button type="button" class="u-btn u-btn--gold u-btn--sm" (click)="regenerate.emit()">
             Reintentar
           </button>
         </div>
       } @else {
-        <header class="sg-evo-ai__hero">
-          <div
-            class="sg-evo-ai__score"
-            [class.sg-evo-ai__score--up]="report.verdict === 'ascending'"
-            [class.sg-evo-ai__score--down]="report.verdict === 'declining'"
-            [class.sg-evo-ai__score--volatile]="report.verdict === 'volatile'"
-            [class.sg-evo-ai__score--stable]="report.verdict === 'stable' || !report.verdict"
-            [attr.aria-label]="'Nota ' + report.gradeLabel + ', score ' + report.performanceScore"
-          >
-            <div class="sg-evo-ai__score-ring" [style.--score]="report.performanceScore">
-              <span class="sg-evo-ai__score-grade">{{ report.gradeLabel }}</span>
-              <span class="sg-evo-ai__score-value">{{ report.performanceScore }}<small>/100</small></span>
-            </div>
-            <span class="sg-evo-ai__score-verdict">{{ verdictLabel(report.verdict) }}</span>
+        @if (displayReport; as view) {
+        @if (showUpdatingBanner) {
+          <div class="sg-evo-ai__live-banner" role="status">
+            <span class="sg-evo-ai__pulse sg-evo-ai__pulse--sm" aria-hidden="true"></span>
+            <p class="u-m-0">Actualizando informe… seguís viendo la última versión lista.</p>
           </div>
+        } @else if (showFailedBanner) {
+          <div class="sg-evo-ai__live-banner sg-evo-ai__live-banner--warn" role="status">
+            <p class="u-m-0">
+              No se pudo regenerar. Mostramos el último informe listo.
+              <button type="button" class="sg-evo-ai__inline-btn" (click)="regenerate.emit()">
+                Reintentar
+              </button>
+            </p>
+          </div>
+        }
 
-          <div class="sg-evo-ai__hero-copy">
-            <div class="sg-evo-ai__badges">
-              <sg-neon-badge tone="gold">Coach IA</sg-neon-badge>
-              <sg-neon-badge tone="muted">Evolución semanal</sg-neon-badge>
-              <sg-neon-badge tone="gold">Listo</sg-neon-badge>
+        <header class="sg-evo-ai__header">
+          <div class="sg-evo-ai__heading">
+            <h3 class="sg-evo-ai__title">{{ view.headline }}</h3>
+            <p class="sg-evo-ai__lead u-m-0">{{ view.summary }}</p>
+          </div>
+          <div class="sg-evo-ai__meta">
+            <div
+              class="sg-evo-ai__score"
+              [class.sg-evo-ai__score--up]="view.verdict === 'ascending'"
+              [class.sg-evo-ai__score--down]="view.verdict === 'declining'"
+              [class.sg-evo-ai__score--volatile]="view.verdict === 'volatile'"
+              [class.sg-evo-ai__score--stable]="view.verdict === 'stable' || !view.verdict"
+              [attr.aria-label]="'Nota ' + view.gradeLabel + ', score ' + view.performanceScore"
+            >
+              <div class="sg-evo-ai__score-ring" [style.--score]="view.performanceScore">
+                <span class="sg-evo-ai__score-grade">{{ view.gradeLabel }}</span>
+                <span class="sg-evo-ai__score-value">{{ view.performanceScore }}<small>/100</small></span>
+              </div>
+              <span class="sg-evo-ai__score-verdict">{{ verdictLabel(view.verdict) }}</span>
             </div>
-            <h2 class="sg-evo-ai__headline">{{ report.headline }}</h2>
-            <p class="sg-evo-ai__summary u-m-0">{{ report.summary }}</p>
-            @if (subtitle) {
-              <p class="sg-evo-ai__meta u-m-0">{{ subtitle }}</p>
-            }
+            <sg-neon-badge tone="gold">{{ showUpdatingBanner ? 'Actualizando' : 'Listo' }}</sg-neon-badge>
           </div>
         </header>
 
         <div class="sg-evo-ai__body">
-          @if (report.pros.length || report.cons.length) {
+          @if (view.pros.length || view.cons.length) {
             <div class="sg-evo-ai__split">
-              @if (report.pros.length) {
+              @if (view.pros.length) {
                 <article class="sg-evo-ai__card sg-evo-ai__card--pro">
                   <h3 class="sg-evo-ai__card-title">Fortalezas</h3>
                   <ul class="sg-evo-ai__card-list">
-                    @for (item of report.pros; track item) {
+                    @for (item of view.pros; track item) {
                       <li>{{ item }}</li>
                     }
                   </ul>
                 </article>
               }
-              @if (report.cons.length) {
+              @if (view.cons.length) {
                 <article class="sg-evo-ai__card sg-evo-ai__card--con">
                   <h3 class="sg-evo-ai__card-title">Riesgos</h3>
                   <ul class="sg-evo-ai__card-list">
-                    @for (item of report.cons; track item) {
+                    @for (item of view.cons; track item) {
                       <li>{{ item }}</li>
                     }
                   </ul>
@@ -149,17 +145,26 @@ type MarkdownBlock =
             </div>
           }
 
-          @if (report.actionPlan.length) {
+          @if (focusActions.length) {
             <article class="sg-evo-ai__plan">
               <div class="sg-evo-ai__plan-head">
                 <h3 class="sg-evo-ai__card-title sg-evo-ai__card-title--plan">Plan de foco</h3>
-                <span class="sg-evo-ai__plan-count">{{ report.actionPlan.length }} pasos</span>
+                <span class="sg-evo-ai__plan-count">{{ focusActions.length }} acciones</span>
               </div>
               <ol class="sg-evo-ai__plan-list">
-                @for (step of report.actionPlan; track step; let i = $index) {
+                @for (action of focusActions; track action.text; let i = $index) {
                   <li>
                     <span class="sg-evo-ai__step-num">{{ i + 1 }}</span>
-                    <span class="sg-evo-ai__step-text">{{ step }}</span>
+                    <div class="sg-evo-ai__step-body">
+                      <span class="sg-evo-ai__step-text">{{ action.text }}</span>
+                      <a
+                        [routerLink]="action.route"
+                        [queryParams]="action.queryParams ?? null"
+                        class="sg-evo-ai__step-link"
+                      >
+                        {{ action.cta }} →
+                      </a>
+                    </div>
                   </li>
                 }
               </ol>
@@ -200,31 +205,82 @@ type MarkdownBlock =
 
           <footer class="sg-evo-ai__footer">
             <p class="sg-evo-ai__footer-note u-m-0">
-              Persistido · {{ formatDate(report.createdAt) }}
+              Persistido · {{ formatDate(view.createdAt) }}
             </p>
-            <button
-              type="button"
-              class="sg-evo-ai__btn sg-evo-ai__btn--ghost"
-              (click)="regenerate.emit()"
-            >
-              Regenerar informe
-            </button>
+            <div class="sg-evo-ai__footer-actions">
+              <button
+                type="button"
+                class="u-btn u-btn--ghost-gold u-btn--sm"
+                (click)="onCopyMarkdown()"
+              >
+                {{ exportHint || 'Copiar MD' }}
+              </button>
+              <button
+                type="button"
+                class="u-btn u-btn--ghost-gold u-btn--sm"
+                (click)="onDownloadMarkdown()"
+              >
+                Descargar MD
+              </button>
+            </div>
           </footer>
         </div>
+        }
       }
-    </section>
+    </article>
   `,
 })
 export class EvolutionAiReportPanelComponent {
   @Input() title = 'Informe de evolución';
   @Input() subtitle = '';
   @Input() report: EvolutionAiReportView | null = null;
+  /** Último informe ready a mostrar mientras regenera / falla. */
+  @Input() staleReady: EvolutionAiReportView | null = null;
+  @Input() regenerating = false;
   @Input() loading = false;
   @Output() readonly generate = new EventEmitter<void>();
   @Output() readonly regenerate = new EventEmitter<void>();
 
+  exportHint = '';
+
+  get displayReport(): EvolutionAiReportView | null {
+    if (this.report?.status === 'ready') return this.report;
+    if (this.staleReady?.status === 'ready') return this.staleReady;
+    return this.report;
+  }
+
+  get showUpdatingBanner(): boolean {
+    return (
+      Boolean(this.staleReady?.status === 'ready') &&
+      (this.regenerating || this.report?.status === 'pending')
+    );
+  }
+
+  get showFailedBanner(): boolean {
+    return this.report?.status === 'failed' && this.staleReady?.status === 'ready';
+  }
+
+  get isHardPending(): boolean {
+    return (
+      (this.report?.status === 'pending' || this.regenerating) &&
+      this.staleReady?.status !== 'ready'
+    );
+  }
+
+  get isHardFailed(): boolean {
+    return this.report?.status === 'failed' && this.staleReady?.status !== 'ready';
+  }
+
+  get focusActions(): FocusAction[] {
+    const plan = this.displayReport?.actionPlan ?? [];
+    return plan
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((text, index) => ({ text, ...this.resolveFocusLink(text, index) }));
+  }
+
   get markdownSections(): Array<{ title: string; blocks: MarkdownBlock[] }> {
-    const markdown = this.report?.markdown?.trim();
+    const markdown = this.displayReport?.markdown?.trim();
     if (!markdown) return [];
     const chunks = markdown.split(/^##\s+/m).slice(1);
     return chunks
@@ -234,6 +290,84 @@ export class EvolutionAiReportPanelComponent {
         return { title, blocks: this.parseBlocks(lines.slice(1)) };
       })
       .filter((s) => s.title && s.blocks.length);
+  }
+
+  async onCopyMarkdown(): Promise<void> {
+    const md = this.buildExportMarkdown();
+    if (!md) return;
+    const ok = await copyToClipboard(md);
+    this.exportHint = ok ? 'Copiado' : 'Error';
+    setTimeout(() => {
+      this.exportHint = '';
+    }, 1600);
+  }
+
+  onDownloadMarkdown(): void {
+    const md = this.buildExportMarkdown();
+    if (!md) return;
+    const period = this.displayReport?.periodId ?? 'semana';
+    downloadTextFile(`evolucion-${period}.md`, md, 'text/markdown');
+  }
+
+  private buildExportMarkdown(): string {
+    const view = this.displayReport;
+    if (!view) return '';
+    if (view.markdown?.trim()) {
+      return `# ${view.headline}\n\n${view.summary}\n\n${view.markdown.trim()}\n`;
+    }
+    const pros = view.pros.map((p) => `- ${p}`).join('\n');
+    const cons = view.cons.map((c) => `- ${c}`).join('\n');
+    const plan = view.actionPlan.map((a, i) => `${i + 1}. ${a}`).join('\n');
+    return [
+      `# ${view.headline}`,
+      '',
+      view.summary,
+      '',
+      '## Fortalezas',
+      pros || '- —',
+      '',
+      '## Riesgos',
+      cons || '- —',
+      '',
+      '## Plan de foco',
+      plan || '1. —',
+      '',
+    ].join('\n');
+  }
+
+  private resolveFocusLink(
+    step: string,
+    index: number,
+  ): { route: string; queryParams?: Record<string, string>; cta: string } {
+    const t = step.toLowerCase();
+    if (/coach|entren|hábit|habit|mental|tilt/.test(t) && index > 0) {
+      return { route: '/tabs/ai-coach', cta: 'Abrir Coach' };
+    }
+
+    let topic = 'form';
+    if (/muerte|death|die|dying/.test(t)) topic = 'deaths';
+    else if (/visi[oó]n|ward|vision/.test(t)) topic = 'vision';
+    else if (/\bcs\b|farm|cs\/|minions/.test(t)) topic = 'cs';
+    else if (/kda|kill|agres/.test(t)) topic = 'kda';
+    else if (/derrota|loss|lose|perdid/.test(t)) {
+      return {
+        route: '/tabs/matches',
+        queryParams: { topic: 'losses', result: 'losses', date: '7d' },
+        cta: 'Ver derrotas',
+      };
+    } else if (/victoria|win|clutch/.test(t)) {
+      return {
+        route: '/tabs/matches',
+        queryParams: { topic: 'wins', result: 'wins', date: '7d' },
+        cta: 'Ver victorias',
+      };
+    }
+
+    return {
+      route: '/tabs/matches',
+      queryParams: { topic, date: '7d', sort: topic === 'deaths' ? 'kills' : 'newest' },
+      cta: 'Revisar en Partidas',
+    };
   }
 
   cleanSectionTitle(title: string): string {

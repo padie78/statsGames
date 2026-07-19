@@ -1,18 +1,26 @@
 import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
-import { lolMatchesBannerSplashUrl } from '../../core/game/lol-ddragon.util';
+import {
+  lolBannerSplashFallbackUrl,
+  lolMatchesBannerSplashUrl,
+} from '../../core/game/lol-ddragon.util';
 import type { SelectedGame } from '../../core/game/selected-game';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
+import { MatchNotificationsStore } from '../../stores/match-notifications.store';
 import {
   MatchFiltersToolbarComponent,
   MatchHighlightCardComponent,
   MatchHistoryListComponent,
+  MatchPreviewModalComponent,
   WeekHeroBrandComponent,
+  sgFadeSlideIn,
   type MatchDateFilter,
+  type MatchHistoryListItem,
   type MatchResultFilter,
 } from '../../ui';
 import {
@@ -25,6 +33,7 @@ import {
   type MatchSortKey,
 } from '../../utils/match-stats.util';
 import { aggregatePlatformMatchStats } from '../../utils/platform-stats.util';
+import { resolveLolRegionLabel } from '../../utils/lol-region.util';
 import { resolveMatchHistory } from '../../data/match-mock.data';
 
 @Component({
@@ -35,12 +44,20 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
     IonContent,
     IonRefresher,
     IonRefresherContent,
+    RouterLink,
     MatchFiltersToolbarComponent,
     MatchHighlightCardComponent,
     MatchHistoryListComponent,
+    MatchPreviewModalComponent,
     WeekHeroBrandComponent,
   ],
+  animations: [sgFadeSlideIn],
   template: `
+    <sg-match-preview-modal
+      [matchId]="previewMatchId()"
+      (closed)="closeMatchPreview()"
+    />
+
     <ion-content class="sg-page-content">
       <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
         <ion-refresher-content />
@@ -76,14 +93,61 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
               <h1 class="sg-dashboard__week-title">Partidas</h1>
               <p class="sg-dashboard__week-lede u-m-0">
                 @if (loading()) {
-                  Cargando tu historial filtrable…
+                  Cargando tu historial…
                 } @else if (filteredMatches().length === 0) {
-                  No hay partidas con estos filtros. Ampliá búsqueda o periodo.
+                  Sin resultados con estos filtros. Probá ampliar el periodo.
                 } @else {
-                  Filtrá por resultado, modo y {{ identityLabel().toLowerCase() }}. El análisis
-                  profundo vive en cada match.
+                  Tu historial filtrable por resultado, modo y
+                  {{ identityLabel().toLowerCase() }}. Abrí un match para el análisis completo.
                 }
               </p>
+
+              @if (heroChips().length) {
+                <div class="sg-dashboard__week-chips" aria-label="Región y modo">
+                  @for (chip of heroChips(); track chip.id) {
+                    <span
+                      class="sg-dashboard__week-chip"
+                      [attr.data-tone]="chip.tone"
+                    >{{ chip.label }}</span>
+                  }
+                </div>
+              }
+
+              @if (latestMatch(); as latest) {
+                <div class="sg-dashboard__week-latest">
+                  <div class="sg-dashboard__week-latest-copy">
+                    <span class="sg-dashboard__week-latest-label">Último match</span>
+                    <span
+                      class="sg-dashboard__week-latest-title"
+                      [class.sg-dashboard__week-latest-title--win]="latest.won"
+                      [class.sg-dashboard__week-latest-title--loss]="!latest.won"
+                    >{{ latest.headline }}</span>
+                    <span class="sg-dashboard__week-latest-time">{{ latest.relativeTime }}</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="u-btn u-btn--gold sg-dashboard__week-cta"
+                    (click)="openMatchPreview(latest)"
+                  >
+                    Ver análisis
+                  </button>
+                </div>
+              } @else if (!loading()) {
+                <div class="sg-dashboard__week-latest sg-dashboard__week-latest--empty">
+                  <div class="sg-dashboard__week-latest-copy">
+                    <span class="sg-dashboard__week-latest-label">Sin partidas</span>
+                    <span class="sg-dashboard__week-latest-title">
+                      Conectá tu cuenta para sincronizar el historial
+                    </span>
+                  </div>
+                  <a
+                    routerLink="/tabs/integrations"
+                    class="u-btn u-btn--gold sg-dashboard__week-cta"
+                  >
+                    Integraciones
+                  </a>
+                </div>
+              }
 
               <div class="sg-dashboard__week-kpis" aria-label="KPIs del filtro">
                 <div class="sg-dashboard__week-kpi">
@@ -107,31 +171,50 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
           </div>
         </section>
 
-        <div class="sg-matches__body page-shell page-shell--fluid u-flex u-flex-col u-gap-6">
-          <sg-match-filters-toolbar
-            [dateRange]="dateFilter()"
-            [result]="resultFilter()"
-            [sort]="sortKey()"
-            [query]="searchQuery()"
-            [mode]="modeFilter()"
-            [identity]="identityFilter()"
-            [map]="mapFilter()"
-            [modeOptions]="modeOptions()"
-            [identityOptions]="identityOptions()"
-            [mapOptions]="mapOptions()"
-            [identityLabel]="identityLabel()"
-            [resultCount]="filteredMatches().length"
-            [usingMockData]="usingMockData()"
-            [hasActiveFilters]="hasActiveFilters()"
-            (dateRangeChange)="setDateFilter($event)"
-            (resultChange)="setResultFilter($event)"
-            (sortChange)="setSortKey($event)"
-            (queryChange)="setSearchQuery($event)"
-            (modeChange)="setModeFilter($event)"
-            (identityChange)="setIdentityFilter($event)"
-            (mapChange)="setMapFilter($event)"
-            (clearFilters)="clearFilters()"
-          />
+        <div class="sg-matches__body page-shell page-shell--fluid">
+          <section class="sg-dashboard__block" aria-labelledby="matches-filters">
+            <div class="sg-dashboard__block-head">
+              <div>
+                <h2 id="matches-filters" class="sg-dashboard__block-title">Filtros</h2>
+                <p class="sg-dashboard__block-desc">
+                  Período, resultado y búsqueda sobre tu historial.
+                </p>
+              </div>
+              @if (hasActiveFilters()) {
+                <button
+                  type="button"
+                  class="sg-dashboard__block-link"
+                  (click)="clearFilters()"
+                >
+                  Limpiar →
+                </button>
+              }
+            </div>
+            <sg-match-filters-toolbar
+              [dateRange]="dateFilter()"
+              [result]="resultFilter()"
+              [sort]="sortKey()"
+              [query]="searchQuery()"
+              [mode]="modeFilter()"
+              [identity]="identityFilter()"
+              [map]="mapFilter()"
+              [modeOptions]="modeOptions()"
+              [identityOptions]="identityOptions()"
+              [mapOptions]="mapOptions()"
+              [identityLabel]="identityLabel()"
+              [resultCount]="filteredMatches().length"
+              [usingMockData]="usingMockData()"
+              [hasActiveFilters]="hasActiveFilters()"
+              (dateRangeChange)="setDateFilter($event)"
+              (resultChange)="setResultFilter($event)"
+              (sortChange)="setSortKey($event)"
+              (queryChange)="setSearchQuery($event)"
+              (modeChange)="setModeFilter($event)"
+              (identityChange)="setIdentityFilter($event)"
+              (mapChange)="setMapFilter($event)"
+              (clearFilters)="clearFilters()"
+            />
+          </section>
 
           @if (error()) {
             <p class="u-error">{{ error() }}</p>
@@ -151,7 +234,7 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
             </div>
           } @else if (filteredMatches().length > 0) {
             @if (highlightMatch(); as match) {
-              <section class="sg-dashboard__block" aria-labelledby="matches-highlight">
+              <section class="sg-dashboard__block" aria-labelledby="matches-highlight" @sgFadeSlideIn>
                 <div class="sg-dashboard__block-head">
                   <div>
                     <h2 id="matches-highlight" class="sg-dashboard__block-title">
@@ -170,31 +253,50 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
                   [stats]="match.stats"
                   [showHistoryLink]="false"
                   [compact]="true"
+                  [fresh]="isFreshMatch(match.matchId)"
+                  openMode="event"
+                  (openMatch)="openMatchPreview(match)"
                 />
               </section>
             }
 
-            <section class="sg-dashboard__block" aria-labelledby="matches-history">
+            <section class="sg-dashboard__block" aria-labelledby="matches-history" @sgFadeSlideIn>
               <div class="sg-dashboard__block-head">
                 <div>
                   <h2 id="matches-history" class="sg-dashboard__block-title">Historial</h2>
                   <p class="sg-dashboard__block-desc">
-                    Agrupado por día. Abrí una partida para el análisis.
+                    Agrupado por día. Tocá una partida para ver el resumen.
                   </p>
                 </div>
               </div>
               <sg-match-history-list
                 [groups]="groupedMatches()"
                 emptyMessage="No hay partidas con estos filtros."
+                openMode="event"
+                (matchSelect)="openMatchPreview($event)"
               />
             </section>
           } @else {
-            <section class="sg-match-history__empty u-surface-card u-p-5">
-              <h2 class="sg-page-header__title u-text-md u-mb-2">Sin partidas</h2>
-              <p class="u-hint u-m-0">
-                No hay resultados con los filtros actuales. Probá ampliar la búsqueda o conectá tu
-                cuenta en Integraciones.
-              </p>
+            <section class="sg-dashboard__block" aria-labelledby="matches-empty" @sgFadeSlideIn>
+              <div class="sg-dashboard__block-head">
+                <div>
+                  <h2 id="matches-empty" class="sg-dashboard__block-title">Historial</h2>
+                  <p class="sg-dashboard__block-desc">
+                    Sin resultados con los filtros actuales.
+                  </p>
+                </div>
+              </div>
+              <article class="sg-dashboard__empty-card">
+                <div class="sg-dashboard__empty-copy-wrap">
+                  <h3 class="sg-dashboard__empty-title">Sin partidas</h3>
+                  <p class="sg-dashboard__empty-copy u-m-0">
+                    Probá ampliar la búsqueda o conectá tu cuenta en Integraciones.
+                  </p>
+                </div>
+                <div class="sg-dashboard__empty-actions">
+                  <a routerLink="/tabs/integrations" class="u-btn u-btn--gold">Ir a Integraciones</a>
+                </div>
+              </article>
             </section>
           }
         </div>
@@ -207,6 +309,9 @@ export class MatchesPageComponent implements OnInit {
   private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
   private readonly realtime = inject(AppSyncRealtimeService);
+  private readonly notifications = inject(MatchNotificationsStore);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly allMatches = signal<MatchUpdateView[]>([]);
   readonly dateFilter = signal<MatchDateFilter>('all');
@@ -216,8 +321,11 @@ export class MatchesPageComponent implements OnInit {
   readonly modeFilter = signal('all');
   readonly identityFilter = signal('all');
   readonly mapFilter = signal('all');
+  /** Foco desde Evolución: deaths | vision | cs | kda | form | wins | losses */
+  readonly topicFilter = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+  readonly previewMatchId = signal<string | null>(null);
   private readonly heroArtFailed = signal(false);
 
   readonly bannerPlatform = computed(
@@ -229,11 +337,14 @@ export class MatchesPageComponent implements OnInit {
   /** Arte distinto a Inicio: pool cinematic de Partidas para LoL. */
   readonly heroArtSrc = computed(() => {
     const meta = this.platformMeta();
+    const seed = (this.auth.userId() ?? 'lol-matches').length + 11;
     if (this.heroArtFailed()) {
+      if (this.bannerPlatform() === 'league_of_legends') {
+        return lolBannerSplashFallbackUrl(seed, 'matches');
+      }
       return meta.portraitFallbackUrl || meta.artUrl;
     }
     if (this.bannerPlatform() === 'league_of_legends') {
-      const seed = (this.auth.userId() ?? 'lol-matches').length + 11;
       return lolMatchesBannerSplashUrl(seed);
     }
     return meta.portraitUrl || meta.artUrl;
@@ -299,7 +410,8 @@ export class MatchesPageComponent implements OnInit {
       this.modeFilter() !== 'all' ||
       this.identityFilter() !== 'all' ||
       this.mapFilter() !== 'all' ||
-      this.sortKey() !== 'newest',
+      this.sortKey() !== 'newest' ||
+      Boolean(this.topicFilter()),
   );
 
   readonly filteredMatches = computed(() => {
@@ -342,6 +454,28 @@ export class MatchesPageComponent implements OnInit {
       rows = rows.filter((m) => this.matchSearchHaystack(m).includes(query));
     }
 
+    const topic = this.topicFilter();
+    if (topic === 'deaths') {
+      rows = [...rows].sort((a, b) => (b.stats?.deaths ?? 0) - (a.stats?.deaths ?? 0));
+    } else if (topic === 'vision') {
+      rows = [...rows].sort(
+        (a, b) => (b.stats?.visionScore ?? 0) - (a.stats?.visionScore ?? 0),
+      );
+    } else if (topic === 'cs') {
+      rows = [...rows].sort((a, b) => (b.stats?.cs ?? 0) - (a.stats?.cs ?? 0));
+    } else if (topic === 'kda') {
+      rows = [...rows].sort((a, b) => {
+        const kdaA =
+          ((a.stats?.kills ?? 0) + (a.stats?.assists ?? 0)) / Math.max(a.stats?.deaths ?? 0, 1);
+        const kdaB =
+          ((b.stats?.kills ?? 0) + (b.stats?.assists ?? 0)) / Math.max(b.stats?.deaths ?? 0, 1);
+        return kdaA - kdaB;
+      });
+    }
+
+    if (topic === 'deaths' || topic === 'vision' || topic === 'cs' || topic === 'kda') {
+      return rows;
+    }
     return sortMatches(rows, this.sortKey());
   });
 
@@ -354,6 +488,62 @@ export class MatchesPageComponent implements OnInit {
       wins: summary.winCount,
       matches: summary.matchCount,
     };
+  });
+
+  /** Última partida del juego activo (sin filtros de historial). */
+  readonly latestMatch = computed(() => {
+    const rows = sortMatches(this.platformScopedMatches(), 'newest');
+    const match = rows[0];
+    if (!match) return null;
+
+    const won = isMatchWin(match.stats);
+    const identity = (
+      match.stats?.champion ||
+      match.stats?.agent ||
+      match.stats?.role ||
+      ''
+    ).trim();
+    const mode = (match.stats?.mode ?? '').trim();
+    const parts = [won ? 'Win' : 'Loss'];
+    if (identity) parts.push(identity);
+    if (mode) parts.push(mode);
+
+    return {
+      matchId: match.matchId,
+      won,
+      mode,
+      headline: parts.join(' · '),
+      relativeTime: formatMatchRelativeTime(match.updatedAt),
+    };
+  });
+
+  readonly heroChips = computed(() => {
+    const chips: Array<{ id: string; label: string; tone: 'region' | 'mode' | 'game' }> = [];
+    const platform = this.bannerPlatform();
+
+    if (platform === 'league_of_legends') {
+      chips.push({
+        id: 'region',
+        label: resolveLolRegionLabel(),
+        tone: 'region',
+      });
+    } else {
+      chips.push({
+        id: 'game',
+        label: this.platformMeta().shortLabel,
+        tone: 'game',
+      });
+    }
+
+    const mode =
+      this.modeFilter() !== 'all'
+        ? this.modeFilter()
+        : (this.latestMatch()?.mode ?? '');
+    if (mode) {
+      chips.push({ id: `mode-${mode}`, label: mode, tone: 'mode' });
+    }
+
+    return chips;
   });
 
   readonly highlightMatch = computed(() => {
@@ -374,13 +564,16 @@ export class MatchesPageComponent implements OnInit {
       matchId: best.matchId,
       platform: best.platform,
       summary: best.summary,
+      updatedAt: best.updatedAt,
       relativeTime: formatMatchRelativeTime(best.updatedAt),
       stats: toMatchCardStats(best.stats),
     };
   });
 
-  readonly groupedMatches = computed(() =>
-    groupMatchesByDay(this.filteredMatches()).map((group) => ({
+  readonly groupedMatches = computed(() => {
+    const newestId = this.notifications.newestMatchId();
+    const liveIds = new Set(this.realtime.liveMatches().map((m) => m.matchId));
+    return groupMatchesByDay(this.filteredMatches()).map((group) => ({
       ...group,
       items: group.matches.map((match) => ({
         matchId: match.matchId,
@@ -389,9 +582,15 @@ export class MatchesPageComponent implements OnInit {
         updatedAt: match.updatedAt,
         relativeTime: formatMatchRelativeTime(match.updatedAt),
         stats: toMatchCardStats(match.stats),
+        live: liveIds.has(match.matchId) && newestId === match.matchId,
+        fresh: newestId === match.matchId,
       })),
-    })),
-  );
+    }));
+  });
+
+  isFreshMatch(matchId: string): boolean {
+    return this.notifications.isFreshMatch(matchId);
+  }
 
   constructor() {
     effect(
@@ -430,11 +629,42 @@ export class MatchesPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.applyQueryParams(this.route.snapshot.queryParamMap);
+    this.route.queryParamMap.subscribe((params) => this.applyQueryParams(params));
     void this.loadMatches();
+  }
+
+  private applyQueryParams(params: ParamMap): void {
+    const date = params.get('date');
+    if (date === '7d' || date === '30d' || date === 'all') this.dateFilter.set(date);
+
+    const result = params.get('result');
+    if (result === 'wins' || result === 'losses' || result === 'all') {
+      this.resultFilter.set(result);
+    }
+
+    const sort = params.get('sort');
+    if (sort === 'newest' || sort === 'oldest' || sort === 'placement' || sort === 'kills') {
+      this.sortKey.set(sort);
+    }
+
+    const q = params.get('q');
+    if (q != null) this.searchQuery.set(q);
+
+    const topic = params.get('topic');
+    this.topicFilter.set(topic?.trim() || null);
   }
 
   onHeroArtError(): void {
     this.heroArtFailed.set(true);
+  }
+
+  openMatchPreview(match: { matchId: string } | MatchHistoryListItem): void {
+    this.previewMatchId.set(match.matchId);
+  }
+
+  closeMatchPreview(): void {
+    this.previewMatchId.set(null);
   }
 
   setDateFilter(value: MatchDateFilter): void {
@@ -470,7 +700,13 @@ export class MatchesPageComponent implements OnInit {
     this.resultFilter.set('all');
     this.sortKey.set('newest');
     this.searchQuery.set('');
+    this.topicFilter.set(null);
     this.resetDetailFilters();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {},
+      replaceUrl: true,
+    });
   }
 
   async refresh(event: CustomEvent): Promise<void> {

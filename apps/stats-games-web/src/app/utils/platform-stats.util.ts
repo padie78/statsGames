@@ -398,17 +398,72 @@ export function buildMatchCardStatCells(
       return cells;
     }
     case 'league_of_legends': {
+      const durationSec =
+        stats.durationSec != null && stats.durationSec > 0 ? stats.durationSec : null;
+      const durationMin = durationSec != null ? durationSec / 60 : null;
+      const formatGold = (gold: number): string =>
+        gold >= 1000
+          ? `${(gold / 1000).toFixed(1).replace(/\.0$/, '')}k`
+          : String(gold);
+      const formatDuration = (sec: number): string => {
+        const m = Math.floor(sec / 60);
+        const s = Math.round(sec % 60);
+        return `${m}:${String(s).padStart(2, '0')}`;
+      };
+
+      if (!detailed) {
+        return [
+          { label: 'K/D/A', value: `${kills ?? 0}/${deaths ?? 0}/${assists ?? 0}`, accent: 'lime' },
+          { label: 'CS', value: stats.cs ?? '—', accent: 'cyan' },
+          { label: 'Visión', value: stats.visionScore ?? '—' },
+        ];
+      }
+
+      // Panel: KPIs de rendimiento (no repetir campeón/KDA ratio — ya van en título).
       const cells: MatchCardStatCell[] = [
         { label: 'K/D/A', value: `${kills ?? 0}/${deaths ?? 0}/${assists ?? 0}`, accent: 'lime' },
         { label: 'CS', value: stats.cs ?? '—', accent: 'cyan' },
-        { label: 'Visión', value: stats.visionScore ?? '—' },
       ];
-      if (detailed) {
-        cells.push(
-          { label: 'Campeón', value: stats.champion ?? stats.agent ?? '—' },
-          { label: 'Rol', value: stats.role ?? '—' },
-          { label: 'KDA', value: kda, accent: 'purple' },
-        );
+      if (durationMin != null && stats.cs != null) {
+        cells.push({
+          label: 'CS/min',
+          value: (stats.cs / durationMin).toFixed(1),
+          accent: 'cyan',
+        });
+      }
+      if (stats.goldEarned != null) {
+        cells.push({
+          label: 'Oro',
+          value: formatGold(stats.goldEarned),
+          accent: 'cyan',
+        });
+      }
+      if (durationMin != null && stats.goldEarned != null) {
+        cells.push({
+          label: 'Oro/min',
+          value: String(Math.round(stats.goldEarned / durationMin)),
+        });
+      }
+      cells.push({ label: 'Visión', value: stats.visionScore ?? '—' });
+      if (durationSec != null) {
+        cells.push({ label: 'Duración', value: formatDuration(durationSec) });
+      }
+      if (
+        stats.teamDragons != null ||
+        stats.teamBarons != null ||
+        stats.teamTowers != null
+      ) {
+        cells.push({
+          label: 'Dr/Bar/Tor',
+          value: `${stats.teamDragons ?? 0}/${stats.teamBarons ?? 0}/${stats.teamTowers ?? 0}`,
+          accent: 'purple',
+        });
+      }
+      if (stats.champLevel != null) {
+        cells.push({ label: 'Nivel', value: stats.champLevel });
+      }
+      if (stats.role) {
+        cells.push({ label: 'Rol', value: stats.role });
       }
       return cells;
     }

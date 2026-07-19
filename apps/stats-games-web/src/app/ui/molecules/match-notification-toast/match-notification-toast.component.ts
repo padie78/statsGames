@@ -1,23 +1,28 @@
 import { Component, ViewEncapsulation, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 import { MatchNotificationsStore } from '../../../stores/match-notifications.store';
 import { matchDetailRoute } from '../../../utils/match-analysis.util';
+import { sgToastPop } from '../../animations/sg-motion';
+import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 @Component({
   standalone: true,
   selector: 'sg-match-notification-toast',
   encapsulation: ViewEncapsulation.None,
   imports: [NeonBadgeComponent],
+  animations: [sgToastPop],
   template: `
     @if (store.toast(); as toast) {
       <aside
         class="sg-notify-toast"
         [class.sg-notify-toast--pending]="toast.aiStatus === 'pending'"
         [class.sg-notify-toast--ready]="toast.aiStatus === 'ready'"
+        [attr.data-arrival]="store.arrivalTick()"
+        @sgToastPop
         role="status"
         aria-live="polite"
       >
+        <span class="sg-notify-toast__ring" aria-hidden="true"></span>
         <div class="sg-notify-toast__body">
           <div class="sg-notify-toast__badges">
             <sg-neon-badge [tone]="toast.platform.toLowerCase() === 'roblox' ? 'purple' : 'cyan'">

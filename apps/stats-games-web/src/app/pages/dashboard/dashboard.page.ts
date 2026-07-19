@@ -28,6 +28,7 @@ import {
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchAiService, type MatchAiReportView } from '../../services/match-ai.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
+import { MatchNotificationsStore } from '../../stores/match-notifications.store';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
 import {
   StatsService,
@@ -40,14 +41,15 @@ import {
   MatchHighlightCardComponent,
   TrackStartPanelComponent,
   WeekHeroBrandComponent,
-  WeekHeroSearchComponent,
   WeeklyHomeSummaryComponent,
+  sgFadeSlideIn,
 } from '../../ui';
 import { matchDetailRoute } from '../../utils/match-analysis.util';
 import {
   aggregateMatchStats,
   computeKdRatio,
   filterMatchesWithinDays,
+  mergeMatchUpdates,
   toMatchCardStats,
 } from '../../utils/match-stats.util';
 import { formatCommunitySampleSize, mapCommunityBenchmarksFromApi } from '../../utils/community-stats.util';
@@ -68,9 +70,9 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     MatchHighlightCardComponent,
     CommunityRankTableComponent,
     WeekHeroBrandComponent,
-    WeekHeroSearchComponent,
     WeeklyHomeSummaryComponent,
   ],
+  animations: [sgFadeSlideIn],
   template: `
     <ion-content class="sg-page-content">
       <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
@@ -135,8 +137,6 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 }
               </p>
 
-              <sg-week-hero-search [platform]="heroPlatform()" />
-
               <div class="sg-dashboard__week-kpis" aria-label="KPIs de la semana">
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">{{ weekSummary().winRate }}</span>
@@ -161,17 +161,26 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
         <div class="sg-dashboard__body">
           <section class="sg-dashboard__block" aria-labelledby="dash-section-analysis">
-            @if (needsTrackingSetup()) {
-              <div class="sg-dashboard__block-head">
-                <div>
-                  <h2 id="dash-section-analysis" class="sg-dashboard__block-title">
-                    Análisis semanal
-                  </h2>
-                  <p class="sg-dashboard__block-desc">
+            <div class="sg-dashboard__block-head">
+              <div>
+                <h2 id="dash-section-analysis" class="sg-dashboard__block-title">
+                  Análisis semanal
+                </h2>
+                <p class="sg-dashboard__block-desc">
+                  @if (needsTrackingSetup()) {
                     Vinculá tu cuenta para ver cómo venís esta semana.
-                  </p>
-                </div>
+                  } @else {
+                    Forma, foco y plan de práctica.
+                  }
+                </p>
               </div>
+              @if (!needsTrackingSetup()) {
+                <a routerLink="/tabs/ai-coach" class="sg-dashboard__block-link">
+                  Ver completo →
+                </a>
+              }
+            </div>
+            @if (needsTrackingSetup()) {
               <sg-track-start-panel [platform]="heroPlatform()" />
             } @else {
               <sg-weekly-home-summary
@@ -191,7 +200,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                     Tu puesto esta semana
                   </h2>
                   <p class="sg-dashboard__block-desc">
-                    Snapshot rápido: quién está justo arriba y abajo tuyo.
+                    Quién está justo arriba y abajo tuyo.
                     @if (communityUsesMock()) {
                       <span class="sg-analytics__badge">preview</span>
                     }
@@ -228,14 +237,14 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
             </section>
           }
 
-          <section class="sg-dashboard__block" aria-labelledby="dash-section-latest">
+          <section class="sg-dashboard__block" aria-labelledby="dash-section-latest" @sgFadeSlideIn>
             <div class="sg-dashboard__block-head">
               <div>
                 <h2 id="dash-section-latest" class="sg-dashboard__block-title">
                   Partida destacada
                 </h2>
                 <p class="sg-dashboard__block-desc">
-                  Tu mejor resultado de la semana. El historial completo está en Partidas.
+                  Tu mejor resultado de la semana.
                 </p>
               </div>
               <a routerLink="/tabs/matches" class="sg-dashboard__block-link">Ver partidas →</a>
@@ -250,6 +259,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 [stats]="match.stats"
                 [showHistoryLink]="false"
                 [compact]="true"
+                [fresh]="notifications.isFreshMatch(match.matchId)"
               />
             } @else {
               <article class="sg-dashboard__empty-card">
@@ -275,6 +285,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 export class DashboardPageComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly realtime = inject(AppSyncRealtimeService);
+  readonly notifications = inject(MatchNotificationsStore);
   private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
   private readonly matchAi = inject(MatchAiService);
@@ -387,6 +398,14 @@ export class DashboardPageComponent implements OnInit {
         this.leaderboardApi.set([]);
         this.communityBenchmarksApi.set(null);
         void this.loadData();
+      },
+      { allowSignalWrites: true },
+    );
+    effect(
+      () => {
+        const live = this.realtime.liveMatches();
+        if (!live.length) return;
+        this.recentMatches.update((current) => mergeMatchUpdates(live, current));
       },
       { allowSignalWrites: true },
     );

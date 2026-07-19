@@ -240,17 +240,26 @@ export function currentWeeklyPeriodIdForStats(): string {
 }
 
 export function previousWeeklyPeriodIdForStats(): string {
-  const current = currentWeeklyPeriodId();
-  const match = /^(\d{4})-W(\d{2})$/.exec(current);
-  if (!match) return current;
+  return weeklyPeriodIdWeeksAgo(1);
+}
 
-  let year = Number(match[1]);
-  let week = Number(match[2]) - 1;
-
-  if (week < 1) {
-    year -= 1;
-    week = 52;
+/** ISO week ids from oldest → newest (includes current week). */
+export function listRecentWeeklyPeriodIds(count: number): string[] {
+  const n = Math.max(1, Math.floor(count));
+  const ids: string[] = [];
+  for (let weeksAgo = n - 1; weeksAgo >= 0; weeksAgo -= 1) {
+    ids.push(weeklyPeriodIdWeeksAgo(weeksAgo));
   }
+  return ids;
+}
 
-  return `${year}-W${String(week).padStart(2, '0')}`;
+export function weeklyPeriodIdWeeksAgo(weeksAgo: number): string {
+  const now = new Date();
+  const tmp = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+  tmp.setUTCDate(tmp.getUTCDate() - Math.max(0, Math.floor(weeksAgo)) * 7);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }

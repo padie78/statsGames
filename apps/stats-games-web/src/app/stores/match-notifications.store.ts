@@ -40,21 +40,32 @@ export class MatchNotificationsStore {
   private readonly _items = signal<MatchNotification[]>([]);
   private readonly _panelOpen = signal(false);
   private readonly _toast = signal<MatchNotification | null>(null);
+  /** Última partida recién llegada — las cards la usan para animar entrada. */
+  private readonly _newestMatchId = signal<string | null>(null);
+  /** Contador para re-disparar animaciones de campana/toast. */
+  private readonly _arrivalTick = signal(0);
   private readonly seenIds = new Set<string>();
   private readonly aiTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private newestClearTimer: ReturnType<typeof setTimeout> | null = null;
   private aiReadySub: Subscription | null = null;
   private lastAiUserId: string | null = null;
 
   readonly items = computed(() => this._items());
   readonly panelOpen = computed(() => this._panelOpen());
   readonly toast = computed(() => this._toast());
+  readonly newestMatchId = computed(() => this._newestMatchId());
+  readonly arrivalTick = computed(() => this._arrivalTick());
   readonly unreadCount = computed(
     () => this._items().filter((item) => !item.read).length,
   );
   readonly pendingAiCount = computed(
     () => this._items().filter((item) => item.aiStatus === 'pending').length,
   );
+
+  isFreshMatch(matchId: string): boolean {
+    return !!matchId && this._newestMatchId() === matchId;
+  }
 
   constructor() {
     effect(
@@ -134,11 +145,15 @@ export class MatchNotificationsStore {
     this.aiTimers.clear();
     this.seenIds.clear();
     this.dismissToast();
+    if (this.newestClearTimer) clearTimeout(this.newestClearTimer);
+    this.newestClearTimer = null;
     this.aiReadySub?.unsubscribe();
     this.aiReadySub = null;
     this.lastAiUserId = null;
     this._items.set([]);
     this._panelOpen.set(false);
+    this._newestMatchId.set(null);
+    this._arrivalTick.set(0);
   }
 
   markAiReadyFromEvent(event: MatchAiReadyView): void {
@@ -235,8 +250,27 @@ export class MatchNotificationsStore {
     };
 
     this._items.update((items) => [notification, ...items].slice(0, MAX_ITEMS));
+    this.markArrival(match.matchId);
     this.showToast(notification);
     this.scheduleAiFallback(notification.id, match);
+  }
+
+  private markArrival(matchId: string): void {
+    this._newestMatchId.set(matchId);
+    this._arrivalTick.update((n) => n + 1);
+    if (typeof document !== 'undefined') {
+      document.body.classList.add('sg-match-arrival');
+    }
+    if (this.newestClearTimer) clearTimeout(this.newestClearTimer);
+    this.newestClearTimer = setTimeout(() => {
+      if (this._newestMatchId() === matchId) {
+        this._newestMatchId.set(null);
+      }
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('sg-match-arrival');
+      }
+      this.newestClearTimer = null;
+    }, 5200);
   }
 
   private scheduleAiFallback(id: string, match: MatchUpdateView): void {

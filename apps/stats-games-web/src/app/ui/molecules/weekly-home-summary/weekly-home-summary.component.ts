@@ -22,8 +22,8 @@ interface HomeWeekChip {
 }
 
 /**
- * Resumen hero del análisis semanal para Inicio del portal jugador.
- * Compacto: headline, señales, plan de acción y gráficos secundarios.
+ * Resumen del análisis semanal para Inicio del portal jugador.
+ * Misma cáscara visual que `sg-community-rank` (surface-card + header).
  */
 @Component({
   standalone: true,
@@ -31,23 +31,21 @@ interface HomeWeekChip {
   encapsulation: ViewEncapsulation.None,
   imports: [RouterLink, NeonBadgeComponent, NgxEchartsDirective],
   template: `
-    <article class="sg-home-week" aria-label="Análisis semanal">
+    <article class="sg-home-week u-surface-card u-p-5" aria-label="Análisis semanal">
       <header class="sg-home-week__header">
-        <div class="sg-home-week__header-top">
-          <div class="sg-home-week__badges">
-            <sg-neon-badge tone="purple">Análisis semanal</sg-neon-badge>
-            <span class="sg-home-week__meta">
-              {{ summary.winCount }}V · {{ summary.lossCount }}D ·
-              {{ summary.matchCount }} partidas
-            </span>
-          </div>
-          <a routerLink="/tabs/ai-coach" class="sg-home-week__link">Ver completo →</a>
+        <div class="sg-home-week__heading">
+          <h3 class="sg-home-week__title">{{ summary.headline }}</h3>
+          <p class="sg-home-week__lead u-m-0">{{ summary.body }}</p>
+          @if (summary.narrative[0]) {
+            <p class="sg-home-week__narrative u-m-0">{{ summary.narrative[0] }}</p>
+          }
         </div>
-        <h2 class="sg-home-week__title">{{ summary.headline }}</h2>
-        <p class="sg-home-week__lead u-m-0">{{ summary.body }}</p>
-        @if (summary.narrative[0]) {
-          <p class="sg-home-week__narrative u-m-0">{{ summary.narrative[0] }}</p>
-        }
+        <div class="sg-home-week__meta">
+          <sg-neon-badge tone="gold">
+            {{ summary.winCount }}V · {{ summary.lossCount }}D
+          </sg-neon-badge>
+          <sg-neon-badge tone="gold">{{ summary.matchCount }} partidas</sg-neon-badge>
+        </div>
       </header>
 
       <div class="sg-home-week__body">

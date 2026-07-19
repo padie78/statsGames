@@ -7,6 +7,8 @@
  */
 
 const DDRAGON_SPLASH_BASE = 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash';
+/** Splash centered (cara al frente) — mejor para heroes full-bleed. */
+const DDRAGON_CENTERED_BASE = 'https://ddragon.leagueoflegends.com/cdn/img/champion/centered';
 const CDRAGON_CHAMP_BASE = 'https://cdn.communitydragon.org/latest/champion';
 
 /** Claves internas cuando el display name no coincide 1:1. */
@@ -121,9 +123,41 @@ const PROFILE_CINEMATIC_SPLASHES = [
   'Camille_2', // Program
 ] as const;
 
+/**
+ * Banner: siempre splash *centered* del campeón (skin 0).
+ * Las skins cinematográficas wide cortan caras en heroes bajos;
+ * el centered base mantiene el foco en el personaje principal.
+ */
+function splashKeyToCenteredUrl(skinKey: string): string {
+  const champKey = skinKey.split('_')[0] || 'Jinx';
+  return `${DDRAGON_CENTERED_BASE}/${champKey}_0.jpg`;
+}
+
+/** Wide cinematic (fallback si no hay centered). */
+function splashKeyToWideUrl(skinKey: string): string {
+  return `${DDRAGON_SPLASH_BASE}/${skinKey}.jpg`;
+}
+
 function pickDdragonSplash(pool: readonly string[], seed: number): string {
   const pick = pool[Math.abs(seed) % pool.length] ?? pool[0];
-  return `${DDRAGON_SPLASH_BASE}/${pick}.jpg`;
+  return splashKeyToCenteredUrl(pick);
+}
+
+/** Fallback wide si falla el centered (usar desde onError de banners). */
+export function lolBannerSplashFallbackUrl(
+  seed: number,
+  pool: 'home' | 'matches' | 'evolution' | 'coach' | 'profile' = 'home',
+): string {
+  const map = {
+    home: CINEMATIC_SPLASHES,
+    matches: MATCHES_CINEMATIC_SPLASHES,
+    evolution: EVOLUTION_CINEMATIC_SPLASHES,
+    coach: COACH_CINEMATIC_SPLASHES,
+    profile: PROFILE_CINEMATIC_SPLASHES,
+  } as const;
+  const list = map[pool];
+  const pick = list[Math.abs(seed) % list.length] ?? list[0];
+  return splashKeyToWideUrl(pick);
 }
 
 export function lolChampionKey(name: string | null | undefined): string | null {

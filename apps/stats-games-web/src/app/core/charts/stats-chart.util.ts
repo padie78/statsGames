@@ -1,6 +1,25 @@
 import type { MatchUpdateView } from '../../services/match.service';
-import type { PlayerStatsRollupView } from '../../services/stats.service';
+import {
+  listRecentWeeklyPeriodIds,
+  type PlayerStatsRollupView,
+} from '../../services/stats.service';
+import { isMatchWin } from '../../utils/match-stats.util';
+import { computeFairCommunityScore } from '../../utils/weekly-community-rank.util';
 import type { TrendChartPoint } from './chart.types';
+
+export interface WeeklyFormPoint {
+  periodId: string;
+  label: string;
+  /** null = semana sin partidas (gap en el chart, no WR/KDA en 0). */
+  winRate: number | null;
+  kd: number | null;
+  fairScore: number | null;
+  matchCount: number;
+  winCount: number;
+  hasData: boolean;
+  /** Última semana del rango (semana actual). */
+  isCurrent: boolean;
+}
 
 export interface StatsRadarAxis {
   name: string;
@@ -180,4 +199,75 @@ export function buildPlacementTrend(dailyTrend: PlayerStatsRollupView[]): TrendC
       label: day.periodId.slice(5),
       value: day.avgPlacement > 0 ? Number(day.avgPlacement.toFixed(1)) : 0,
     }));
+}
+
+/** Forma multi-semana (WR + K/D|KDA) a partir del historial de partidas. */
+export function buildWeeklyFormFromMatches(
+  matches: MatchUpdateView[],
+  options?: { weeks?: number; useKda?: boolean },
+): WeeklyFormPoint[] {
+  const weeks = options?.weeks ?? 6;
+  const useKda = Boolean(options?.useKda);
+  const periodIds = listRecentWeeklyPeriodIds(weeks);
+  const buckets = new Map(
+    periodIds.map((periodId) => [
+      periodId,
+      { matchCount: 0, winCount: 0, kills: 0, deaths: 0, assists: 0 },
+    ]),
+  );
+
+  for (const match of matches) {
+    const stamp = new Date(match.updatedAt);
+    if (Number.isNaN(stamp.getTime())) continue;
+    const periodId = isoWeekPeriodIdFromDate(stamp);
+    const bucket = buckets.get(periodId);
+    if (!bucket) continue;
+    bucket.matchCount += 1;
+    bucket.kills += match.stats?.kills ?? 0;
+    bucket.deaths += match.stats?.deaths ?? 0;
+    bucket.assists += match.stats?.assists ?? 0;
+    if (isMatchWin(match.stats)) bucket.winCount += 1;
+  }
+
+  const currentId = periodIds[periodIds.length - 1];
+  return periodIds.map((periodId) => {
+    const b = buckets.get(periodId)!;
+    const hasData = b.matchCount > 0;
+    const ratioNumerator = useKda ? b.kills + b.assists : b.kills;
+    const kd = hasData
+      ? Number((ratioNumerator / Math.max(b.deaths, 1)).toFixed(2))
+      : null;
+    const winRate = hasData
+      ? Math.round((b.winCount / b.matchCount) * 1000) / 10
+      : null;
+    const fairScore = hasData
+      ? computeFairCommunityScore({
+          totalKills: b.kills,
+          totalDeaths: b.deaths,
+          totalAssists: b.assists,
+          winCount: b.winCount,
+          matchCount: b.matchCount,
+        })
+      : null;
+    return {
+      periodId,
+      label: periodId.replace(/^\d{4}-/, ''),
+      winRate,
+      kd,
+      fairScore,
+      matchCount: b.matchCount,
+      winCount: b.winCount,
+      hasData,
+      isCurrent: periodId === currentId,
+    };
+  });
+}
+
+function isoWeekPeriodIdFromDate(date: Date): string {
+  const tmp = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }

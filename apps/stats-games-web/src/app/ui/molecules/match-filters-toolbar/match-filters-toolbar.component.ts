@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, ViewEncapsulation } from '@angu
 import { FormsModule } from '@angular/forms';
 import { SelectComponent, type SelectOption } from '../../atoms/select/select.component';
 import type { MatchSortKey } from '../../../utils/match-stats.util';
+import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 export type MatchDateFilter = 'all' | '7d' | '30d';
 export type MatchResultFilter = 'all' | 'wins' | 'losses';
@@ -10,9 +11,23 @@ export type MatchResultFilter = 'all' | 'wins' | 'losses';
   standalone: true,
   selector: 'sg-match-filters-toolbar',
   encapsulation: ViewEncapsulation.None,
-  imports: [FormsModule, SelectComponent],
+  imports: [FormsModule, SelectComponent, NeonBadgeComponent],
   template: `
     <section class="sg-match-filters u-surface-card u-p-5" aria-label="Filtros de partidas">
+      <div class="sg-match-filters__top">
+        <div class="sg-match-filters__top-badges">
+          <sg-neon-badge tone="gold">{{ resultCount }} partidas</sg-neon-badge>
+          @if (usingMockData) {
+            <sg-neon-badge tone="gold">preview</sg-neon-badge>
+          }
+          @if (hasActiveFilters) {
+            <button type="button" class="sg-match-filters__reset" (click)="clearFilters.emit()">
+              Limpiar filtros
+            </button>
+          }
+        </div>
+      </div>
+
       <div class="sg-match-filters__search">
         <label class="sg-match-filters__label" for="sg-match-search">Buscar</label>
         <div class="sg-match-filters__search-field">
@@ -95,25 +110,8 @@ export type MatchResultFilter = 'all' | 'wins' | 'losses';
           [value]="map"
           (valueChange)="mapChange.emit($event)"
         />
-      </div>
-
-      <div class="sg-match-filters__footer">
-        <div class="sg-match-filters__footer-meta">
-          <p class="sg-match-filters__count">
-            <strong>{{ resultCount }}</strong> partidas
-            @if (usingMockData) {
-              <span class="sg-match-filters__hint">· datos demo</span>
-            }
-          </p>
-          @if (hasActiveFilters) {
-            <button type="button" class="sg-match-filters__reset" (click)="clearFilters.emit()">
-              Limpiar filtros
-            </button>
-          }
-        </div>
-
         <sg-select
-          class="sg-match-filters__sort"
+          class="sg-match-filters__select sg-match-filters__sort"
           label="Ordenar"
           [options]="sortOptions"
           [value]="sort"

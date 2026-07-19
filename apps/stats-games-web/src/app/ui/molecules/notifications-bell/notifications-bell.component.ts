@@ -3,7 +3,9 @@ import {
   ElementRef,
   HostListener,
   ViewEncapsulation,
+  effect,
   inject,
+  signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
@@ -13,14 +15,20 @@ import {
 } from '../../../stores/match-notifications.store';
 import { matchDetailRoute } from '../../../utils/match-analysis.util';
 import { formatMatchRelativeTime } from '../../../utils/match-stats.util';
+import { sgFadeSlideIn, sgPulseOnce } from '../../animations/sg-motion';
 
 @Component({
   standalone: true,
   selector: 'sg-notifications-bell',
   encapsulation: ViewEncapsulation.None,
   imports: [NeonBadgeComponent],
+  animations: [sgPulseOnce, sgFadeSlideIn],
   template: `
-    <div class="sg-notify" [class.sg-notify--open]="store.panelOpen()">
+    <div
+      class="sg-notify"
+      [class.sg-notify--open]="store.panelOpen()"
+      [class.sg-notify--alert]="bellAlert()"
+    >
       <button
         type="button"
         class="sg-notify__bell"
@@ -34,7 +42,9 @@ import { formatMatchRelativeTime } from '../../../utils/match-stats.util';
           <path d="M9.5 17a2.5 2.5 0 0 0 5 0"/>
         </svg>
         @if (store.unreadCount() > 0) {
-          <span class="sg-notify__count">{{ store.unreadCount() > 9 ? '9+' : store.unreadCount() }}</span>
+          <span class="sg-notify__count" [attr.data-count]="store.unreadCount()" @sgPulseOnce>
+            {{ store.unreadCount() > 9 ? '9+' : store.unreadCount() }}
+          </span>
         }
       </button>
 
@@ -45,6 +55,7 @@ import { formatMatchRelativeTime } from '../../../utils/match-stats.util';
           role="dialog"
           aria-label="Partidas recientes"
           (click)="$event.stopPropagation()"
+          @sgFadeSlideIn
         >
           <header class="sg-notify__header">
             <div>
@@ -116,6 +127,21 @@ export class NotificationsBellComponent {
   readonly store = inject(MatchNotificationsStore);
   private readonly router = inject(Router);
   private readonly host = inject(ElementRef<HTMLElement>);
+  readonly bellAlert = signal(false);
+  private alertTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    effect(() => {
+      const tick = this.store.arrivalTick();
+      if (tick <= 0) return;
+      this.bellAlert.set(true);
+      if (this.alertTimer) clearTimeout(this.alertTimer);
+      this.alertTimer = setTimeout(() => {
+        this.bellAlert.set(false);
+        this.alertTimer = null;
+      }, 1400);
+    });
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {

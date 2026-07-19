@@ -24,16 +24,28 @@ import { TrendChartComponent } from '../trend-chart/trend-chart.component';
     NgxEchartsDirective,
   ],
   template: `
-    <section class="sg-weekly-coach u-surface-card u-surface-card--ai u-p-5">
+    <section
+      class="sg-weekly-coach u-surface-card u-p-5"
+      [class.u-surface-card--ai]="emphasizeAi"
+    >
       <header class="sg-weekly-coach__header">
         <div>
           <div class="sg-weekly-coach__badges">
-            <sg-neon-badge tone="purple">Análisis semanal</sg-neon-badge>
+            <sg-neon-badge [tone]="emphasizeAi ? 'purple' : 'muted'">{{ badgeLabel }}</sg-neon-badge>
+            @if (!emphasizeAi) {
+              <sg-neon-badge tone="muted">Local</sg-neon-badge>
+            }
           </div>
           <h2 class="sg-weekly-coach__title">{{ summary.headline }}</h2>
           <p class="sg-weekly-coach__lead u-m-0">{{ summary.body }}</p>
         </div>
-        <button type="button" class="u-btn u-btn--ai" (click)="ctaClick.emit()">
+        <button
+          type="button"
+          class="u-btn"
+          [class.u-btn--ai]="emphasizeAi"
+          [class.u-btn--ghost-gold]="!emphasizeAi"
+          (click)="ctaClick.emit()"
+        >
           {{ ctaLabel }}
         </button>
       </header>
@@ -209,7 +221,11 @@ import { TrendChartComponent } from '../trend-chart/trend-chart.component';
 export class WeeklyAiCoachPanelComponent {
   @Input({ required: true }) summary!: WeeklyAiCoachSummary;
   @Input() communityRank: CommunityRankTableView | null = null;
-  @Input() ctaLabel = 'Ver análisis semanal';
+  /** Badge del encabezado. Por defecto deja claro que no es Bedrock. */
+  @Input() badgeLabel = 'Resumen semanal';
+  /** Si true, acento “IA”; si false, tratamiento local/heurístico. */
+  @Input() emphasizeAi = false;
+  @Input() ctaLabel = 'Ver partidas';
   @Output() readonly ctaClick = new EventEmitter<void>();
 
   get killsKdChartOptions(): EChartsOption {

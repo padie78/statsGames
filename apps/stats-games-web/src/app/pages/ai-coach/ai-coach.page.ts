@@ -77,15 +77,15 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
             <sg-week-hero-brand [platform]="activePlatform()" />
             <div class="sg-dashboard__week-main">
               <p class="sg-dashboard__week-eyebrow">
-                {{ platformMeta().label }} · Bedrock
+                {{ platformMeta().label }} · Bandeja IA
                 @if (!loading()) {
                   <span>· {{ reports().length }} reportes</span>
                 }
               </p>
               <h1 class="sg-dashboard__week-title">Coach IA</h1>
               <p class="sg-dashboard__week-lede u-m-0">
-                Análisis semanal de tu rendimiento e informes por partida. El detalle técnico vive
-                en cada match.
+                Bandeja de análisis Bedrock por partida. El detalle técnico vive en cada match; el
+                informe macro de progreso está en Evolución.
               </p>
 
               <div class="sg-dashboard__week-kpis" aria-label="KPIs del coach">
@@ -110,7 +110,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
           </div>
         </section>
 
-        <div class="sg-coach__body page-shell page-shell--fluid u-flex u-flex-col u-gap-6">
+        <div class="sg-coach__body page-shell page-shell--fluid">
           @if (loading()) {
             <div
               class="sg-coach__loading"
@@ -128,33 +128,18 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
               <p class="u-error u-m-0">{{ error() }}</p>
             }
 
-            @if (hasWeekData()) {
-              <section class="sg-dashboard__block" aria-labelledby="coach-weekly">
-                <div class="sg-dashboard__block-head">
-                  <div>
-                    <h2 id="coach-weekly" class="sg-dashboard__block-title">Análisis semanal</h2>
-                    <p class="sg-dashboard__block-desc">
-                      Lectura de forma, foco mecánico y posición vs comunidad.
-                    </p>
-                  </div>
-                </div>
-                <sg-weekly-ai-coach-panel
-                  [summary]="weeklyCoach()"
-                  [communityRank]="weeklyCommunityRank()"
-                  ctaLabel="Ver partidas"
-                  (ctaClick)="goToMatches()"
-                />
-              </section>
-            }
-
             <section class="sg-dashboard__block" aria-labelledby="coach-reports">
               <div class="sg-dashboard__block-head">
                 <div>
-                  <h2 id="coach-reports" class="sg-dashboard__block-title">Análisis por partida</h2>
+                  <h2 id="coach-reports" class="sg-dashboard__block-title">
+                    Análisis por partida
+                  </h2>
                   <p class="sg-dashboard__block-desc">
-                    Headline, grade y plan de acción de cada match analizado.
+                    Reportes Bedrock listos: grade, headline y primer foco. Tocá uno para el
+                    detalle.
                   </p>
                 </div>
+                <a routerLink="/tabs/matches" class="sg-dashboard__block-link">Partidas →</a>
               </div>
 
               @if (error() && reports().length === 0) {
@@ -163,9 +148,9 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
                 <section class="u-surface-card u-p-5">
                   <sg-neon-badge tone="muted">Sin reportes aún</sg-neon-badge>
                   <p class="u-hint u-mt-3 u-mb-0">
-                    Acá aparece la lista de análisis por partida. Todavía no hay filas porque el
-                    analyzer no generó reportes, o las partidas del juego activo no están
-                    encoladas a Bedrock.
+                    Esta bandeja lista análisis por partida generados por Bedrock. Todavía no hay
+                    filas porque el analyzer no generó reportes, o las partidas del juego activo no
+                    están encoladas.
                   </p>
                   <ul class="u-hint u-mt-3" style="padding-left: 1.1rem; margin: 0">
                     <li>Vinculá la cuenta del juego en Integraciones</li>
@@ -208,6 +193,31 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
                 </div>
               }
             </section>
+
+            @if (hasWeekData()) {
+              <section class="sg-dashboard__block" aria-labelledby="coach-weekly">
+                <div class="sg-dashboard__block-head">
+                  <div>
+                    <h2 id="coach-weekly" class="sg-dashboard__block-title">Resumen semanal</h2>
+                    <p class="sg-dashboard__block-desc">
+                      Lectura local de la semana (no Bedrock). El informe IA macro está en
+                      Evolución.
+                    </p>
+                  </div>
+                  <a routerLink="/tabs/analytics" class="sg-dashboard__block-link">
+                    Evolución →
+                  </a>
+                </div>
+                <sg-weekly-ai-coach-panel
+                  [summary]="weeklyCoach()"
+                  [communityRank]="weeklyCommunityRank()"
+                  badgeLabel="Resumen semanal"
+                  [emphasizeAi]="false"
+                  ctaLabel="Ver Evolución"
+                  (ctaClick)="goToEvolution()"
+                />
+              </section>
+            }
           }
         </div>
       </div>
@@ -381,6 +391,10 @@ export class AiCoachPageComponent implements OnInit {
 
   goToMatches(): void {
     void this.router.navigateByUrl('/tabs/matches');
+  }
+
+  goToEvolution(): void {
+    void this.router.navigateByUrl('/tabs/analytics');
   }
 
   private async load(): Promise<void> {
