@@ -4,6 +4,7 @@ import {
   OnInit,
   ViewEncapsulation,
   computed,
+  effect,
   inject,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -70,9 +71,15 @@ export class ShellPageComponent implements OnInit {
 
   private scrollCleanup: (() => void) | null = null;
 
-  ngOnInit(): void {
-    this.realtime.ensureConnected();
+  constructor() {
+    // Reconectar cuando la sesión esté lista (ngOnInit puede correr con userId null).
+    effect(() => {
+      const userId = this.auth.userId();
+      if (userId) this.realtime.ensureConnected(userId);
+    });
+  }
 
+  ngOnInit(): void {
     this.destroyRef.onDestroy(() => this.scrollCleanup?.());
 
     this.router.events

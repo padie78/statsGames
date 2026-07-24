@@ -1,6 +1,19 @@
-import type { IMatchEventNotifier } from '@stats-games/application';
+import type { IMatchEventNotifier, MatchStatsDto, MatchUpdateDto } from '@stats-games/application';
 import { MatchMapper } from '@stats-games/application';
 import type { Match } from '@stats-games/domain';
+
+/** AppSync `AWSJSON` solo acepta string JSON en variables/input. */
+function serializeStatsForAppsync(
+  stats: MatchUpdateDto['stats'] | undefined,
+): (Omit<MatchStatsDto, 'mapTelemetry'> & { mapTelemetry?: string | null }) | null {
+  if (!stats) return null;
+  const { mapTelemetry, ...rest } = stats;
+  return {
+    ...rest,
+    mapTelemetry:
+      mapTelemetry == null ? null : typeof mapTelemetry === 'string' ? mapTelemetry : JSON.stringify(mapTelemetry),
+  };
+}
 
 const MATCH_UPDATE_FRAGMENT = /* GraphQL */ `
   fragment MatchUpdateFields on MatchUpdate {
@@ -100,7 +113,8 @@ export class AppSyncMatchUpdatePublisherAdapter implements IMatchEventNotifier {
             platform: dto.platform,
             summary: dto.summary,
             updatedAt: dto.updatedAt,
-            stats: dto.stats ?? null,
+            // AppSync AWSJSON exige string JSON, no objeto crudo.
+            stats: serializeStatsForAppsync(dto.stats),
           },
         },
       }),

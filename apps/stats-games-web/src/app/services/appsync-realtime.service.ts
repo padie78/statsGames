@@ -41,6 +41,12 @@ const ON_MATCH_UPDATE = /* GraphQL */ `
         shots
         shotPct
         durationSec
+        goldEarned
+        champLevel
+        teamBarons
+        teamDragons
+        teamTowers
+        mapTelemetry
       }
     }
   }
