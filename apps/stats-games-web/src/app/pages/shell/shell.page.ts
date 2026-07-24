@@ -17,6 +17,7 @@ import { MatchNotificationsStore } from '../../stores/match-notifications.store'
 import {
   AppSubnavComponent,
   GamePlatformSwitcherComponent,
+  InAppAlertToastComponent,
   MatchNotificationToastComponent,
 } from '../../ui';
 
@@ -29,6 +30,7 @@ import {
     GamePlatformSwitcherComponent,
     AppSubnavComponent,
     MatchNotificationToastComponent,
+    InAppAlertToastComponent,
   ],
   template: `
     <div
@@ -51,6 +53,7 @@ import {
         <router-outlet />
       </main>
       <sg-match-notification-toast />
+      <sg-in-app-alert-toast />
     </div>
   `,
 })

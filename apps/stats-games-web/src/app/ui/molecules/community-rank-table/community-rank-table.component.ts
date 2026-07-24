@@ -1,7 +1,7 @@
 import { Component, Input, ViewEncapsulation } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { CommunityRankRow } from '../../../data/community-mock.data';
-import { trackerLolProfileUrl } from '../../../utils/tracker-profile.util';
+import { trackerLolProfileUrl, trackerValorantProfileUrl } from '../../../utils/tracker-profile.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 /** snapshot = Inicio (compacto); deep = Evolución (detalle completo). */
@@ -51,34 +51,58 @@ export type CommunityRankVariant = 'snapshot' | 'deep';
           <table class="sg-community-rank__table">
             <thead>
               <tr>
-                <th scope="col" title="Puesto en la muestra">#</th>
+                <th scope="col" class="sg-community-rank__th--rank" title="Puesto en la muestra">#</th>
                 <th scope="col">Jugador</th>
-                <th scope="col" [attr.title]="kdColumnLabel + ' medio de la ventana'">{{ kdColumnLabel }}</th>
-                <th scope="col" title="Win rate %">WR</th>
+                <th
+                  scope="col"
+                  class="sg-community-rank__th--num"
+                  [attr.title]="kdColumnLabel + ' medio de la ventana'"
+                >
+                  {{ kdColumnLabel }}
+                </th>
+                <th scope="col" class="sg-community-rank__th--num" title="Win rate %">WR</th>
                 @if (!isSnapshot) {
-                  <th scope="col" class="sg-community-rank__col--optional" title="Kills / muertes / asistencias">
+                  <th
+                    scope="col"
+                    class="sg-community-rank__th--num sg-community-rank__col--optional"
+                    title="Kills / muertes / asistencias"
+                  >
                     K/D/A
                   </th>
                   <th
                     scope="col"
-                    class="sg-community-rank__col--optional"
+                    class="sg-community-rank__th--num sg-community-rank__col--optional"
                     [attr.title]="perGameLabel + ' promedio'"
                   >
                     {{ perGameLabel }}
                   </th>
-                  @if (isLol) {
-                    <th scope="col" class="sg-community-rank__col--optional" title="League Points">
-                      LP
+                  @if (showRankPoints) {
+                    <th
+                      scope="col"
+                      class="sg-community-rank__th--num sg-community-rank__col--optional"
+                      [attr.title]="rankPointsLabel === 'LP' ? 'League Points' : 'Ranked Rating'"
+                    >
+                      {{ rankPointsLabel }}
                     </th>
                   }
-                  <th scope="col" class="sg-community-rank__col--optional" title="Partidas en la ventana">
+                  <th
+                    scope="col"
+                    class="sg-community-rank__th--num sg-community-rank__col--optional"
+                    title="Partidas en la ventana"
+                  >
                     Partidas
                   </th>
                 }
-                <th scope="col" title="Score justo: KDA + WR + kills/partida">Score</th>
+                <th scope="col" class="sg-community-rank__th--score" title="Score justo: KDA + WR + kills/partida">
+                  Score
+                </th>
                 @if (!isSnapshot) {
-                  <th scope="col" class="sg-community-rank__col--delta" title="Cambio de puesto">
-                    Δ puesto
+                  <th
+                    scope="col"
+                    class="sg-community-rank__th--num sg-community-rank__col--delta"
+                    title="Cambio de puesto"
+                  >
+                    Δ
                   </th>
                 }
               </tr>
@@ -88,11 +112,14 @@ export type CommunityRankVariant = 'snapshot' | 'deep';
                 <tr
                   class="sg-community-rank__row"
                   [class.sg-community-rank__row--you]="row.isYou"
-                  [class.sg-community-rank__row--top]="row.rank <= 3 && !row.isYou"
+                  [class.sg-community-rank__row--top]="row.rank <= 3"
+                  [class.sg-community-rank__row--top-1]="row.rank === 1"
+                  [class.sg-community-rank__row--top-2]="row.rank === 2"
+                  [class.sg-community-rank__row--top-3]="row.rank === 3"
                   [class.sg-community-rank__row--open]="expandedTag === row.gamerTag"
                 >
                   <td class="sg-community-rank__rank">
-                    <span [class.sg-community-rank__rank-pill--you]="row.isYou">#{{ row.rank }}</span>
+                    <span [class.sg-community-rank__rank-pill--you]="row.isYou">{{ row.rank }}</span>
                   </td>
                   <td class="sg-community-rank__player">
                     <button
@@ -106,8 +133,8 @@ export type CommunityRankVariant = 'snapshot' | 'deep';
                           class="sg-community-rank__avatar"
                           [src]="row.avatarUrl"
                           [alt]="''"
-                          width="28"
-                          height="28"
+                          width="32"
+                          height="32"
                           loading="lazy"
                           decoding="async"
                         />
@@ -154,26 +181,29 @@ export type CommunityRankVariant = 'snapshot' | 'deep';
                       }
                     </button>
                   </td>
-                  <td>{{ formatKd(row.kd) }}</td>
-                  <td>{{ row.winRate }}%</td>
+                  <td class="sg-community-rank__num">{{ formatKd(row.kd) }}</td>
+                  <td class="sg-community-rank__num">{{ row.winRate }}%</td>
                   @if (!isSnapshot) {
-                    <td class="sg-community-rank__col--optional sg-community-rank__kda">
+                    <td class="sg-community-rank__num sg-community-rank__col--optional sg-community-rank__kda">
                       {{ row.kills }}/{{ row.deaths }}/{{ row.assists }}
                     </td>
-                    <td class="sg-community-rank__col--optional">{{ formatKd(row.killsPerGame) }}</td>
-                    @if (isLol) {
-                      <td class="sg-community-rank__col--optional">
-                        {{ row.leaguePoints != null ? row.leaguePoints : '—' }}
+                    <td class="sg-community-rank__num sg-community-rank__col--optional">
+                      {{ formatKd(row.killsPerGame) }}
+                    </td>
+                    @if (showRankPoints) {
+                      <td class="sg-community-rank__num sg-community-rank__col--optional">
+                        {{ rankPointsFor(row) }}
                       </td>
                     }
-                    <td class="sg-community-rank__col--optional">{{ row.matches }}</td>
+                    <td class="sg-community-rank__num sg-community-rank__col--optional">{{ row.matches }}</td>
                   }
                   <td class="sg-community-rank__score">{{ row.score }}</td>
                   @if (!isSnapshot) {
                     <td
-                      class="sg-community-rank__delta sg-community-rank__col--delta"
+                      class="sg-community-rank__delta sg-community-rank__num sg-community-rank__col--delta"
                       [class.sg-community-rank__delta--up]="row.trend === 'up'"
                       [class.sg-community-rank__delta--down]="row.trend === 'down'"
+                      [class.sg-community-rank__delta--flat]="row.trend === 'flat'"
                     >
                       {{ row.delta }}
                     </td>
@@ -187,8 +217,8 @@ export type CommunityRankVariant = 'snapshot' | 'deep';
                         <span><strong>WR</strong> {{ row.winRate }}%</span>
                         <span><strong>K/D/A</strong> {{ row.kills }}/{{ row.deaths }}/{{ row.assists }}</span>
                         <span><strong>{{ perGameLabel }}</strong> {{ formatKd(row.killsPerGame) }}</span>
-                        @if (isLol && row.leaguePoints != null) {
-                          <span><strong>LP</strong> {{ row.leaguePoints }}</span>
+                        @if (showRankPoints && row.leaguePoints != null) {
+                          <span><strong>{{ rankPointsLabel }}</strong> {{ row.leaguePoints }}</span>
                         }
                         <span><strong>Partidas</strong> {{ row.matches }}</span>
                         <span><strong>Score</strong> {{ row.score }}</span>
@@ -220,7 +250,7 @@ export type CommunityRankVariant = 'snapshot' | 'deep';
             }
           } @else {
             Detalle de la muestra: {{ rows.length }} de {{ totalPlayers }} jugadores.
-            @if (isLol) {
+            @if (isLol || isValorant) {
               Riot ID → Tracker.gg.
             }
             Score justo = KDA + win rate + kills/partida (misma ventana; sin premio por volumen).
@@ -254,13 +284,26 @@ export class CommunityRankTableComponent {
     return this.platform?.toLowerCase() === 'league_of_legends';
   }
 
+  get isValorant(): boolean {
+    return this.platform?.toLowerCase() === 'valorant';
+  }
+
+  /** LoL LP o Valorant RR. */
+  get showRankPoints(): boolean {
+    return this.isLol || this.isValorant;
+  }
+
+  get rankPointsLabel(): string {
+    return this.isValorant ? 'RR' : 'LP';
+  }
+
   get eyebrow(): string {
     return this.isSnapshot ? 'Snapshot semanal' : 'Tabla de jugadores';
   }
 
   get detailColspan(): number {
     if (this.isSnapshot) return 5;
-    return this.isLol ? 10 : 9;
+    return this.showRankPoints ? 10 : 9;
   }
 
   get kdColumnLabel(): string {
@@ -277,8 +320,16 @@ export class CommunityRankTableComponent {
   }
 
   externalProfileUrl(row: CommunityRankRow): string | null {
-    if (!this.isLol) return null;
-    return trackerLolProfileUrl(row.gamerTag);
+    if (this.isLol) return trackerLolProfileUrl(row.gamerTag);
+    if (this.isValorant) return trackerValorantProfileUrl(row.gamerTag);
+    return null;
+  }
+
+  /** LP/RR; en Valorant sin dato API estima RR desde score (preview). */
+  rankPointsFor(row: CommunityRankRow): string {
+    if (row.leaguePoints != null) return String(row.leaguePoints);
+    if (this.isValorant) return String(Math.max(0, Math.round(row.score * 0.85 + 20)));
+    return '—';
   }
 
   toggleRow(tag: string): void {

@@ -5,7 +5,11 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
-import { lolCoachBannerSplashUrl } from '../../core/game/lol-ddragon.util';
+import { lolChampionSplashUrl, lolCoachBannerSplashUrl } from '../../core/game/lol-ddragon.util';
+import {
+  valorantAgentSplashUrl,
+  valorantCoachBannerSplashUrl,
+} from '../../core/game/valorant-assets.util';
 import {
   matchBackendPlatform,
   selectedGameFromBackend,
@@ -165,28 +169,45 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
                   </div>
                 </section>
               } @else {
-                <div class="u-flex u-flex-col u-gap-3">
-                  @for (report of reports(); track report.matchId) {
+                <div class="sg-coach-cards">
+                  @for (card of reportCards(); track card.matchId) {
                     <a
-                      class="u-surface-card u-p-4 sg-ai-coach-row"
-                      [routerLink]="detailLink(report.matchId)"
+                      class="sg-coach-card"
+                      [class.sg-coach-card--ready]="card.status === 'ready'"
+                      [routerLink]="detailLink(card.matchId)"
                     >
-                      <div class="u-flex u-items-start u-justify-between u-gap-3">
-                        <div>
-                          <div class="u-flex u-gap-2 u-items-center u-mb-1">
-                            <sg-neon-badge [tone]="report.status === 'ready' ? 'purple' : 'muted'">
-                              {{ report.gradeLabel || '—' }} ·
-                              {{ report.performanceScore != null ? report.performanceScore : '—' }}/100
-                            </sg-neon-badge>
-                            <sg-neon-badge tone="muted">{{ report.platform }}</sg-neon-badge>
-                          </div>
-                          <h3 class="u-text-md u-m-0">{{ report.headline || 'Análisis de partida' }}</h3>
-                          <p class="u-hint u-m-0 u-mt-1">{{ report.summary }}</p>
-                          @if (report.actionPlan.length) {
-                            <p class="u-hint u-m-0 u-mt-2">Foco: {{ report.actionPlan[0] }}</p>
-                          }
+                      @if (card.artUrl) {
+                        <div class="sg-coach-card__art-wrap" aria-hidden="true">
+                          <img
+                            class="sg-coach-card__art"
+                            [src]="card.artUrl"
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <span class="sg-coach-card__veil"></span>
                         </div>
-                        <span class="u-hint u-text-xs">{{ relative(report.createdAt) }}</span>
+                      }
+                      <div class="sg-coach-card__body">
+                        <div class="sg-coach-card__top">
+                          <div class="sg-coach-card__grade">
+                            <span class="sg-coach-card__grade-letter">{{ card.gradeLabel || '—' }}</span>
+                            <span class="sg-coach-card__grade-score">
+                              {{ card.performanceScore != null ? card.performanceScore : '—' }}
+                              <small>/100</small>
+                            </span>
+                          </div>
+                          <span class="sg-coach-card__time">{{ card.relativeTime }}</span>
+                        </div>
+                        <p class="sg-coach-card__identity u-m-0">{{ card.identity }}</p>
+                        <h3 class="sg-coach-card__title">{{ card.headline }}</h3>
+                        <p class="sg-coach-card__summary u-m-0">{{ card.summary }}</p>
+                        @if (card.focus) {
+                          <p class="sg-coach-card__focus u-m-0">
+                            <strong>Foco</strong> {{ card.focus }}
+                          </p>
+                        }
+                        <span class="sg-coach-card__cta">Ver análisis →</span>
                       </div>
                     </a>
                   }
@@ -195,13 +216,12 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
             </section>
 
             @if (hasWeekData()) {
-              <section class="sg-dashboard__block" aria-labelledby="coach-weekly">
+              <section class="sg-dashboard__block sg-coach__weekly-slim" aria-labelledby="coach-weekly">
                 <div class="sg-dashboard__block-head">
                   <div>
                     <h2 id="coach-weekly" class="sg-dashboard__block-title">Resumen semanal</h2>
                     <p class="sg-dashboard__block-desc">
-                      Lectura local de la semana (no Bedrock). El informe IA macro está en
-                      Evolución.
+                      Lectura local. El informe IA macro está en Evolución.
                     </p>
                   </div>
                   <a routerLink="/tabs/analytics" class="sg-dashboard__block-link">
@@ -211,7 +231,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
                 <sg-weekly-ai-coach-panel
                   [summary]="weeklyCoach()"
                   [communityRank]="weeklyCommunityRank()"
-                  badgeLabel="Resumen semanal"
+                  badgeLabel="Local"
                   [emphasizeAi]="false"
                   ctaLabel="Ver Evolución"
                   (ctaClick)="goToEvolution()"
@@ -223,19 +243,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
       </div>
     </ion-content>
   `,
-  styles: [
-    `
-      .sg-ai-coach-row {
-        display: block;
-        text-decoration: none;
-        color: inherit;
-        transition: border-color 160ms ease, transform 160ms ease;
-      }
-      .sg-ai-coach-row:hover {
-        transform: translateY(-1px);
-      }
-    `,
-  ],
+  styles: [],
 })
 export class AiCoachPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
@@ -270,9 +278,12 @@ export class AiCoachPageComponent implements OnInit {
     if (this.heroArtFailed()) {
       return meta.portraitFallbackUrl || meta.artUrl;
     }
+    const seed = (this.profile()?.gamerTag ?? this.auth.userId() ?? 'coach-hero').length + 23;
     if (this.activePlatform() === 'league_of_legends') {
-      const seed = (this.profile()?.gamerTag ?? this.auth.userId() ?? 'lol-coach').length + 23;
       return lolCoachBannerSplashUrl(seed);
+    }
+    if (this.activePlatform() === 'valorant') {
+      return valorantCoachBannerSplashUrl(seed);
     }
     return meta.portraitUrl || meta.artUrl;
   });
@@ -319,6 +330,43 @@ export class AiCoachPageComponent implements OnInit {
   readonly hasWeekData = computed(() => {
     const w = this.weekly();
     return !!w && w.matchCount > 0;
+  });
+
+  readonly reportCards = computed(() => {
+    const matchesById = new Map(
+      this.effectiveRecentMatches().map((m) => [m.matchId, m] as const),
+    );
+    const platform = this.activePlatform();
+
+    return this.reports().map((report) => {
+      const match = matchesById.get(report.matchId);
+      const stats = match?.stats;
+      const identity =
+        stats?.agent?.trim() ||
+        stats?.champion?.trim() ||
+        stats?.mode?.trim() ||
+        gamePlatformMeta(platform).shortLabel;
+      const artUrl =
+        platform === 'valorant'
+          ? valorantAgentSplashUrl(stats?.agent) ?? gamePlatformMeta('valorant').artUrl
+          : platform === 'league_of_legends'
+            ? lolChampionSplashUrl(stats?.champion) ??
+              gamePlatformMeta('league_of_legends').artUrl
+            : gamePlatformMeta(platform).artUrl;
+
+      return {
+        matchId: report.matchId,
+        status: report.status,
+        gradeLabel: report.gradeLabel,
+        performanceScore: report.performanceScore,
+        headline: report.headline || 'Análisis de partida',
+        summary: report.summary,
+        focus: report.actionPlan?.[0] ?? '',
+        identity,
+        artUrl,
+        relativeTime: formatMatchRelativeTime(report.createdAt),
+      };
+    });
   });
 
   readonly weeklyCoach = computed(() => {
@@ -385,10 +433,6 @@ export class AiCoachPageComponent implements OnInit {
     return matchDetailRoute(matchId);
   }
 
-  relative(iso: string): string {
-    return formatMatchRelativeTime(iso);
-  }
-
   goToMatches(): void {
     void this.router.navigateByUrl('/tabs/matches');
   }
@@ -423,7 +467,7 @@ export class AiCoachPageComponent implements OnInit {
           .listMatchAiReportsOnce(userId, { platform: platform ?? undefined, limit: 30 })
           .catch(() => [] as MatchAiReportView[]),
         this.matchService
-          .listPlayerMatchesOnce(userId, { limit: 50 })
+          .listPlayerMatchesOnce(userId, { platform: platform ?? undefined, limit: 50 })
           .catch(() => [] as MatchUpdateView[]),
         firstValueFrom(
           this.statsService.listPlayerStatsRollups(userId, 'WEEKLY', periodId, platform),

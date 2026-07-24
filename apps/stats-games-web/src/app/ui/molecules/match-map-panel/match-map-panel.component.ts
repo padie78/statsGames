@@ -49,6 +49,7 @@ const LOL_LEGEND: MatchMapEventType[] = [
   'turret',
   'loot',
 ];
+const VAL_LEGEND: MatchMapEventType[] = ['spawn', 'kill', 'death', 'objective', 'assist'];
 
 @Component({
   standalone: true,
@@ -266,26 +267,42 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
     );
   }
 
+  get isValorant(): boolean {
+    return (this.telemetry?.platform ?? '').toLowerCase() === 'valorant';
+  }
+
   get mapTitle(): string {
-    return this.isLol ? 'Mapa · Grieta del Invocador' : 'Mapa de la partida';
+    if (this.isLol) return 'Mapa · Grieta del Invocador';
+    if (this.isValorant) return `Mapa · ${this.telemetry?.seasonLabel || 'Valorant'}`;
+    return 'Mapa de la partida';
   }
 
   get mapAriaLabel(): string {
-    return this.isLol ? 'Mapa de partida League of Legends' : 'Mapa de partida Fortnite';
+    if (this.isLol) return 'Mapa de partida League of Legends';
+    if (this.isValorant) return 'Mapa de partida Valorant';
+    return 'Mapa de partida Fortnite';
   }
 
   get previewBadge(): string {
-    return this.isLol ? 'Preview estimado' : 'Preview telemetría';
+    if (this.isLol) return 'Preview estimado';
+    if (this.isValorant) return 'Preview estimado';
+    return 'Preview telemetría';
   }
 
   get previewCopy(): string {
-    return this.isLol
-      ? 'Path e hitos estimados por rol/KDA. Cuando el poller traiga Match-Timeline-V5, verás coordenadas Riot reales (0–15000). Live Client queda para companion in-match.'
-      : 'Datos simulados localmente. El companion enviará path real + eventos por webhook/S3.';
+    if (this.isLol) {
+      return 'Path e hitos estimados por rol/KDA. Cuando el poller traiga Match-Timeline-V5, verás coordenadas Riot reales (0–15000). Live Client queda para companion in-match.';
+    }
+    if (this.isValorant) {
+      return 'Path e hitos estimados por agente/mapa (plant, frags, deaths). Cuando llegue telemetría Riot VAL, reemplazamos el preview.';
+    }
+    return 'Datos simulados localmente. El companion enviará path real + eventos por webhook/S3.';
   }
 
   get legendTypes(): MatchMapEventType[] {
-    return this.isLol ? LOL_LEGEND : FORTNITE_LEGEND;
+    if (this.isLol) return LOL_LEGEND;
+    if (this.isValorant) return VAL_LEGEND;
+    return FORTNITE_LEGEND;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -404,7 +421,7 @@ export class MatchMapPanelComponent implements OnChanges, OnDestroy {
   }
 
   isEventActive(event: MatchMapEvent): boolean {
-    const windowSec = this.isLol ? 20 : 8;
+    const windowSec = this.isLol || this.isValorant ? 20 : 8;
     return Math.abs(event.t - this.currentTime()) <= windowSec;
   }
 

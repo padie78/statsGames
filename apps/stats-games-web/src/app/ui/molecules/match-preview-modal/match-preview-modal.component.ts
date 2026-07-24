@@ -13,6 +13,8 @@ import {
   inject,
 } from '@angular/core';
 import { lolMatchesBannerSplashUrl } from '../../../core/game/lol-ddragon.util';
+import { valorantMatchesBannerSplashUrl } from '../../../core/game/valorant-assets.util';
+import type { SelectedGame } from '../../../core/game/selected-game';
 import { sgFadeSlideIn, sgModalIn } from '../../animations/sg-motion';
 import { MatchAnalysisViewComponent } from '../../organisms/match-analysis-view/match-analysis-view.component';
 
@@ -76,12 +78,16 @@ export class MatchPreviewModalComponent implements OnChanges, OnDestroy {
   private readonly document = inject(DOCUMENT);
 
   @Input() matchId: string | null = null;
+  @Input() platform: SelectedGame | string | null = null;
   @Output() readonly closed = new EventEmitter<void>();
 
   get wingArtUrl(): string {
-    const id = this.matchId ?? 'lol-match-modal';
+    const id = this.matchId ?? 'match-modal';
     let seed = 17;
     for (let i = 0; i < id.length; i++) seed = (seed + id.charCodeAt(i) * (i + 3)) % 997;
+    if (this.platform === 'valorant') {
+      return valorantMatchesBannerSplashUrl(seed);
+    }
     return lolMatchesBannerSplashUrl(seed);
   }
 

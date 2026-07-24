@@ -8,6 +8,10 @@ import {
   lolChampionSplashUrl,
 } from '../../../core/game/lol-ddragon.util';
 import {
+  valorantAgentSplashFallbackUrl,
+  valorantAgentSplashUrl,
+} from '../../../core/game/valorant-assets.util';
+import {
   normalizeSelectedGame,
   type SelectedGame,
 } from '../../../core/game/selected-game';
@@ -338,7 +342,7 @@ export class MatchStatCardComponent {
     return { k: parts[0], d: parts[1], a: parts[2] };
   }
 
-  /** Campeón desde stats o summary (ej. "Ranked Solo · Jinx · ADC"). */
+  /** Campeón / agente desde stats o summary. */
   get resolvedChampion(): string | null {
     const direct = this.stats.champion ?? this.stats.agent;
     if (direct?.trim()) return direct.trim();
@@ -357,15 +361,23 @@ export class MatchStatCardComponent {
   }
 
   /**
-   * Splash del campeón jugado (LoL).
-   * Sin campeón: arte genérico del juego — nunca otro campeón al azar.
+   * Splash del campeón (LoL) o agente (Valorant).
+   * Sin identidad: arte genérico del juego — nunca otro personaje al azar.
    */
   get panelArtUrl(): string | null {
-    if (this.platformKey !== 'league_of_legends') return null;
-    return (
-      lolChampionSplashUrl(this.resolvedChampion) ??
-      gamePlatformMeta('league_of_legends').artUrl
-    );
+    if (this.platformKey === 'league_of_legends') {
+      return (
+        lolChampionSplashUrl(this.resolvedChampion) ??
+        gamePlatformMeta('league_of_legends').artUrl
+      );
+    }
+    if (this.platformKey === 'valorant') {
+      return (
+        valorantAgentSplashUrl(this.resolvedChampion) ??
+        gamePlatformMeta('valorant').artUrl
+      );
+    }
+    return null;
   }
 
   get activePanelArtUrl(): string | null {
@@ -377,6 +389,12 @@ export class MatchStatCardComponent {
   onPanelArtError(): void {
     if (this.panelArtFallback !== undefined) {
       this.panelArtFallback = null;
+      return;
+    }
+    if (this.platformKey === 'valorant') {
+      this.panelArtFallback =
+        valorantAgentSplashFallbackUrl(this.resolvedChampion) ??
+        gamePlatformMeta('valorant').artUrl;
       return;
     }
     this.panelArtFallback =

@@ -33,6 +33,8 @@ export interface WeeklyCoachDeltaRow {
   note: string;
 }
 
+export type WeeklyFormBand = 'hot' | 'solid' | 'mixed' | 'cold';
+
 export interface WeeklyAiCoachSummary {
   headline: string;
   body: string;
@@ -41,6 +43,7 @@ export interface WeeklyAiCoachSummary {
   improvements: string[];
   regressions: string[];
   focusNext: string | null;
+  formBand: WeeklyFormBand;
   matchCount: number;
   winCount: number;
   lossCount: number;
@@ -230,6 +233,7 @@ export function buildWeeklyAiCoachSummary(input: {
     improvements: improvements.slice(0, 5),
     regressions: regressions.slice(0, 4),
     focusNext,
+    formBand,
     matchCount,
     winCount,
     lossCount,
@@ -256,12 +260,13 @@ function emptySummary(kdLabel: string): WeeklyAiCoachSummary {
     body: 'Cuando juegues partidas esta semana, acá vas a ver un resumen completo: record, forma, comparativas y qué mejorar.',
     narrative: [
       'Aún no hay suficientes partidas esta semana para armar el análisis semanal.',
-      'Vinculá tu cuenta, jugá al menos 3 ranked y volvé: el resumen incluye wins/losses, tendencias y focos.',
+      'Vinculá tu cuenta, jugá al menos 3 partidas y volvé: el resumen incluye wins/losses, tendencias y focos.',
     ],
     strengths: [],
     improvements: ['Cerrá al menos 3 partidas esta semana para desbloquear el resumen.'],
     regressions: [],
     focusNext: null,
+    formBand: 'mixed',
     matchCount: 0,
     winCount: 0,
     lossCount: 0,
@@ -278,7 +283,7 @@ function emptySummary(kdLabel: string): WeeklyAiCoachSummary {
   };
 }
 
-type FormBand = 'hot' | 'solid' | 'mixed' | 'cold';
+type FormBand = WeeklyFormBand;
 
 function formBandLabel(band: FormBand): string {
   if (band === 'hot') return 'Caliente';
@@ -597,6 +602,21 @@ function buildStrengths(input: {
     out.push(`Farm sólido (~${lolFarm.toFixed(1)} CS/min) sosteniendo economía`);
   }
 
+  if (input.platform === 'valorant') {
+    const hs = averageHeadshotPct(input.matches);
+    if (hs != null && hs >= 24) {
+      out.push(`HS% alto (~${hs.toFixed(0)}%): aim limpio en pelea`);
+    }
+    const acs = averageAcs(input.matches);
+    if (acs != null && acs >= 240) {
+      out.push(`ACS fuerte (~${acs}): impacto de round consistente`);
+    }
+    const topAgent = mostFrequentAgent(input.matches);
+    if (topAgent) {
+      out.push(`Pool claro: ${topAgent.name} (${topAgent.count} partidas) — profundizá utility`);
+    }
+  }
+
   const aiPros =
     input.latestAiReport?.status === 'ready' ? input.latestAiReport.pros ?? [] : [];
   for (const pro of aiPros.slice(0, 2)) {
@@ -674,6 +694,27 @@ function buildImprovements(input: {
     );
   }
 
+  if (input.platform === 'valorant') {
+    const hs = averageHeadshotPct(input.matches);
+    if (hs != null && hs < 18) {
+      out.push(
+        `HS% bajo (~${hs.toFixed(0)}%): 10 min deathmatch crosshair placement antes de ranked`,
+      );
+    }
+    const acs = averageAcs(input.matches);
+    if (acs != null && acs < 180) {
+      out.push(
+        `ACS flojo (~${acs}): tradear mid-round y no peek solo sin info de teammate`,
+      );
+    }
+    const topMap = mostFrequentMap(input.matches);
+    if (topMap && topMap.count >= 2) {
+      out.push(
+        `Drill en ${topMap.name}: 1 default A + 1 default B con utility sync (no solo entry solo)`,
+      );
+    }
+  }
+
   if (input.formBand === 'hot' && input.lossCount === 0) {
     out.push(
       'Con 100% WR, forzá 1 hábito defensivo: no pelees sin visión en río aunque vayas ahead',
@@ -718,6 +759,47 @@ function averageVision(matches: MatchUpdateView[]): number | null {
     .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
   if (!values.length) return null;
   return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function averageHeadshotPct(matches: MatchUpdateView[]): number | null {
+  const values = matches
+    .map((m) => m.stats?.headshotPct)
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  if (!values.length) return null;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function averageAcs(matches: MatchUpdateView[]): number | null {
+  const values: number[] = [];
+  for (const m of matches) {
+    const s = m.stats;
+    if (s?.score == null) continue;
+    const rounds = (s.roundsWon ?? 0) + (s.roundsLost ?? 0);
+    values.push(rounds > 0 ? s.score / rounds : s.score);
+  }
+  if (!values.length) return null;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function mostFrequentAgent(matches: MatchUpdateView[]): { name: string; count: number } | null {
+  return mostFrequentLabel(matches.map((m) => m.stats?.agent?.trim()).filter(Boolean) as string[]);
+}
+
+function mostFrequentMap(matches: MatchUpdateView[]): { name: string; count: number } | null {
+  return mostFrequentLabel(matches.map((m) => m.stats?.map?.trim()).filter(Boolean) as string[]);
+}
+
+function mostFrequentLabel(labels: string[]): { name: string; count: number } | null {
+  if (!labels.length) return null;
+  const counts = new Map<string, number>();
+  for (const label of labels) {
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  let best: { name: string; count: number } | null = null;
+  for (const [name, count] of counts) {
+    if (!best || count > best.count) best = { name, count };
+  }
+  return best;
 }
 
 function currentLossStreak(matches: MatchUpdateView[]): number {

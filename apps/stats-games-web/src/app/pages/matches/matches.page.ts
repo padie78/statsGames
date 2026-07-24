@@ -8,7 +8,11 @@ import {
   lolBannerSplashFallbackUrl,
   lolMatchesBannerSplashUrl,
 } from '../../core/game/lol-ddragon.util';
-import type { SelectedGame } from '../../core/game/selected-game';
+import {
+  valorantBannerSplashFallbackUrl,
+  valorantMatchesBannerSplashUrl,
+} from '../../core/game/valorant-assets.util';
+import { matchBackendPlatform, type SelectedGame } from '../../core/game/selected-game';
 import { AppSyncRealtimeService } from '../../services/appsync-realtime.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { MatchNotificationsStore } from '../../stores/match-notifications.store';
@@ -34,6 +38,7 @@ import {
 } from '../../utils/match-stats.util';
 import { aggregatePlatformMatchStats } from '../../utils/platform-stats.util';
 import { resolveLolRegionLabel } from '../../utils/lol-region.util';
+import { resolveValorantRegionLabel } from '../../utils/valorant-region.util';
 import { resolveMatchHistory } from '../../data/match-mock.data';
 
 @Component({
@@ -55,6 +60,7 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
   template: `
     <sg-match-preview-modal
       [matchId]="previewMatchId()"
+      [platform]="bannerPlatform()"
       (closed)="closeMatchPreview()"
     />
 
@@ -334,18 +340,24 @@ export class MatchesPageComponent implements OnInit {
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.bannerPlatform()));
 
-  /** Arte distinto a Inicio: pool cinematic de Partidas para LoL. */
+  /** Arte distinto a Inicio: pool cinematic de Partidas (LoL / Valorant). */
   readonly heroArtSrc = computed(() => {
     const meta = this.platformMeta();
-    const seed = (this.auth.userId() ?? 'lol-matches').length + 11;
+    const seed = (this.auth.userId() ?? 'matches-hero').length + 11;
     if (this.heroArtFailed()) {
       if (this.bannerPlatform() === 'league_of_legends') {
         return lolBannerSplashFallbackUrl(seed, 'matches');
+      }
+      if (this.bannerPlatform() === 'valorant') {
+        return valorantBannerSplashFallbackUrl(seed, 'matches');
       }
       return meta.portraitFallbackUrl || meta.artUrl;
     }
     if (this.bannerPlatform() === 'league_of_legends') {
       return lolMatchesBannerSplashUrl(seed);
+    }
+    if (this.bannerPlatform() === 'valorant') {
+      return valorantMatchesBannerSplashUrl(seed);
     }
     return meta.portraitUrl || meta.artUrl;
   });
@@ -525,6 +537,12 @@ export class MatchesPageComponent implements OnInit {
       chips.push({
         id: 'region',
         label: resolveLolRegionLabel(),
+        tone: 'region',
+      });
+    } else if (platform === 'valorant') {
+      chips.push({
+        id: 'region',
+        label: resolveValorantRegionLabel(),
         tone: 'region',
       });
     } else {
@@ -749,7 +767,11 @@ export class MatchesPageComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const rows = await this.matchService.listPlayerMatchesOnce(userId, { limit: 100 });
+      const platform = matchBackendPlatform(this.bannerPlatform());
+      const rows = await this.matchService.listPlayerMatchesOnce(userId, {
+        platform: platform ?? undefined,
+        limit: 100,
+      });
       this.allMatches.set(mergeMatchUpdates(this.realtime.liveMatches(), rows));
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Error cargando partidas');

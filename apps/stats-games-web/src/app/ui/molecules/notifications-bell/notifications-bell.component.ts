@@ -3,6 +3,7 @@ import {
   ElementRef,
   HostListener,
   ViewEncapsulation,
+  computed,
   effect,
   inject,
   signal,
@@ -13,9 +14,21 @@ import {
   MatchNotificationsStore,
   type MatchNotification,
 } from '../../../stores/match-notifications.store';
+import {
+  InAppAlertsStore,
+  type InAppAlert,
+} from '../../../stores/in-app-alerts.store';
 import { matchDetailRoute } from '../../../utils/match-analysis.util';
 import { formatMatchRelativeTime } from '../../../utils/match-stats.util';
 import { sgFadeSlideIn, sgPulseOnce } from '../../animations/sg-motion';
+
+const PRODUCT_KIND_LABEL: Record<string, string> = {
+  forma_down: 'Forma',
+  sync_stale: 'Sync',
+  rank_up: 'Ranking',
+  rank_down: 'Ranking',
+  report_ready: 'Coach IA',
+};
 
 @Component({
   standalone: true,
@@ -26,56 +39,84 @@ import { sgFadeSlideIn, sgPulseOnce } from '../../animations/sg-motion';
   template: `
     <div
       class="sg-notify"
-      [class.sg-notify--open]="store.panelOpen()"
+      [class.sg-notify--open]="panelOpen()"
       [class.sg-notify--alert]="bellAlert()"
     >
       <button
         type="button"
         class="sg-notify__bell"
-        [attr.aria-expanded]="store.panelOpen()"
+        [attr.aria-expanded]="panelOpen()"
         aria-controls="sg-notify-panel"
-        aria-label="Notificaciones de partidas"
-        (click)="store.togglePanel(); $event.stopPropagation()"
+        aria-label="Notificaciones"
+        (click)="togglePanel(); $event.stopPropagation()"
       >
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/>
           <path d="M9.5 17a2.5 2.5 0 0 0 5 0"/>
         </svg>
-        @if (store.unreadCount() > 0) {
-          <span class="sg-notify__count" [attr.data-count]="store.unreadCount()" @sgPulseOnce>
-            {{ store.unreadCount() > 9 ? '9+' : store.unreadCount() }}
+        @if (unreadTotal() > 0) {
+          <span class="sg-notify__count" [attr.data-count]="unreadTotal()" @sgPulseOnce>
+            {{ unreadTotal() > 9 ? '9+' : unreadTotal() }}
           </span>
         }
       </button>
 
-      @if (store.panelOpen()) {
+      @if (panelOpen()) {
         <div
           id="sg-notify-panel"
           class="sg-notify__panel"
           role="dialog"
-          aria-label="Partidas recientes"
+          aria-label="Notificaciones"
           (click)="$event.stopPropagation()"
           @sgFadeSlideIn
         >
           <header class="sg-notify__header">
             <div>
               <p class="sg-notify__eyebrow">Notificaciones</p>
-              <h2 class="sg-notify__title">Partidas en vivo</h2>
+              <h2 class="sg-notify__title">Inbox</h2>
             </div>
-            @if (store.items().length) {
-              <button type="button" class="sg-notify__action" (click)="store.markAllRead()">
+            @if (matchStore.items().length || productStore.items().length) {
+              <button type="button" class="sg-notify__action" (click)="markAllRead()">
                 Marcar leídas
               </button>
             }
           </header>
 
-          @if (!store.items().length) {
-            <p class="sg-notify__empty u-m-0">
-              Cuando termine una partida, aparece acá. Podés abrirla al instante; el análisis IA se completa en segundos.
-            </p>
-          } @else {
+          @if (productStore.items().length) {
+            <p class="sg-notify__section u-m-0">Alertas</p>
             <ul class="sg-notify__list">
-              @for (item of store.items(); track item.id) {
+              @for (item of productStore.items(); track item.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="sg-notify__item"
+                    [class.sg-notify__item--unread]="!item.read"
+                    [class.sg-notify__item--pending]="
+                      item.kind === 'forma_down' || item.kind === 'rank_down' || item.kind === 'sync_stale'
+                    "
+                    [class.sg-notify__item--ready]="
+                      item.kind === 'rank_up' || item.kind === 'report_ready'
+                    "
+                    (click)="onProductClick(item)"
+                  >
+                    <div class="sg-notify__item-top">
+                      <sg-neon-badge [tone]="productTone(item.kind)">
+                        {{ productLabel(item.kind) }}
+                      </sg-neon-badge>
+                      <span class="sg-notify__time">{{ relative(item.createdAt) }}</span>
+                    </div>
+                    <p class="sg-notify__summary u-m-0">{{ item.title }}</p>
+                    <p class="sg-notify__ai u-m-0">{{ item.body }}</p>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (matchStore.items().length) {
+            <p class="sg-notify__section u-m-0">Partidas</p>
+            <ul class="sg-notify__list">
+              @for (item of matchStore.items(); track item.id) {
                 <li>
                   <button
                     type="button"
@@ -88,7 +129,7 @@ import { sgFadeSlideIn, sgPulseOnce } from '../../animations/sg-motion';
                         ? 'Abrir partida · análisis IA en proceso'
                         : 'Abrir partida y análisis'
                     "
-                    (click)="onItemClick(item)"
+                    (click)="onMatchClick(item)"
                   >
                     <div class="sg-notify__item-top">
                       <sg-neon-badge [tone]="platformTone(item.platform)">
@@ -118,22 +159,38 @@ import { sgFadeSlideIn, sgPulseOnce } from '../../animations/sg-motion';
               }
             </ul>
           }
+
+          @if (!matchStore.items().length && !productStore.items().length) {
+            <p class="sg-notify__empty u-m-0">
+              Cuando termine una partida o haya un aviso de forma/ranking, aparece acá.
+            </p>
+          }
         </div>
       }
     </div>
   `,
 })
 export class NotificationsBellComponent {
-  readonly store = inject(MatchNotificationsStore);
+  readonly matchStore = inject(MatchNotificationsStore);
+  readonly productStore = inject(InAppAlertsStore);
   private readonly router = inject(Router);
   private readonly host = inject(ElementRef<HTMLElement>);
   readonly bellAlert = signal(false);
   private alertTimer: ReturnType<typeof setTimeout> | null = null;
 
+  readonly unreadTotal = computed(
+    () => this.matchStore.unreadCount() + this.productStore.unreadCount(),
+  );
+
+  readonly panelOpen = computed(
+    () => this.matchStore.panelOpen(),
+  );
+
   constructor() {
     effect(() => {
-      const tick = this.store.arrivalTick();
-      if (tick <= 0) return;
+      const tick = this.matchStore.arrivalTick();
+      const productUnread = this.productStore.unreadCount();
+      if (tick <= 0 && productUnread <= 0) return;
       this.bellAlert.set(true);
       if (this.alertTimer) clearTimeout(this.alertTimer);
       this.alertTimer = setTimeout(() => {
@@ -143,11 +200,20 @@ export class NotificationsBellComponent {
     });
   }
 
+  togglePanel(): void {
+    this.matchStore.togglePanel();
+  }
+
+  markAllRead(): void {
+    this.matchStore.markAllRead();
+    this.productStore.markAllRead();
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.store.panelOpen()) return;
+    if (!this.panelOpen()) return;
     if (!this.host.nativeElement.contains(event.target as Node)) {
-      this.store.closePanel();
+      this.matchStore.closePanel();
     }
   }
 
@@ -155,18 +221,26 @@ export class NotificationsBellComponent {
     return formatMatchRelativeTime(iso);
   }
 
+  productLabel(kind: string): string {
+    return PRODUCT_KIND_LABEL[kind] ?? 'Alerta';
+  }
+
+  productTone(kind: string): 'gold' | 'lime' | 'pink' | 'cyan' | 'muted' {
+    if (kind === 'rank_up' || kind === 'report_ready') return 'lime';
+    if (kind === 'forma_down' || kind === 'rank_down') return 'pink';
+    if (kind === 'sync_stale') return 'gold';
+    return 'cyan';
+  }
+
   platformShort(platform: string): string {
     const key = platform.toLowerCase();
     const map: Record<string, string> = {
       valorant: 'VAL',
+      league_of_legends: 'LoL',
       rocket_league: 'RL',
       fortnite: 'FN',
       roblox: 'RBX',
       blox_fruits: 'BF',
-      adopt_me: 'AM',
-      brookhaven: 'BH',
-      bedwars: 'BW',
-      arsenal: 'ARS',
     };
     return map[key] ?? platform.slice(0, 3).toUpperCase();
   }
@@ -178,9 +252,15 @@ export class NotificationsBellComponent {
     return 'lime';
   }
 
-  onItemClick(item: MatchNotification): void {
-    this.store.markRead(item.id);
-    this.store.closePanel();
+  onMatchClick(item: MatchNotification): void {
+    this.matchStore.markRead(item.id);
+    this.matchStore.closePanel();
     void this.router.navigateByUrl(matchDetailRoute(item.matchId));
+  }
+
+  onProductClick(item: InAppAlert): void {
+    this.productStore.markRead(item.id);
+    this.matchStore.closePanel();
+    void this.router.navigateByUrl(item.route);
   }
 }

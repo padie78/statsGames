@@ -5,6 +5,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import { lolProfileBannerSplashUrl } from '../../core/game/lol-ddragon.util';
+import { valorantProfileBannerSplashUrl } from '../../core/game/valorant-assets.util';
 import type { SelectedGame } from '../../core/game/selected-game';
 import { PlayerService } from '../../services/player.service';
 import {
@@ -46,9 +47,7 @@ import {
               <p class="sg-dashboard__week-eyebrow">
                 {{ game().label }} · Ficha pública
               </p>
-              <h1 class="sg-dashboard__week-title">
-                {{ gamerTag() || 'Mi Perfil' }}
-              </h1>
+              <h1 class="sg-dashboard__week-title">Mi Perfil</h1>
               <p class="sg-dashboard__week-lede u-m-0">
                 Vista previa de tu ficha para reclutadores. Editá biografía e identidad en
                 Configuración.
@@ -145,9 +144,12 @@ export class ProfilePageComponent {
     if (this.heroArtFailed()) {
       return meta.portraitFallbackUrl || meta.artUrl;
     }
+    const seed = (this.gamerTag() || this.auth.userId() || 'profile-hero').length + 31;
     if (this.activeGame() === 'league_of_legends') {
-      const seed = (this.gamerTag() || this.auth.userId() || 'lol-profile').length + 31;
       return lolProfileBannerSplashUrl(seed);
+    }
+    if (this.activeGame() === 'valorant') {
+      return valorantProfileBannerSplashUrl(seed);
     }
     return meta.portraitUrl || meta.artUrl;
   });

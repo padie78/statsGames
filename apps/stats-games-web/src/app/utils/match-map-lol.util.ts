@@ -13,8 +13,13 @@ import {
   formatMapTime,
   interpolatePath,
 } from './match-map-telemetry.mock';
+import {
+  isValorantPlatform,
+  resolveValorantMatchMapTelemetry,
+} from './match-map-valorant.util';
 
 export { formatMapTime, interpolatePath } from './match-map-telemetry.mock';
+export { isValorantPlatform } from './match-map-valorant.util';
 
 const RIFT_MAP_ASSET = '/assets/maps/summoners-rift-mvp.svg';
 const RIFT_MAX = 15_000;
@@ -101,6 +106,9 @@ export function resolveMatchMapTelemetry(match: MatchUpdateView): MatchMapTeleme
   }
   if (isLolPlatform(match.platform)) {
     return resolveLolMatchMapTelemetry(match);
+  }
+  if (isValorantPlatform(match.platform)) {
+    return resolveValorantMatchMapTelemetry(match);
   }
   return null;
 }

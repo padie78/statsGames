@@ -8,8 +8,8 @@ import {
   type CommunityRankTableView,
 } from '../../data/community-mock.data';
 import {
-  buildMockMatchHistory,
   filterMockMatchesByPlatform,
+  resolveMatchHistory,
 } from '../../data/match-mock.data';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameContextService } from '../../core/game/game-context.service';
@@ -19,6 +19,11 @@ import {
   lolChampionSplashUrl,
   lolFallbackSplashUrl,
 } from '../../core/game/lol-ddragon.util';
+import {
+  valorantAgentSplashFallbackUrl,
+  valorantAgentSplashUrl,
+  valorantFallbackSplashUrl,
+} from '../../core/game/valorant-assets.util';
 import { isGameAccountConnected } from '../../core/game/platform-link.util';
 import {
   matchBackendPlatform,
@@ -29,6 +34,7 @@ import { AppSyncRealtimeService } from '../../services/appsync-realtime.service'
 import { MatchAiService, type MatchAiReportView } from '../../services/match-ai.service';
 import { MatchService, type MatchUpdateView } from '../../services/match.service';
 import { MatchNotificationsStore } from '../../stores/match-notifications.store';
+import { InAppAlertsStore } from '../../stores/in-app-alerts.store';
 import { PlayerService, type PlayerProfileView } from '../../services/player.service';
 import {
   StatsService,
@@ -37,6 +43,7 @@ import {
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
 import {
+  AgentOfWeekComponent,
   CommunityRankTableComponent,
   MatchHighlightCardComponent,
   TrackStartPanelComponent,
@@ -44,11 +51,13 @@ import {
   WeeklyHomeSummaryComponent,
   sgFadeSlideIn,
 } from '../../ui';
+import type { AgentOfWeekView } from '../../ui/molecules/agent-of-week/agent-of-week.component';
 import { matchDetailRoute } from '../../utils/match-analysis.util';
 import {
   aggregateMatchStats,
   computeKdRatio,
   filterMatchesWithinDays,
+  isMatchWin,
   mergeMatchUpdates,
   toMatchCardStats,
 } from '../../utils/match-stats.util';
@@ -71,6 +80,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     CommunityRankTableComponent,
     WeekHeroBrandComponent,
     WeeklyHomeSummaryComponent,
+    AgentOfWeekComponent,
   ],
   animations: [sgFadeSlideIn],
   template: `
@@ -122,9 +132,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                   <span>· Actualizado {{ lastUpdatedLabel() }}</span>
                 }
               </p>
-              <h1 class="sg-dashboard__week-title">
-                {{ profile()?.gamerTag || 'Tu rendimiento' }}
-              </h1>
+              <h1 class="sg-dashboard__week-title">Inicio</h1>
               <p class="sg-dashboard__week-lede u-m-0">
                 @if (needsTrackingSetup()) {
                   Conectá tu cuenta del juego para ver KPIs reales, forma semanal y análisis.
@@ -134,6 +142,9 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 } @else {
                   Esta semana: {{ weekSummary().winCount }}V /
                   {{ weekMatchCount() }} partidas · WR {{ weekSummary().winRate }}.
+                  @if (matchesUsePreview()) {
+                    <span class="sg-analytics__badge">preview</span>
+                  }
                 }
               </p>
 
@@ -189,6 +200,9 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 [ctaLabel]="aiCtaLabel()"
                 (primaryClick)="onAiCta()"
               />
+              @if (agentOfWeek(); as agentWeek) {
+                <sg-agent-of-week [view]="agentWeek" />
+              }
             }
           </section>
 
@@ -286,6 +300,7 @@ export class DashboardPageComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly realtime = inject(AppSyncRealtimeService);
   readonly notifications = inject(MatchNotificationsStore);
+  private readonly productAlerts = inject(InAppAlertsStore);
   private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
   private readonly matchAi = inject(MatchAiService);
@@ -354,6 +369,19 @@ export class DashboardPageComponent implements OnInit {
       return this.weekLolSplashUrl() ?? localFallback;
     }
 
+    if (this.heroPlatform() === 'valorant') {
+      if (this.weekBannerFailed()) {
+        const agent =
+          this.highlightMatch()?.stats?.agent ??
+          this.weekMatches().find((m) => m.stats?.agent)?.stats?.agent;
+        return (
+          valorantAgentSplashFallbackUrl(agent) ??
+          valorantFallbackSplashUrl((this.profile()?.gamerTag ?? 'val').length + 3)
+        );
+      }
+      return this.weekValorantSplashUrl() ?? localFallback;
+    }
+
     if (this.weekBannerFailed()) {
       return localFallback;
     }
@@ -381,10 +409,27 @@ export class DashboardPageComponent implements OnInit {
     return lolFallbackSplashUrl(seed);
   });
 
+  /** Agente más relevante de la semana → fullportrait Valorant API. */
+  private readonly weekValorantSplashUrl = computed(() => {
+    if (this.heroPlatform() !== 'valorant') return null;
+
+    const fromHighlight = this.highlightMatch()?.stats?.agent;
+    const fromSplash = valorantAgentSplashUrl(fromHighlight);
+    if (fromSplash) return fromSplash;
+
+    const fromRecent = this.weekMatches().find((m) => m.stats?.agent)?.stats?.agent;
+    const recentSplash = valorantAgentSplashUrl(fromRecent);
+    if (recentSplash) return recentSplash;
+
+    const seed = (this.profile()?.gamerTag ?? 'val').length;
+    return valorantFallbackSplashUrl(seed);
+  });
+
   constructor() {
     effect(() => {
       this.heroPlatform();
       this.weekLolSplashUrl();
+      this.weekValorantSplashUrl();
       this.weekBannerFailed.set(false);
       this.weekBannerRetried.set(false);
     });
@@ -406,6 +451,13 @@ export class DashboardPageComponent implements OnInit {
         const live = this.realtime.liveMatches();
         if (!live.length) return;
         this.recentMatches.update((current) => mergeMatchUpdates(live, current));
+      },
+      { allowSignalWrites: true },
+    );
+    effect(
+      () => {
+        if (!this.bootstrapped() || this.loading()) return;
+        this.emitProductAlerts();
       },
       { allowSignalWrites: true },
     );
@@ -507,14 +559,24 @@ export class DashboardPageComponent implements OnInit {
 
   readonly effectiveRecentMatches = computed(() => {
     const platform = this.heroPlatform();
-    const api = this.recentMatches();
-    // Autenticado: nunca mocks (causaban imagen/paneles incorrectos ~2s al entrar a Inicio).
-    if (this.auth.userId()) {
-      return filterMockMatchesByPlatform(api, platform);
+    const api = filterMockMatchesByPlatform(this.recentMatches(), platform);
+    if (api.length > 0) return api;
+
+    const userId = this.auth.userId();
+    // Sin cuenta vinculada: vacío (el track panel cubre el CTA).
+    if (userId && !isGameAccountConnected(platform, this.profile())) {
+      return [];
     }
-    const userId = 'mock-user-demo';
-    const source = api.length > 0 ? api : buildMockMatchHistory(userId);
-    return filterMockMatchesByPlatform(source, platform);
+
+    // Guest o cuenta vinculada sin ingest: preview (mismo criterio que Partidas).
+    return resolveMatchHistory([], userId || 'mock-user-demo', platform);
+  });
+
+  /** True cuando Inicio está en preview (API sin partidas del juego). */
+  readonly matchesUsePreview = computed(() => {
+    const platform = this.heroPlatform();
+    const api = filterMockMatchesByPlatform(this.recentMatches(), platform);
+    return api.length === 0 && this.effectiveRecentMatches().length > 0;
   });
 
   readonly communityUsesMock = computed(() => this.communityBenchmarksApi() == null);
@@ -530,6 +592,57 @@ export class DashboardPageComponent implements OnInit {
         (this.bootstrapped() ? MOCK_COMMUNITY_BENCHMARKS[platform] : undefined),
       kdLabel: this.kdLabel(),
     });
+  });
+
+  /** Moda de agente + mapa top en la semana (solo Valorant). */
+  readonly agentOfWeek = computed<AgentOfWeekView | null>(() => {
+    if (this.heroPlatform() !== 'valorant') return null;
+    const matches = this.weekMatches().filter((m) => m.stats?.agent?.trim());
+    if (matches.length < 2) return null;
+
+    const agentCounts = new Map<string, { count: number; wins: number }>();
+    const mapCounts = new Map<string, number>();
+    for (const m of matches) {
+      const agent = m.stats?.agent?.trim();
+      if (!agent) continue;
+      const prev = agentCounts.get(agent) ?? { count: 0, wins: 0 };
+      prev.count += 1;
+      if (isMatchWin(m.stats)) prev.wins += 1;
+      agentCounts.set(agent, prev);
+
+      const map = m.stats?.map?.trim();
+      if (map) mapCounts.set(map, (mapCounts.get(map) ?? 0) + 1);
+    }
+
+    let bestAgent = '';
+    let best = { count: 0, wins: 0 };
+    for (const [agent, stats] of agentCounts) {
+      if (stats.count > best.count || (stats.count === best.count && stats.wins > best.wins)) {
+        bestAgent = agent;
+        best = stats;
+      }
+    }
+    if (!bestAgent || best.count < 2) return null;
+
+    let mapOfWeek: string | null = null;
+    let mapTop = 0;
+    for (const [map, count] of mapCounts) {
+      if (count > mapTop) {
+        mapTop = count;
+        mapOfWeek = map;
+      }
+    }
+
+    const winRate =
+      best.count > 0 ? `${Math.round((best.wins / best.count) * 100)}%` : '—';
+
+    return {
+      agent: bestAgent,
+      matches: best.count,
+      winRate,
+      artUrl: valorantAgentSplashUrl(bestAgent),
+      mapOfWeek,
+    };
   });
 
   readonly communityRank = computed<CommunityRankTableView | null>(() => {
@@ -601,6 +714,70 @@ export class DashboardPageComponent implements OnInit {
     void this.router.navigateByUrl('/tabs/ai-coach');
   }
 
+  private emitProductAlerts(): void {
+    const platform = this.heroPlatform();
+    const periodId = currentWeeklyPeriodIdForStats();
+    const meta = this.platformMeta();
+    const connected = isGameAccountConnected(platform, this.profile());
+
+    if (this.needsTrackingSetup() || !connected) {
+      this.productAlerts.push({
+        kind: 'sync_stale',
+        title: `Sync · ${meta.label}`,
+        body: 'Cuenta sin vincular o desactualizada. Conectá para refrescar partidas y ranking.',
+        route: '/tabs/integrations',
+        dedupKey: `sync_stale:${platform}:${periodId}`,
+      });
+      return;
+    }
+
+    const coach = this.weeklyCoach();
+    if (coach.matchCount >= 3 && (coach.formBand === 'cold' || coach.regressions.length >= 2)) {
+      this.productAlerts.push({
+        kind: 'forma_down',
+        title: 'Forma en baja',
+        body:
+          coach.regressions[0] ||
+          'WR/KDA de la semana por debajo de tu media. Revisá el foco en Coach.',
+        route: '/tabs/ai-coach',
+        dedupKey: `forma_down:${platform}:${periodId}`,
+      });
+    }
+
+    const report = this.latestAiReport();
+    if (report?.status === 'ready' && report.matchId) {
+      this.productAlerts.push({
+        kind: 'report_ready',
+        title: 'Reporte IA listo',
+        body: report.headline?.trim() || 'Tu último análisis de partida ya está disponible.',
+        route: matchDetailRoute(report.matchId),
+        dedupKey: `report_ready:${report.matchId}`,
+      });
+    }
+
+    const rank = this.communityRank();
+    const you = rank?.rows.find((row) => row.isYou);
+    if (you && you.trend === 'up' && you.rank > 0) {
+      const lpLabel = platform === 'valorant' ? 'RR' : platform === 'league_of_legends' ? 'LP' : 'rank';
+      this.productAlerts.push({
+        kind: 'rank_up',
+        title: `Subiste en el ranking (${lpLabel})`,
+        body: `#${you.rank} · ${you.delta} esta semana. Compartí tu ficha si querés.`,
+        route: '/tabs/profile',
+        dedupKey: `rank_up:${platform}:${periodId}:${you.rank}`,
+      });
+    } else if (you && you.trend === 'down' && you.rank > 0) {
+      const lpLabel = platform === 'valorant' ? 'RR' : platform === 'league_of_legends' ? 'LP' : 'rank';
+      this.productAlerts.push({
+        kind: 'rank_down',
+        title: `Bajaste en el ranking (${lpLabel})`,
+        body: `#${you.rank} · ${you.delta}. Revisá forma y rivales en Evolución.`,
+        route: '/tabs/analytics',
+        dedupKey: `rank_down:${platform}:${periodId}:${you.rank}`,
+      });
+    }
+  }
+
   private async loadData(): Promise<void> {
     const userId = this.auth.userId();
     if (!userId) {
@@ -627,7 +804,10 @@ export class DashboardPageComponent implements OnInit {
       const periodId = currentWeeklyPeriodIdForStats();
 
       const [matches, weeklyRows, community, leaderboard, aiReports] = await Promise.all([
-        this.matchService.listPlayerMatchesOnce(userId, { limit: 50 }),
+        this.matchService.listPlayerMatchesOnce(userId, {
+          platform: platform ?? undefined,
+          limit: 50,
+        }),
         firstValueFrom(
           this.statsService.listPlayerStatsRollups(userId, 'WEEKLY', periodId, platform),
         ),

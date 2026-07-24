@@ -43,6 +43,7 @@ export {
 export { NotificationsBellComponent } from './molecules/notifications-bell/notifications-bell.component';
 export { ChromeAccountComponent } from './molecules/chrome-account/chrome-account.component';
 export { MatchNotificationToastComponent } from './molecules/match-notification-toast/match-notification-toast.component';
+export { InAppAlertToastComponent } from './molecules/in-app-alert-toast/in-app-alert-toast.component';
 export { ShareLinkButtonComponent } from './molecules/share-link-button/share-link-button.component';
 export { LiveTickerComponent } from './molecules/live-ticker/live-ticker.component';
 export { KpiStripComponent, type KpiStripItem, type KpiMetricIcon } from './molecules/kpi-strip/kpi-strip.component';
@@ -59,6 +60,8 @@ export { IntegrationStatusCardComponent } from './molecules/integration-status-c
 export { AiInsightCardComponent } from './molecules/ai-insight-card/ai-insight-card.component';
 export { WeeklyAiCoachPanelComponent } from './molecules/weekly-ai-coach-panel/weekly-ai-coach-panel.component';
 export { WeeklyHomeSummaryComponent } from './molecules/weekly-home-summary/weekly-home-summary.component';
+export { AgentOfWeekComponent } from './molecules/agent-of-week/agent-of-week.component';
+export type { AgentOfWeekView } from './molecules/agent-of-week/agent-of-week.component';
 export {
   LiveMatchFeedComponent,
   type LiveMatchFeedItem,

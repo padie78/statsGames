@@ -9,21 +9,40 @@ import { buildPlayerShareUrl, copyToClipboard } from '../../../utils/match-stats
     <button
       type="button"
       class="u-btn u-btn--ghost sg-share-link"
-      (click)="copyLink()"
+      (click)="share()"
       [disabled]="!gamerTag"
     >
-      {{ copied() ? '¡Copiado!' : 'Compartir perfil' }}
+      {{ label() }}
     </button>
   `,
 })
 export class ShareLinkButtonComponent {
   @Input({ required: true }) gamerTag!: string;
+  /** Texto opcional del share nativo / clipboard hint. */
+  @Input() shareText = 'Mi ficha en Stats Games';
+  @Input() idleLabel = 'Compartir ficha';
+  @Input() copiedLabel = '¡Link copiado!';
 
   readonly copied = signal(false);
 
-  async copyLink(): Promise<void> {
+  label(): string {
+    return this.copied() ? this.copiedLabel : this.idleLabel;
+  }
+
+  async share(): Promise<void> {
     if (!this.gamerTag) return;
     const url = buildPlayerShareUrl(this.gamerTag);
+    const title = this.shareText;
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title, text: title, url });
+        return;
+      } catch {
+        /* cancelado o no soportado → clipboard */
+      }
+    }
+
     const ok = await copyToClipboard(url);
     if (ok) {
       this.copied.set(true);

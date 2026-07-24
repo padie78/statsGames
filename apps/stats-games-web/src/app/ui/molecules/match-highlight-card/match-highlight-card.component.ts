@@ -7,6 +7,10 @@ import {
   lolChampionSplashUrl,
 } from '../../../core/game/lol-ddragon.util';
 import {
+  valorantAgentSplashFallbackUrl,
+  valorantAgentSplashUrl,
+} from '../../../core/game/valorant-assets.util';
+import {
   normalizeSelectedGame,
   type SelectedGame,
 } from '../../../core/game/selected-game';
@@ -311,16 +315,30 @@ export class MatchHighlightCardComponent {
         gamePlatformMeta('league_of_legends').artUrl
       );
     }
+    if (this.platformKey === 'valorant') {
+      return (
+        valorantAgentSplashUrl(this.stats.agent) ??
+        gamePlatformMeta('valorant').artUrl
+      );
+    }
     if (this.platformKey) return gamePlatformMeta(this.platformKey).artUrl;
     return '/assets/games/fortnite-hero.png';
   }
 
   get panelArtUrl(): string | null {
-    if (this.platformKey !== 'league_of_legends') return null;
-    return (
-      lolChampionSplashUrl(this.stats.champion) ??
-      gamePlatformMeta('league_of_legends').artUrl
-    );
+    if (this.platformKey === 'league_of_legends') {
+      return (
+        lolChampionSplashUrl(this.stats.champion) ??
+        gamePlatformMeta('league_of_legends').artUrl
+      );
+    }
+    if (this.platformKey === 'valorant') {
+      return (
+        valorantAgentSplashUrl(this.stats.agent) ??
+        gamePlatformMeta('valorant').artUrl
+      );
+    }
+    return null;
   }
 
   get activePanelArtUrl(): string | null {
@@ -332,6 +350,12 @@ export class MatchHighlightCardComponent {
   onPanelArtError(): void {
     if (this.panelArtFallback !== undefined) {
       this.panelArtFallback = null;
+      return;
+    }
+    if (this.platformKey === 'valorant') {
+      this.panelArtFallback =
+        valorantAgentSplashFallbackUrl(this.stats.agent) ??
+        gamePlatformMeta('valorant').artUrl;
       return;
     }
     this.panelArtFallback =

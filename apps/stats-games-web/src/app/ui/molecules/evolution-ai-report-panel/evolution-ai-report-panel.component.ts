@@ -28,6 +28,7 @@ type FocusAction = {
       [class.sg-evo-ai--ready]="!!displayReport && displayReport.status !== 'failed'"
       [class.sg-evo-ai--pending]="isHardPending"
       [class.sg-evo-ai--failed]="isHardFailed"
+      [class.sg-evo-ai--compact]="compact"
       aria-label="Informe IA de evolución"
     >
       @if (loading && !displayReport) {
@@ -121,12 +122,12 @@ type FocusAction = {
 
         <div class="sg-evo-ai__body">
           @if (view.pros.length || view.cons.length) {
-            <div class="sg-evo-ai__split">
+            <div class="sg-evo-ai__split" [class.sg-evo-ai__split--compact]="compact && !detailOpen">
               @if (view.pros.length) {
                 <article class="sg-evo-ai__card sg-evo-ai__card--pro">
                   <h3 class="sg-evo-ai__card-title">Fortalezas</h3>
                   <ul class="sg-evo-ai__card-list">
-                    @for (item of view.pros; track item) {
+                    @for (item of compactPros; track item) {
                       <li>{{ item }}</li>
                     }
                   </ul>
@@ -136,7 +137,7 @@ type FocusAction = {
                 <article class="sg-evo-ai__card sg-evo-ai__card--con">
                   <h3 class="sg-evo-ai__card-title">Riesgos</h3>
                   <ul class="sg-evo-ai__card-list">
-                    @for (item of view.cons; track item) {
+                    @for (item of compactCons; track item) {
                       <li>{{ item }}</li>
                     }
                   </ul>
@@ -145,7 +146,7 @@ type FocusAction = {
             </div>
           }
 
-          @if (focusActions.length) {
+          @if (focusActions.length && (!compact || detailOpen)) {
             <article class="sg-evo-ai__plan">
               <div class="sg-evo-ai__plan-head">
                 <h3 class="sg-evo-ai__card-title sg-evo-ai__card-title--plan">Plan de foco</h3>
@@ -169,9 +170,24 @@ type FocusAction = {
                 }
               </ol>
             </article>
+          } @else if (compact && focusActions.length && !detailOpen) {
+            <p class="sg-evo-ai__focus-one u-m-0">
+              <strong>Foco:</strong> {{ focusActions[0].text }}
+            </p>
           }
 
-          @if (markdownSections.length) {
+          @if (compact && hasExpandableDetail) {
+            <button
+              type="button"
+              class="sg-evo-ai__expand"
+              (click)="detailOpen = !detailOpen"
+              [attr.aria-expanded]="detailOpen"
+            >
+              {{ detailOpen ? 'Ocultar detalle' : 'Ver informe completo' }}
+            </button>
+          }
+
+          @if (markdownSections.length && (!compact || detailOpen)) {
             <div class="sg-evo-ai__detail">
               <p class="sg-evo-ai__detail-label">Detalle del informe</p>
               <div class="sg-evo-ai__sections">
@@ -238,15 +254,41 @@ export class EvolutionAiReportPanelComponent {
   @Input() staleReady: EvolutionAiReportView | null = null;
   @Input() regenerating = false;
   @Input() loading = false;
+  /** Compacto: header + 1 pro/con + foco; detalle detrás de toggle. */
+  @Input() compact = false;
   @Output() readonly generate = new EventEmitter<void>();
   @Output() readonly regenerate = new EventEmitter<void>();
 
   exportHint = '';
+  detailOpen = false;
 
   get displayReport(): EvolutionAiReportView | null {
     if (this.report?.status === 'ready') return this.report;
     if (this.staleReady?.status === 'ready') return this.staleReady;
     return this.report;
+  }
+
+  get compactPros(): string[] {
+    const list = this.displayReport?.pros ?? [];
+    if (!this.compact || this.detailOpen) return list;
+    return list.slice(0, 1);
+  }
+
+  get compactCons(): string[] {
+    const list = this.displayReport?.cons ?? [];
+    if (!this.compact || this.detailOpen) return list;
+    return list.slice(0, 1);
+  }
+
+  get hasExpandableDetail(): boolean {
+    const view = this.displayReport;
+    if (!view) return false;
+    return (
+      (view.pros?.length ?? 0) > 1 ||
+      (view.cons?.length ?? 0) > 1 ||
+      (view.actionPlan?.length ?? 0) > 1 ||
+      Boolean(view.markdown?.trim())
+    );
   }
 
   get showUpdatingBanner(): boolean {

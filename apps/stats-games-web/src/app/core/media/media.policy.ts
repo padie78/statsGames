@@ -36,6 +36,8 @@ export const MEDIA_POLICY = {
     'ddragon.leagueoflegends.com',
     'cdn.communitydragon.org',
     'raw.communitydragon.org',
+    'media.valorant-api.com',
+    'valorant-api.com',
     'i.ytimg.com',
   ] as const,
   maxApiThumbPx: {

@@ -4,6 +4,8 @@ import { AuthService } from '../core/auth/auth.service';
 import { AppSyncRealtimeService } from '../services/appsync-realtime.service';
 import { MatchAiService, type MatchAiReadyView } from '../services/match-ai.service';
 import type { MatchUpdateView } from '../services/match.service';
+import { InAppAlertsStore } from './in-app-alerts.store';
+import { matchDetailRoute } from '../utils/match-analysis.util';
 
 export type MatchAiStatus = 'pending' | 'ready' | 'failed';
 
@@ -36,6 +38,7 @@ export class MatchNotificationsStore {
   private readonly realtime = inject(AppSyncRealtimeService);
   private readonly matchAi = inject(MatchAiService);
   private readonly auth = inject(AuthService);
+  private readonly productAlerts = inject(InAppAlertsStore);
 
   private readonly _items = signal<MatchNotification[]>([]);
   private readonly _panelOpen = signal(false);
@@ -209,6 +212,16 @@ export class MatchNotificationsStore {
 
     const updated = this._items().find((item) => item.matchId === event.matchId);
     if (updated) this.showToast(updated);
+
+    if (status === 'ready') {
+      this.productAlerts.push({
+        kind: 'report_ready',
+        title: 'Reporte IA listo',
+        body: headline,
+        route: matchDetailRoute(event.matchId),
+        dedupKey: `report_ready:${event.matchId}`,
+      });
+    }
   }
 
   private ensureAiReadySubscription(userId: string | null): void {

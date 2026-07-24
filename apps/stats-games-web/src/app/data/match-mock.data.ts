@@ -589,8 +589,13 @@ export function filterMockMatchesByPlatform(
   const key =
     platform === 'blox_fruits' || platform === 'adopt_me' || platform === 'brookhaven'
       ? 'roblox'
-      : platform;
-  return matches.filter((m) => m.platform === key);
+      : platform === 'lol'
+        ? 'league_of_legends'
+        : platform;
+  return matches.filter((m) => {
+    const p = m.platform === 'lol' ? 'league_of_legends' : m.platform;
+    return p === key;
+  });
 }
 
 export function buildMockMatchHistory(userId: string): MatchUpdateView[] {
