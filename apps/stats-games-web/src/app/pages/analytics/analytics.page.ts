@@ -44,6 +44,7 @@ import {
   CommunityComparisonPanelComponent,
   CommunityRankTableComponent,
   EvolutionAiReportPanelComponent,
+  ObjectivesPlanPanelComponent,
   PeerBenchmarkPanelComponent,
   WeekHeroBrandComponent,
   StatsComparisonChartComponent,
@@ -95,6 +96,7 @@ import {
     StatsComparisonChartComponent,
     PeerBenchmarkPanelComponent,
     EvolutionAiReportPanelComponent,
+    ObjectivesPlanPanelComponent,
     WeeklyFormChartComponent,
   ],
   template: `
@@ -335,6 +337,23 @@ import {
           />
         </section>
 
+        @if (auth.userId(); as objectivesUserId) {
+          <section class="sg-dashboard__block sg-analytics__section" aria-labelledby="analytics-objectives">
+            <div class="sg-dashboard__block-head">
+              <div>
+                <h2 id="analytics-objectives" class="sg-dashboard__block-title">Plan vs Realidad</h2>
+                <p class="sg-dashboard__block-desc">
+                  Programa de metas, carga de ejecución y cumplimiento por métrica.
+                </p>
+              </div>
+            </div>
+            <sg-objectives-plan-panel
+              [userId]="objectivesUserId"
+              [platform]="objectivesPlatform()"
+            />
+          </section>
+        }
+
         <section class="sg-dashboard__block sg-analytics__section" aria-labelledby="analytics-compare-week">
           <div class="sg-dashboard__block-head">
             <div>
@@ -451,7 +470,7 @@ import {
   `,
 })
 export class AnalyticsPageComponent implements OnInit, OnDestroy {
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly gameContext = inject(GameContextService);
   private readonly statsService = inject(StatsService);
   private readonly matchService = inject(MatchService);
@@ -481,6 +500,10 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
   private readonly heroArtFailed = signal(false);
 
   readonly activePlatform = computed((): SelectedGame => this.gameContext.activeGame() ?? 'fortnite');
+
+  readonly objectivesPlatform = computed(
+    () => matchBackendPlatform(this.activePlatform()) ?? null,
+  );
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.activePlatform()));
 

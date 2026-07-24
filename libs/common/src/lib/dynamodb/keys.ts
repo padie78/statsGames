@@ -95,4 +95,34 @@ export const DynamoKeys = {
   gamerTagGsi2Sk(normalizedTag: string, userId: string): string {
     return `${normalizedTag}#${userId}`;
   },
+
+  /** Programa de objetivos (planificación). */
+  targetProgramSk(programId: string): string {
+    return `TARGET_PROGRAM#${programId}`;
+  },
+
+  targetProgramSkPrefix(): string {
+    return 'TARGET_PROGRAM#';
+  },
+
+  /** Puntero singleton al programa activo del usuario. */
+  targetProgramActiveSk(): string {
+    return 'TARGET_PROGRAM#ACTIVE';
+  },
+
+  programTargetSk(programId: string, metricTypeId: string, periodId: string): string {
+    return `PROGRAM_TARGET#${programId}#${metricTypeId}#${periodId}`;
+  },
+
+  programTargetSkPrefix(programId?: string): string {
+    return programId ? `PROGRAM_TARGET#${programId}#` : 'PROGRAM_TARGET#';
+  },
+
+  actualExecutionSk(programId: string, metricTypeId: string, periodId: string): string {
+    return `ACTUAL_EXEC#${programId}#${metricTypeId}#${periodId}`;
+  },
+
+  actualExecutionSkPrefix(programId?: string): string {
+    return programId ? `ACTUAL_EXEC#${programId}#` : 'ACTUAL_EXEC#';
+  },
 };

@@ -32,6 +32,7 @@ export {
   type PeerBenchmarkVisualMode,
 } from './molecules/peer-benchmark-panel/peer-benchmark-panel.component';
 export { EvolutionAiReportPanelComponent } from './molecules/evolution-ai-report-panel/evolution-ai-report-panel.component';
+export { ObjectivesPlanPanelComponent } from './molecules/objectives-plan-panel/objectives-plan-panel.component';
 export {
   WeeklyFormChartComponent,
   type WeeklyFormChartVariant,

@@ -1,21 +1,26 @@
 import type { AppSyncResolverEvent, AppSyncResolverHandler } from 'aws-lambda';
 import type { MatchStatsRollupDto, MatchUpdateDto } from '@stats-games/application';
 import {
+  getActiveTargetProgram,
   getCommunityBenchmarks,
   getEvolutionAiReport,
   getMatchAiReport,
+  getObjectiveEvolution,
   getPlayerProfile,
   getProfileByGamerTag,
   linkPlatformAccount,
   listEvolutionAiReports,
   listMatchAiReports,
+  listObjectiveMetricTypes,
   listPlayerDailyTrend,
   listPlayerMatches,
   listPlayerStatsRollups,
   listWeeklyLeaderboard,
   requestEvolutionAiReport,
   searchPlayers,
+  upsertActualExecution,
   upsertPlayerProfile,
+  upsertTargetProgram,
 } from './composition-root';
 import { asPlatform, asStatsGranularity, rethrowAsTyped } from './errors';
 
@@ -69,6 +74,14 @@ type ResolverArgs =
       fieldName: 'listWeeklyLeaderboard';
       args: { platform: string; periodId: string; limit?: number | null };
     }
+  | { fieldName: 'listObjectiveMetricTypes'; args: Record<string, never> }
+  | { fieldName: 'getActiveTargetProgram'; args: { userId: string } }
+  | {
+      fieldName: 'getObjectiveEvolution';
+      args: { userId: string; programId?: string | null };
+    }
+  | { fieldName: 'upsertTargetProgram'; args: { input: Record<string, unknown> } }
+  | { fieldName: 'upsertActualExecution'; args: { input: Record<string, unknown> } }
   | { fieldName: 'upsertPlayerProfile'; args: { input: Record<string, unknown> } }
   | { fieldName: 'linkPlatformAccount'; args: { input: Record<string, unknown> } }
   | { fieldName: 'ping'; args: { message: string } };
@@ -212,6 +225,24 @@ async function dispatch(op: ResolverArgs): Promise<unknown> {
         periodId: op.args.periodId,
         limit: op.args.limit ?? undefined,
       });
+
+    case 'listObjectiveMetricTypes':
+      return listObjectiveMetricTypes.execute();
+
+    case 'getActiveTargetProgram':
+      return getActiveTargetProgram.execute({ userId: op.args.userId });
+
+    case 'getObjectiveEvolution':
+      return getObjectiveEvolution.execute({
+        userId: op.args.userId,
+        programId: op.args.programId ?? undefined,
+      });
+
+    case 'upsertTargetProgram':
+      return upsertTargetProgram.execute(op.args.input);
+
+    case 'upsertActualExecution':
+      return upsertActualExecution.execute(op.args.input);
 
     case 'upsertPlayerProfile':
       return upsertPlayerProfile.execute(op.args.input);

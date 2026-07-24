@@ -35,6 +35,15 @@ type Query {
   getCommunityBenchmarks(platform: String!, periodId: String!): CommunityBenchmarks! @aws_api_key
   listWeeklyLeaderboard(platform: String!, periodId: String!, limit: Int): [LeaderboardEntry!]!
     @aws_api_key
+  listObjectiveMetricTypes: [ObjectiveMetricType!]!
+    @aws_api_key
+    @aws_cognito_user_pools
+  getActiveTargetProgram(userId: ID!): TargetProgram
+    @aws_api_key
+    @aws_cognito_user_pools
+  getObjectiveEvolution(userId: ID!, programId: ID): ObjectiveEvolution
+    @aws_api_key
+    @aws_cognito_user_pools
 }
 
 type PlayerProfile @aws_api_key @aws_cognito_user_pools {
@@ -228,6 +237,117 @@ input RequestEvolutionAiReportInput {
   force: Boolean
 }
 
+# ─── Planificación vs Realidad ───
+
+type ObjectiveMetricType @aws_api_key @aws_cognito_user_pools {
+  id: ID!
+  label: String!
+  unit: String!
+  description: String!
+  higherIsBetter: Boolean!
+  domain: String!
+}
+
+type ProgramTarget @aws_api_key @aws_cognito_user_pools {
+  programId: ID!
+  metricTypeId: String!
+  periodId: String!
+  plannedValue: Float!
+  notes: String
+  createdAt: AWSDateTime!
+}
+
+type ActualExecution @aws_api_key @aws_cognito_user_pools {
+  programId: ID!
+  userId: ID!
+  metricTypeId: String!
+  periodId: String!
+  actualValue: Float!
+  recordedAt: AWSDateTime!
+  source: String!
+  notes: String
+}
+
+type TargetProgram @aws_api_key @aws_cognito_user_pools {
+  programId: ID!
+  userId: ID!
+  title: String!
+  cadence: String!
+  status: String!
+  platform: String
+  startsAt: AWSDate!
+  endsAt: AWSDate
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  targets: [ProgramTarget!]!
+}
+
+input ProgramTargetInput {
+  metricTypeId: String!
+  periodId: String!
+  plannedValue: Float!
+  notes: String
+}
+
+input UpsertTargetProgramInput {
+  userId: ID!
+  programId: ID
+  title: String!
+  cadence: String!
+  status: String
+  platform: String
+  startsAt: AWSDate!
+  endsAt: AWSDate
+  targets: [ProgramTargetInput!]!
+}
+
+input UpsertActualExecutionInput {
+  userId: ID!
+  programId: ID!
+  metricTypeId: String!
+  periodId: String!
+  actualValue: Float!
+  source: String
+  notes: String
+}
+
+type ObjectiveEvolutionRow @aws_api_key @aws_cognito_user_pools {
+  metricTypeId: String!
+  metricLabel: String!
+  unit: String!
+  periodId: String!
+  plannedValue: Float!
+  actualValue: Float
+  compliancePct: Float
+  deviationPct: Float
+  status: String!
+  statusLabel: String!
+}
+
+type ObjectiveEvolutionMetricSummary @aws_api_key @aws_cognito_user_pools {
+  metricTypeId: String!
+  metricLabel: String!
+  unit: String!
+  plannedTotal: Float!
+  actualTotal: Float!
+  compliancePct: Float
+  status: String!
+  statusLabel: String!
+}
+
+type ObjectiveEvolution @aws_api_key @aws_cognito_user_pools {
+  programId: ID!
+  userId: ID!
+  title: String!
+  cadence: String!
+  globalCompliancePct: Float
+  alignedCount: Int!
+  aboveCount: Int!
+  criticalCount: Int!
+  rows: [ObjectiveEvolutionRow!]!
+  byMetric: [ObjectiveEvolutionMetricSummary!]!
+}
+
 type Mutation {
   ping(message: String!): String! @aws_api_key @aws_cognito_user_pools
   upsertPlayerProfile(input: UpsertPlayerProfileInput!): PlayerProfile!
@@ -237,6 +357,12 @@ type Mutation {
     @aws_api_key
     @aws_cognito_user_pools
   requestEvolutionAiReport(input: RequestEvolutionAiReportInput!): EvolutionAiReport!
+    @aws_api_key
+    @aws_cognito_user_pools
+  upsertTargetProgram(input: UpsertTargetProgramInput!): TargetProgram!
+    @aws_api_key
+    @aws_cognito_user_pools
+  upsertActualExecution(input: UpsertActualExecutionInput!): ActualExecution!
     @aws_api_key
     @aws_cognito_user_pools
   publishMatchUpdate(input: MatchUpdateInput!): MatchUpdate @aws_api_key

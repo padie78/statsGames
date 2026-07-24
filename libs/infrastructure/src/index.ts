@@ -9,6 +9,7 @@ export * from './lib/repositories/dynamodb-player-profile.repository';
 export * from './lib/repositories/dynamodb-platform-account-resolver';
 export * from './lib/repositories/dynamodb-stats-summary.repository';
 export * from './lib/repositories/dynamodb-community-stats.repository';
+export * from './lib/repositories/dynamodb-target-program.repository';
 export * from './lib/events/appsync-match-update-publisher.adapter';
 export * from './lib/events/appsync-match-ai-ready-publisher.adapter';
 export * from './lib/events/appsync-evolution-ai-ready-publisher.adapter';

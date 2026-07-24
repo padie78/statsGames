@@ -2,18 +2,23 @@ import {
   GetCommunityBenchmarksUseCase,
   GetEvolutionAiReportUseCase,
   GetMatchAiReportUseCase,
+  GetObjectiveEvolutionUseCase,
+  GetActiveTargetProgramUseCase,
   GetPlayerProfileUseCase,
   GetProfileByGamerTagUseCase,
   LinkPlatformAccountUseCase,
   ListEvolutionAiReportsUseCase,
   ListMatchAiReportsUseCase,
+  ListObjectiveMetricTypesUseCase,
   ListPlayerDailyTrendUseCase,
   ListPlayerMatchesUseCase,
   ListPlayerStatsRollupsUseCase,
   ListWeeklyLeaderboardUseCase,
   RequestEvolutionAiReportUseCase,
   SearchPlayersUseCase,
+  UpsertActualExecutionUseCase,
   UpsertPlayerProfileUseCase,
+  UpsertTargetProgramUseCase,
 } from '@stats-games/application';
 import {
   ConsoleLogger,
@@ -23,6 +28,7 @@ import {
   DynamoDbMatchRepository,
   DynamoDbPlayerProfileRepository,
   DynamoDbStatsSummaryRepository,
+  DynamoDbTargetProgramRepository,
   SqsEvolutionAiAnalysisQueuePublisherAdapter,
 } from '@stats-games/infrastructure';
 
@@ -34,6 +40,7 @@ const matchAiReports = new DynamoDbMatchAiReportRepository();
 const evolutionAiReports = new DynamoDbEvolutionAiReportRepository();
 const statsRepository = new DynamoDbStatsSummaryRepository();
 const communityStatsRepository = new DynamoDbCommunityStatsRepository();
+const targetPrograms = new DynamoDbTargetProgramRepository();
 const evolutionQueue = new SqsEvolutionAiAnalysisQueuePublisherAdapter();
 
 export const getPlayerProfile = new GetPlayerProfileUseCase(playerProfiles);
@@ -63,3 +70,8 @@ export const listWeeklyLeaderboard = new ListWeeklyLeaderboardUseCase(
   communityStatsRepository,
   playerProfiles,
 );
+export const listObjectiveMetricTypes = new ListObjectiveMetricTypesUseCase();
+export const getActiveTargetProgram = new GetActiveTargetProgramUseCase(targetPrograms);
+export const upsertTargetProgram = new UpsertTargetProgramUseCase(targetPrograms);
+export const upsertActualExecution = new UpsertActualExecutionUseCase(targetPrograms);
+export const getObjectiveEvolution = new GetObjectiveEvolutionUseCase(targetPrograms);
