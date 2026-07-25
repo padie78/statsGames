@@ -124,7 +124,9 @@ interface DraftTargetRow {
 
       @if (tab() === 'builder') {
         <div class="sg-obj-panel__body" role="tabpanel">
-          @if (program() || activePrograms().length) {
+          @if (loading() && !program() && !activePrograms().length) {
+            <p class="sg-obj-hint u-m-0">Cargando programas…</p>
+          } @else if (program() || activePrograms().length) {
             <div class="sg-obj-program-stack">
               <div class="sg-obj-summary__section-head">
                 <h4 class="sg-obj-summary__section-title">
@@ -791,6 +793,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   readonly draftTargets = signal<DraftTargetRow[]>([]);
   readonly helpMetricIndex = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly syncHint = signal<string | null>(null);
 
@@ -914,11 +917,19 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     );
   });
 
-  readonly activePrograms = computed(() =>
-    this.history()
-      .filter((item) => item.status === 'active')
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-  );
+  readonly activePrograms = computed(() => {
+    const fromHistory = this.history().filter(
+      (item) => item.status === 'active' || item.isActive,
+    );
+    const byId = new Map(fromHistory.map((item) => [item.programId, item]));
+
+    const focused = this.program();
+    if (focused && focused.status === 'active' && !byId.has(focused.programId)) {
+      byId.set(focused.programId, historyItemFromProgram(focused));
+    }
+
+    return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  });
 
   readonly filteredHistory = computed(() => {
     const filter = this.historyFilter();
@@ -1232,6 +1243,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
         userId: uid,
         programId: prog.programId,
       });
+      this.objectives.removeCachedProgram(uid, prog.programId);
       this.program.set(null);
       this.evolution.set(null);
       this.title = 'Mi programa de objetivos';
@@ -1298,6 +1310,8 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
         targets,
       });
       this.program.set(saved);
+      this.applyProgramForm(saved);
+      this.objectives.upsertCachedProgram(uid, saved);
       this.execMetricId = saved.targets[0]?.metricTypeId ?? '';
       await this.refreshEvolution(uid, saved.programId);
       await this.refreshHistory(uid);
@@ -1344,39 +1358,79 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
 
   private async bootstrap(userId: string): Promise<void> {
     this.error.set(null);
+    this.loading.set(true);
     // Catálogo local siempre disponible (no depende de AppSync).
     this.metrics.set(seedMetricCatalog());
 
+    // Hidratar desde caché inmediatamente para que un refresh no muestre vacío.
+    const cached = this.objectives.readCachedPrograms(userId);
+    if (cached[0] && !this.program()) {
+      this.program.set(cached[0]);
+      this.applyProgramForm(cached[0]);
+    }
+
     try {
       await this.refreshHistory(userId);
-      const active = await this.objectives.getActiveProgramOnce(userId);
-      const actives = this.activePrograms();
+      let active: TargetProgramView | null = null;
+      try {
+        active = await this.objectives.getActiveProgramOnce(userId);
+      } catch (err) {
+        this.error.set(
+          extractGraphqlErrorMessage(err) || 'No se pudo leer el programa activo.',
+        );
+      }
 
       if (active) {
         this.program.set(active);
-        this.title = active.title;
-        this.cadence = active.cadence === 'monthly' ? 'monthly' : 'weekly';
-        this.startsAt = active.startsAt.slice(0, 10);
-        this.draftTargets.set(
-          active.targets.map((t) => ({
-            metricTypeId: t.metricTypeId,
-            periodId: t.periodId,
-            plannedValue: t.plannedValue,
-          })),
-        );
-        this.execMetricId = active.targets[0]?.metricTypeId ?? '';
-        this.execPeriodId =
-          active.cadence === 'monthly' ? currentMonthPeriodId() : currentIsoWeekPeriodId();
+        this.applyProgramForm(active);
+        this.objectives.upsertCachedProgram(userId, active);
         await this.refreshEvolution(userId, active.programId);
-      } else if (actives[0]) {
-        await this.selectActiveProgram(actives[0]);
+      } else if (this.activePrograms()[0]) {
+        await this.selectActiveProgram(this.activePrograms()[0]!);
+      } else if (cached[0]) {
+        this.program.set(cached[0]);
+        this.applyProgramForm(cached[0]);
+        this.syncHint.set(
+          'Mostrando programas guardados en este dispositivo; la API no devolvió activos.',
+        );
       } else {
         this.program.set(null);
         this.evolution.set(null);
       }
+
+      // Persistir snapshot de activos conocidos (API + foco).
+      const snapshot = this.activePrograms()
+        .map((item) => {
+          if (this.program()?.programId === item.programId) return this.program()!;
+          return cached.find((c) => c.programId === item.programId) ?? null;
+        })
+        .filter((p): p is TargetProgramView => p != null);
+      if (snapshot.length) this.objectives.writeCachedPrograms(userId, snapshot);
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo cargar el módulo de objetivos.');
+      if (!this.program() && cached[0]) {
+        this.program.set(cached[0]);
+        this.applyProgramForm(cached[0]);
+      }
+    } finally {
+      this.loading.set(false);
     }
+  }
+
+  private applyProgramForm(active: TargetProgramView): void {
+    this.title = active.title;
+    this.cadence = active.cadence === 'monthly' ? 'monthly' : 'weekly';
+    this.startsAt = active.startsAt.slice(0, 10);
+    this.draftTargets.set(
+      active.targets.map((t) => ({
+        metricTypeId: t.metricTypeId,
+        periodId: t.periodId,
+        plannedValue: t.plannedValue,
+      })),
+    );
+    this.execMetricId = active.targets[0]?.metricTypeId ?? '';
+    this.execPeriodId =
+      active.cadence === 'monthly' ? currentMonthPeriodId() : currentIsoWeekPeriodId();
   }
 
   private async refreshEvolution(userId: string, programId: string): Promise<void> {
@@ -1388,8 +1442,14 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     if (!userId) return;
     try {
       this.history.set(await this.objectives.listHistoryOnce(userId));
-    } catch {
-      /* historial opcional si el schema aún no está deployado */
+    } catch (err) {
+      // No silenciar del todo: sin historial la lista de activos queda incompleta.
+      if (!this.error()) {
+        this.error.set(
+          extractGraphqlErrorMessage(err) ||
+            'No se pudo cargar el historial de programas.',
+        );
+      }
     }
   }
 
@@ -1414,6 +1474,27 @@ function seedMetricCatalog(): ObjectiveMetricTypeView[] {
     domain: m.domain,
     autoSource: m.autoSource,
   }));
+}
+
+function historyItemFromProgram(program: TargetProgramView): TargetProgramHistoryItemView {
+  return {
+    programId: program.programId,
+    userId: program.userId,
+    title: program.title,
+    cadence: program.cadence,
+    status: program.status,
+    platform: program.platform,
+    startsAt: program.startsAt,
+    endsAt: program.endsAt,
+    createdAt: program.createdAt,
+    updatedAt: program.updatedAt,
+    targetCount: program.targets.length,
+    executionCount: 0,
+    globalCompliancePct: null,
+    outcome: 'in_progress',
+    outcomeLabel: 'En curso',
+    isActive: true,
+  };
 }
 
 function programFromHistoryAndEvolution(

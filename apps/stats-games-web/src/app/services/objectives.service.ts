@@ -243,40 +243,100 @@ export class ObjectivesService {
   }
 
   listHistoryOnce(userId: string, limit = 20): Promise<TargetProgramHistoryItemView[]> {
-    return firstValueFrom(
-      from(
-        this.client.graphql({
-          query: /* GraphQL */ `
-            query ListTargetProgramHistory($userId: ID!, $limit: Int) {
-              listTargetProgramHistory(userId: $userId, limit: $limit) {
-                programId
-                userId
-                title
-                cadence
-                status
-                platform
-                startsAt
-                endsAt
-                createdAt
-                updatedAt
-                targetCount
-                executionCount
-                globalCompliancePct
-                outcome
-                outcomeLabel
-                isActive
+    const mapRows = (rows: Array<Partial<TargetProgramHistoryItemView> & { programId: string }>) =>
+      (rows ?? []).map((row) => ({
+        programId: row.programId,
+        userId: row.userId ?? userId,
+        title: row.title ?? '',
+        cadence: row.cadence ?? 'weekly',
+        status: row.status ?? 'archived',
+        platform: row.platform,
+        startsAt: row.startsAt ?? '',
+        endsAt: row.endsAt,
+        createdAt: row.createdAt ?? '',
+        updatedAt: row.updatedAt ?? '',
+        targetCount: row.targetCount ?? 0,
+        executionCount: row.executionCount ?? 0,
+        globalCompliancePct: row.globalCompliancePct,
+        outcome: row.outcome ?? 'in_progress',
+        outcomeLabel: row.outcomeLabel ?? 'En curso',
+        isActive: Boolean(row.isActive),
+      }));
+
+    const run = (withIsActive: boolean) =>
+      firstValueFrom(
+        from(
+          this.client.graphql({
+            query: /* GraphQL */ `
+              query ListTargetProgramHistory($userId: ID!, $limit: Int) {
+                listTargetProgramHistory(userId: $userId, limit: $limit) {
+                  programId
+                  userId
+                  title
+                  cadence
+                  status
+                  platform
+                  startsAt
+                  endsAt
+                  createdAt
+                  updatedAt
+                  targetCount
+                  executionCount
+                  globalCompliancePct
+                  outcome
+                  outcomeLabel
+                  ${withIsActive ? 'isActive' : ''}
+                }
               }
-            }
-          `,
-          variables: { userId, limit },
-        }),
-      ).pipe(
-        map(
-          (resp) =>
-            (resp as { data: { listTargetProgramHistory: TargetProgramHistoryItemView[] } }).data
-              .listTargetProgramHistory,
+            `,
+            variables: { userId, limit },
+          }),
+        ).pipe(
+          map((resp) =>
+            mapRows(
+              (resp as { data: { listTargetProgramHistory: TargetProgramHistoryItemView[] } }).data
+                .listTargetProgramHistory,
+            ),
+          ),
         ),
-      ),
+      );
+
+    return run(true).catch(() => run(false));
+  }
+
+  /** Caché local para no perder la UI si AppSync falla al refrescar. */
+  readCachedPrograms(userId: string): TargetProgramView[] {
+    try {
+      const raw = localStorage.getItem(cacheKey(userId));
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as TargetProgramView[];
+      return Array.isArray(parsed) ? parsed.filter((p) => p?.programId && p.status === 'active') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  writeCachedPrograms(userId: string, programs: TargetProgramView[]): void {
+    try {
+      const actives = programs.filter((p) => p.status === 'active');
+      localStorage.setItem(cacheKey(userId), JSON.stringify(actives));
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
+
+  upsertCachedProgram(userId: string, program: TargetProgramView): void {
+    const current = this.readCachedPrograms(userId).filter(
+      (p) => p.programId !== program.programId,
+    );
+    if (program.status === 'active') current.unshift(program);
+    this.writeCachedPrograms(userId, current);
+  }
+
+  removeCachedProgram(userId: string, programId: string): void {
+    this.writeCachedPrograms(
+      userId,
+      this.readCachedPrograms(userId).filter((p) => p.programId !== programId),
     );
   }
 
@@ -435,4 +495,8 @@ export function currentIsoWeekPeriodId(date = new Date()): string {
 
 export function currentMonthPeriodId(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function cacheKey(userId: string): string {
+  return `sg.objectives.activePrograms.${userId}`;
 }

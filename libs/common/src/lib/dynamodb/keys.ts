@@ -105,8 +105,13 @@ export const DynamoKeys = {
     return 'TARGET_PROGRAM#';
   },
 
-  /** Puntero singleton al programa activo del usuario. */
+  /** Puntero singleton al programa activo del usuario (no comparte prefijo con programas). */
   targetProgramActiveSk(): string {
+    return 'OBJECTIVE_META#ACTIVE_PROGRAM';
+  },
+
+  /** @deprecated Preferir targetProgramActiveSk(); se mantiene para lectura de datos legacy. */
+  targetProgramActiveSkLegacy(): string {
     return 'TARGET_PROGRAM#ACTIVE';
   },
 

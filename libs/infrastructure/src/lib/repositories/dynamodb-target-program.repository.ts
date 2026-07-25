@@ -42,6 +42,7 @@ export class DynamoDbTargetProgramRepository implements ITargetProgramRepository
 
   async setActivePointer(userId: string, programId: string): Promise<void> {
     const client = getDocumentClient();
+    const now = new Date().toISOString();
     await client.send(
       new PutCommand({
         TableName: this.tableName,
@@ -51,38 +52,59 @@ export class DynamoDbTargetProgramRepository implements ITargetProgramRepository
           entityType: EntityType.TargetProgramActive,
           userId,
           programId,
-          updatedAt: new Date().toISOString(),
+          updatedAt: now,
         },
       }),
     );
-  }
-
-  async clearActivePointer(userId: string): Promise<void> {
-    const client = getDocumentClient();
+    // Limpia el puntero legacy si existía (mismo prefijo que los programas).
     await client.send(
       new DeleteCommand({
         TableName: this.tableName,
         Key: {
           PK: DynamoKeys.userPk(userId),
-          SK: DynamoKeys.targetProgramActiveSk(),
+          SK: DynamoKeys.targetProgramActiveSkLegacy(),
         },
       }),
-    );
+    ).catch(() => undefined);
+  }
+
+  async clearActivePointer(userId: string): Promise<void> {
+    const client = getDocumentClient();
+    const pk = DynamoKeys.userPk(userId);
+    await Promise.all([
+      client.send(
+        new DeleteCommand({
+          TableName: this.tableName,
+          Key: { PK: pk, SK: DynamoKeys.targetProgramActiveSk() },
+        }),
+      ),
+      client.send(
+        new DeleteCommand({
+          TableName: this.tableName,
+          Key: { PK: pk, SK: DynamoKeys.targetProgramActiveSkLegacy() },
+        }),
+      ),
+    ]);
   }
 
   async getActiveProgramId(userId: string): Promise<string | null> {
     const client = getDocumentClient();
-    const result = await client.send(
-      new GetCommand({
-        TableName: this.tableName,
-        Key: {
-          PK: DynamoKeys.userPk(userId),
-          SK: DynamoKeys.targetProgramActiveSk(),
-        },
-      }),
-    );
-    const id = result.Item?.['programId'];
-    return typeof id === 'string' && id.length > 0 ? id : null;
+    const pk = DynamoKeys.userPk(userId);
+    const keys = [
+      DynamoKeys.targetProgramActiveSk(),
+      DynamoKeys.targetProgramActiveSkLegacy(),
+    ];
+    for (const sk of keys) {
+      const result = await client.send(
+        new GetCommand({
+          TableName: this.tableName,
+          Key: { PK: pk, SK: sk },
+        }),
+      );
+      const id = result.Item?.['programId'];
+      if (typeof id === 'string' && id.length > 0 && id !== 'ACTIVE') return id;
+    }
+    return null;
   }
 
   async getProgram(userId: string, programId: string): Promise<ProgramRow | null> {
@@ -113,8 +135,13 @@ export class DynamoDbTargetProgramRepository implements ITargetProgramRepository
       }),
     );
     return (result.Items ?? [])
-      .filter((item) => item['SK'] !== DynamoKeys.targetProgramActiveSk())
-      .map(mapProgram);
+      .filter(
+        (item) =>
+          item['entityType'] === EntityType.TargetProgram &&
+          item['SK'] !== DynamoKeys.targetProgramActiveSk(),
+      )
+      .map(mapProgram)
+      .filter((p) => Boolean(p.programId) && p.programId !== 'ACTIVE');
   }
 
   async replaceTargets(

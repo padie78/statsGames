@@ -7,13 +7,27 @@ export class GetActiveTargetProgramUseCase {
   async execute(input: { userId: string }): Promise<TargetProgramDto | null> {
     if (!input.userId?.trim()) throw new Error('userId requerido.');
 
-    const programId = await this.repo.getActiveProgramId(input.userId.trim());
-    if (!programId) return null;
+    const userId = input.userId.trim();
+    const pointedId = await this.repo.getActiveProgramId(userId);
 
-    const program = await this.repo.getProgram(input.userId.trim(), programId);
-    if (!program) return null;
+    if (pointedId) {
+      const pointed = await this.repo.getProgram(userId, pointedId);
+      if (pointed) {
+        const targets = await this.repo.listTargets(userId, pointedId);
+        return { ...pointed, targets };
+      }
+    }
 
-    const targets = await this.repo.listTargets(input.userId.trim(), programId);
-    return { ...program, targets };
+    // Fallback: puntero perdido o huérfano → recuperar el activo más reciente.
+    const actives = (await this.repo.listPrograms(userId))
+      .filter((p) => p.status === 'active')
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+    const fallback = actives[0];
+    if (!fallback) return null;
+
+    await this.repo.setActivePointer(userId, fallback.programId);
+    const targets = await this.repo.listTargets(userId, fallback.programId);
+    return { ...fallback, targets };
   }
 }
