@@ -27,7 +27,15 @@ export class CloseTargetProgramUseCase {
 
     const activeId = await this.repo.getActiveProgramId(input.userId);
     if (activeId === input.programId) {
-      await this.repo.clearActivePointer(input.userId);
+      const others = (await this.repo.listPrograms(input.userId)).filter(
+        (p) => p.status === 'active' && p.programId !== input.programId,
+      );
+      if (others.length) {
+        const next = [...others].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+        await this.repo.setActivePointer(input.userId, next.programId);
+      } else {
+        await this.repo.clearActivePointer(input.userId);
+      }
     }
 
     const targets = await this.repo.listTargets(input.userId, input.programId);

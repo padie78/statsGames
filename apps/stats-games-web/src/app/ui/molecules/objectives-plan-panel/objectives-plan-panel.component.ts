@@ -12,6 +12,13 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import {
+  OBJECTIVE_DOMAIN_LABELS,
+  OBJECTIVE_DOMAIN_ORDER,
+  OBJECTIVE_METRIC_TYPES,
+  type ObjectiveMetricDomain,
+} from '@stats-games/common';
 import {
   ObjectivesService,
   currentIsoWeekPeriodId,
@@ -31,10 +38,11 @@ import {
   type StatsComparisonRow,
 } from '../stats-comparison-chart/stats-comparison-chart.component';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
+import { StatValueComponent } from '../../atoms/stat-value/stat-value.component';
 import { extractGraphqlErrorMessage } from '../../../utils/graphql-error.util';
 import { sgFadeSlideIn, sgModalIn } from '../../animations/sg-motion';
 
-type ObjTab = 'builder' | 'reality' | 'evolution' | 'history';
+type ObjTab = 'builder' | 'reality' | 'compliance' | 'history';
 type HistoryFilter = 'all' | 'in_progress' | 'fulfilled' | 'not_fulfilled';
 type ModalKind = 'program' | 'execution' | null;
 
@@ -48,7 +56,13 @@ interface DraftTargetRow {
   standalone: true,
   selector: 'sg-objectives-plan-panel',
   encapsulation: ViewEncapsulation.None,
-  imports: [FormsModule, StatsComparisonChartComponent, NeonBadgeComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    StatsComparisonChartComponent,
+    NeonBadgeComponent,
+    StatValueComponent,
+  ],
   animations: [sgFadeSlideIn, sgModalIn],
   template: `
     <section class="sg-obj-panel" aria-labelledby="sg-obj-title">
@@ -85,11 +99,11 @@ interface DraftTargetRow {
             type="button"
             role="tab"
             class="sg-obj-panel__tab"
-            [class.sg-obj-panel__tab--active]="tab() === 'evolution'"
-            [attr.aria-selected]="tab() === 'evolution'"
-            (click)="tab.set('evolution')"
+            [class.sg-obj-panel__tab--active]="tab() === 'compliance'"
+            [attr.aria-selected]="tab() === 'compliance'"
+            (click)="tab.set('compliance')"
           >
-            Evolución
+            Cumplimiento
           </button>
           <button
             type="button"
@@ -110,33 +124,211 @@ interface DraftTargetRow {
 
       @if (tab() === 'builder') {
         <div class="sg-obj-panel__body" role="tabpanel">
-          @if (program(); as p) {
-            <article class="sg-obj-summary">
-              <div class="sg-obj-summary__top">
-                <div>
-                  <h3 class="sg-obj-summary__title">{{ p.title }}</h3>
-                  <p class="sg-obj-summary__meta u-m-0">
-                    {{ p.cadence === 'monthly' ? 'Mensual' : 'Semanal' }}
-                    · desde {{ p.startsAt.slice(0, 10) }}
-                    · {{ p.targets.length }} parámetros
-                  </p>
-                </div>
-                <sg-neon-badge tone="cyan">En curso</sg-neon-badge>
+          @if (program() || activePrograms().length) {
+            <div class="sg-obj-program-stack">
+              <div class="sg-obj-summary__section-head">
+                <h4 class="sg-obj-summary__section-title">
+                  Programas activos ({{ activePrograms().length || (program() ? 1 : 0) }})
+                </h4>
+                <button
+                  type="button"
+                  class="u-btn u-btn--gold"
+                  (click)="openProgramModal('create')"
+                >
+                  Nuevo programa
+                </button>
               </div>
-              <ul class="sg-obj-summary__targets">
-                @for (t of p.targets; track t.metricTypeId + t.periodId) {
+
+              @if (activePrograms().length) {
+                <ul class="sg-obj-active-list" role="listbox" aria-label="Programas activos">
+                  @for (item of activePrograms(); track item.programId) {
+                    <li>
+                      <button
+                        type="button"
+                        class="sg-obj-active-chip"
+                        role="option"
+                        [class.sg-obj-active-chip--selected]="
+                          program()?.programId === item.programId
+                        "
+                        [attr.aria-selected]="program()?.programId === item.programId"
+                        (click)="selectActiveProgram(item)"
+                      >
+                        <span class="sg-obj-active-chip__title">{{ item.title }}</span>
+                        <span class="sg-obj-active-chip__meta">
+                          {{ item.cadence === 'monthly' ? 'Mensual' : 'Semanal' }}
+                          · {{ item.targetCount }} metas
+                          @if (item.globalCompliancePct != null) {
+                            · {{ roundPct(item.globalCompliancePct) }}%
+                          }
+                        </span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+
+              @if (program(); as p) {
+              <article
+                class="sg-match-panel sg-match-card sg-match-card--panel u-surface-card sg-obj-program-hero"
+                [class.sg-match-card--victory]="programHeroOutcome() === 'win'"
+                [class.sg-match-card--defeat]="programHeroOutcome() === 'loss'"
+                [attr.data-status]="programHeroStatus()"
+              >
+                <div
+                  class="sg-match-card__award"
+                  [attr.data-outcome]="programHeroOutcome()"
+                  [attr.aria-label]="programHeroStatusLabel()"
+                >
+                  <span class="sg-match-card__award-band">{{ programHeroStatusLabel() }}</span>
+                </div>
+
+                <div class="sg-match-panel__body">
+                  <header class="sg-match-panel__head">
+                    <div class="sg-match-panel__head-copy">
+                      <p class="sg-match-panel__eyebrow">Programa seleccionado</p>
+                      <h3 class="sg-match-panel__title">{{ p.title }}</h3>
+                      <p class="sg-match-panel__summary">
+                        {{ p.cadence === 'monthly' ? 'Cadencia mensual' : 'Cadencia semanal' }}
+                        · desde {{ formatDate(p.startsAt) }}
+                        · {{ programTargetCards().length }} metas
+                      </p>
+                    </div>
+
+                    <div
+                      class="sg-match-panel__score"
+                      [attr.aria-label]="
+                        'Cumplimiento ' +
+                        (programCompliancePct() != null ? programCompliancePct() + '%' : 'sin dato')
+                      "
+                    >
+                      <div class="sg-match-panel__score-part">
+                        <span class="sg-match-panel__score-num">
+                          {{
+                            programCompliancePct() != null
+                              ? programCompliancePct() + '%'
+                              : '—'
+                          }}
+                        </span>
+                        <span class="sg-match-panel__score-label">Cumpl.</span>
+                      </div>
+                    </div>
+                  </header>
+
+                  <ul class="sg-match-panel__strip" aria-label="Resumen del programa">
+                    <li class="sg-match-panel__strip-item">
+                      <span class="sg-match-panel__strip-value">{{ programPeriodLabel() }}</span>
+                      <span class="sg-match-panel__strip-label">Período</span>
+                    </li>
+                    <li class="sg-match-panel__strip-item">
+                      <span class="sg-match-panel__strip-value">{{ programTrackedCount() }}</span>
+                      <span class="sg-match-panel__strip-label">Con real</span>
+                    </li>
+                    <li class="sg-match-panel__strip-item">
+                      <span class="sg-match-panel__strip-value">
+                        {{ evolution()?.alignedCount ?? 0 }}
+                      </span>
+                      <span class="sg-match-panel__strip-label">Alineados</span>
+                    </li>
+                    <li class="sg-match-panel__strip-item">
+                      <span class="sg-match-panel__strip-value">{{ programCriticalCount() }}</span>
+                      <span class="sg-match-panel__strip-label">Críticos</span>
+                    </li>
+                  </ul>
+
+                  <footer class="sg-match-panel__foot">
+                    <span class="sg-match-panel__time">{{ formatDate(p.startsAt) }}</span>
+                    <span class="sg-match-panel__platform">
+                      {{ p.cadence === 'monthly' ? 'Mensual' : 'Semanal' }}
+                    </span>
+                  </footer>
+                </div>
+              </article>
+
+              <div class="sg-obj-summary__section-head">
+                <h4 class="sg-obj-summary__section-title">Metas del programa</h4>
+                <button
+                  type="button"
+                  class="sg-obj-panel__inline-link"
+                  (click)="tab.set('compliance')"
+                >
+                  Ver cumplimiento →
+                </button>
+              </div>
+
+              <ul class="sg-obj-program-targets">
+                @for (card of programTargetCards(); track card.key) {
                   <li>
-                    <strong>{{ metricLabel(t.metricTypeId) }}</strong>
-                    <span>{{ t.periodId }} · meta {{ t.plannedValue }} {{ metricUnit(t.metricTypeId) }}</span>
+                    <article
+                      class="sg-match-card u-surface-card sg-obj-program-target"
+                      [attr.data-status]="card.status"
+                    >
+                      <div class="sg-match-card__body">
+                        <header class="sg-match-card__header">
+                          <div class="sg-match-card__meta">
+                            <div class="sg-match-card__title-block">
+                              <h3 class="sg-match-card__title">{{ card.label }}</h3>
+                              <p class="sg-match-card__subtitle">
+                                {{ card.domainLabel }}
+                                · {{ card.goalKind === 'at_most' ? 'Tope' : 'Mínimo' }}
+                                · {{ card.autoSource ? 'Auto' : 'Manual' }}
+                              </p>
+                            </div>
+                          </div>
+                          <div class="sg-match-card__badges">
+                            <sg-neon-badge [tone]="statusTone(card.status)">
+                              {{ card.statusLabel }}
+                            </sg-neon-badge>
+                          </div>
+                        </header>
+
+                        @if (card.description) {
+                          <p class="sg-match-card__summary">{{ card.description }}</p>
+                        }
+
+                        <div class="sg-match-card__stats">
+                          <sg-stat-value
+                            label="Meta"
+                            [value]="
+                              (card.goalKind === 'at_most' ? '≤ ' : '≥ ') +
+                              card.plannedValue +
+                              ' ' +
+                              card.unit
+                            "
+                            accent="gold"
+                          />
+                          <sg-stat-value
+                            label="Real"
+                            [value]="
+                              card.actualValue != null
+                                ? card.actualValue + ' ' + card.unit
+                                : '—'
+                            "
+                            [accent]="card.actualValue != null ? 'cyan' : 'default'"
+                          />
+                          <sg-stat-value
+                            label="Cumpl."
+                            [value]="
+                              card.compliancePct != null ? card.compliancePct + '%' : '—'
+                            "
+                            [accent]="statAccentForStatus(card.status)"
+                          />
+                          <sg-stat-value
+                            label="Período"
+                            [value]="card.periodId"
+                          />
+                        </div>
+                      </div>
+                    </article>
                   </li>
                 }
               </ul>
+
               <div class="sg-obj-actions">
                 <button type="button" class="u-btn u-btn--gold" (click)="openProgramModal('edit')">
                   Editar programa
                 </button>
-                <button type="button" class="u-btn u-btn--ghost" (click)="openProgramModal('create')">
-                  Nuevo programa
+                <button type="button" class="u-btn u-btn--ghost" (click)="tab.set('reality')">
+                  Cargar realidad
                 </button>
                 <button
                   type="button"
@@ -147,7 +339,8 @@ interface DraftTargetRow {
                   Cerrar programa
                 </button>
               </div>
-            </article>
+              }
+            </div>
           } @else {
             <div class="sg-obj-empty-card">
               <p class="sg-obj-empty u-m-0">
@@ -194,11 +387,11 @@ interface DraftTargetRow {
         </div>
       }
 
-      @if (tab() === 'evolution') {
+      @if (tab() === 'compliance') {
         <div class="sg-obj-panel__body" role="tabpanel">
           @if (!evolution()) {
             <p class="sg-obj-empty u-m-0">
-              Sin datos de evolución. Definí metas y cargá al menos una ejecución.
+              Sin datos de cumplimiento. Definí metas y cargá al menos una ejecución.
             </p>
           } @else {
             <div class="sg-obj-kpis" aria-label="KPIs de cumplimiento">
@@ -264,6 +457,13 @@ interface DraftTargetRow {
                 </tbody>
               </table>
             </div>
+
+            <p class="sg-obj-hint u-m-0">
+              Esto mide plan vs realidad del programa.
+              <a routerLink="/tabs/analytics" class="sg-obj-panel__inline-link">
+                Ver forma táctica en Evolución →
+              </a>
+            </p>
           }
         </div>
       }
@@ -337,7 +537,7 @@ interface DraftTargetRow {
                       class="u-btn u-btn--ghost"
                       (click)="inspectHistoryItem(item)"
                     >
-                      Ver evolución
+                      Ver cumplimiento
                     </button>
                   </div>
                 </li>
@@ -395,51 +595,100 @@ interface DraftTargetRow {
 
             <div class="sg-obj-targets">
               <div class="sg-obj-targets__head">
-                <h4 class="sg-obj-targets__title">Parámetros / metas</h4>
+                <div>
+                  <h4 class="sg-obj-targets__title">Parámetros / metas</h4>
+                  <p class="sg-obj-targets__period u-m-0">
+                    Período activo:
+                    <strong>{{ draftPeriodId() }}</strong>
+                    · lo define la cadencia (no se edita por fila)
+                  </p>
+                </div>
                 <button type="button" class="u-btn u-btn--ghost" (click)="addTargetRow()">
                   + Parámetro
                 </button>
               </div>
 
-              @for (row of draftTargets(); track i; let i = $index) {
-                <div class="sg-obj-target-row sg-obj-target-row--modal">
-                  <select [(ngModel)]="row.metricTypeId" [attr.aria-label]="'Parámetro ' + (i + 1)">
-                    @for (group of metricGroups(); track group.domain) {
-                      <optgroup [label]="group.label">
-                        @for (m of group.metrics; track m.id) {
-                          <option [value]="m.id">
-                            {{ m.label }} ({{ m.unit }})
-                            · {{ m.goalKind === 'at_most' ? 'tope' : 'mín' }}
-                            @if (m.autoSource) {
-                              · auto
-                            }
-                          </option>
-                        }
-                      </optgroup>
-                    }
-                  </select>
-                  <input
-                    type="text"
-                    [(ngModel)]="row.periodId"
-                    [attr.aria-label]="'Período ' + (i + 1)"
-                    placeholder="2026-W30"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    [(ngModel)]="row.plannedValue"
-                    [attr.aria-label]="'Meta ' + (i + 1)"
-                    [placeholder]="goalPlaceholder(row.metricTypeId)"
-                  />
-                  <button
-                    type="button"
-                    class="sg-obj-target-row__remove"
-                    (click)="removeTargetRow(i)"
-                    aria-label="Quitar parámetro"
-                  >
-                    ✕
-                  </button>
+              <div class="sg-obj-target-row sg-obj-target-row--head" aria-hidden="true">
+                <span>Parámetro</span>
+                <span></span>
+                <span>Meta</span>
+                <span></span>
+              </div>
+
+              @for (row of draftTargets(); track $index) {
+                <div class="sg-obj-target-block">
+                  <div class="sg-obj-target-row sg-obj-target-row--modal">
+                    <select
+                      [ngModel]="row.metricTypeId"
+                      (ngModelChange)="setDraftMetric($index, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      [attr.aria-label]="'Parámetro ' + ($index + 1)"
+                      [attr.aria-describedby]="'sg-obj-metric-help-' + $index"
+                    >
+                      @for (group of metricGroups(); track group.domain) {
+                        <optgroup [label]="group.label">
+                          @for (m of group.metrics; track m.id) {
+                            <option [ngValue]="m.id">{{ metricOptionLabel(m) }}</option>
+                          }
+                        </optgroup>
+                      }
+                    </select>
+                    <button
+                      type="button"
+                      class="sg-obj-metric-help"
+                      [class.sg-obj-metric-help--open]="helpMetricIndex() === $index"
+                      [attr.aria-expanded]="helpMetricIndex() === $index"
+                      [attr.aria-controls]="'sg-obj-metric-help-' + $index"
+                      [attr.aria-label]="'Qué es ' + metricLabel(row.metricTypeId)"
+                      [attr.title]="metricHelpTitle(row.metricTypeId)"
+                      (click)="toggleMetricHelp($index)"
+                    >
+                      ?
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      [ngModel]="row.plannedValue"
+                      (ngModelChange)="setDraftPlanned($index, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      [attr.aria-label]="'Meta ' + ($index + 1)"
+                      [placeholder]="goalPlaceholder(row.metricTypeId)"
+                    />
+                    <button
+                      type="button"
+                      class="sg-obj-target-row__remove"
+                      (click)="removeTargetRow($index)"
+                      aria-label="Quitar parámetro"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  @if (helpMetricIndex() === $index) {
+                    <aside
+                      class="sg-obj-metric-help-panel"
+                      [id]="'sg-obj-metric-help-' + $index"
+                      role="note"
+                    >
+                      <p class="sg-obj-metric-help-panel__title u-m-0">
+                        {{ metricLabel(row.metricTypeId) }}
+                      </p>
+                      <p class="sg-obj-metric-help-panel__body u-m-0">
+                        {{ metricDescription(row.metricTypeId) }}
+                      </p>
+                      <ul class="sg-obj-metric-help-panel__meta">
+                        <li><strong>Unidad:</strong> {{ metricUnit(row.metricTypeId) || '—' }}</li>
+                        <li>
+                          <strong>Tipo de meta:</strong>
+                          {{ metricGoalKindLabel(row.metricTypeId) }}
+                        </li>
+                        <li>
+                          <strong>Origen:</strong>
+                          {{ metricSourceLabel(row.metricTypeId) }}
+                        </li>
+                      </ul>
+                    </aside>
+                  }
                 </div>
               }
             </div>
@@ -534,12 +783,13 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   readonly tab = signal<ObjTab>('builder');
   readonly modal = signal<ModalKind>(null);
   readonly programModalMode = signal<'create' | 'edit'>('create');
-  readonly metrics = signal<ObjectiveMetricTypeView[]>([]);
+  readonly metrics = signal<ObjectiveMetricTypeView[]>(seedMetricCatalog());
   readonly program = signal<TargetProgramView | null>(null);
   readonly evolution = signal<ObjectiveEvolutionView | null>(null);
   readonly history = signal<TargetProgramHistoryItemView[]>([]);
   readonly historyFilter = signal<HistoryFilter>('all');
   readonly draftTargets = signal<DraftTargetRow[]>([]);
+  readonly helpMetricIndex = signal<number | null>(null);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly syncHint = signal<string | null>(null);
@@ -551,26 +801,6 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   execPeriodId = currentIsoWeekPeriodId();
   execValue: number | null = null;
 
-  private static readonly DOMAIN_LABELS: Record<string, string> = {
-    competitive: 'Competitivo',
-    discipline: 'Disciplina / rutina',
-    mental: 'Mental / resiliencia',
-    economy: 'Economía in-game',
-    technical: 'Técnica / mecánica',
-    athlete: 'Atleta / hábitos',
-    career: 'Carrera / scouting',
-  };
-
-  private static readonly DOMAIN_ORDER = [
-    'competitive',
-    'discipline',
-    'mental',
-    'economy',
-    'technical',
-    'athlete',
-    'career',
-  ] as const;
-
   readonly metricGroups = computed(() => {
     const byDomain = new Map<string, ObjectiveMetricTypeView[]>();
     for (const m of this.metrics()) {
@@ -578,19 +808,80 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
       list.push(m);
       byDomain.set(m.domain, list);
     }
-    return ObjectivesPlanPanelComponent.DOMAIN_ORDER.filter((d) => byDomain.has(d)).map(
-      (domain) => ({
-        domain,
-        label: ObjectivesPlanPanelComponent.DOMAIN_LABELS[domain] ?? domain,
-        metrics: byDomain.get(domain) ?? [],
-      }),
-    );
+
+    const ordered: string[] = [
+      ...OBJECTIVE_DOMAIN_ORDER.filter((d) => byDomain.has(d)),
+      ...[...byDomain.keys()].filter(
+        (d) => !(OBJECTIVE_DOMAIN_ORDER as readonly string[]).includes(d),
+      ),
+    ];
+
+    return ordered.map((domain) => ({
+      domain,
+      label:
+        OBJECTIVE_DOMAIN_LABELS[domain as ObjectiveMetricDomain] ?? domain,
+      metrics: byDomain.get(domain) ?? [],
+    }));
   });
 
   readonly programMetrics = computed(() => {
     const ids = this.program()?.targets.map((t) => t.metricTypeId) ?? [];
     return [...new Set(ids)];
   });
+
+  readonly programTargetCards = computed(() => {
+    const prog = this.program();
+    if (!prog) return [];
+    const evoRows = this.evolution()?.rows ?? [];
+    const evoByKey = new Map(
+      evoRows.map((r) => [`${r.metricTypeId}#${r.periodId}`, r] as const),
+    );
+
+    return prog.targets.map((t) => {
+      const meta = this.metrics().find((m) => m.id === t.metricTypeId);
+      const evo = evoByKey.get(`${t.metricTypeId}#${t.periodId}`);
+      const domain = meta?.domain ?? 'competitive';
+      return {
+        key: `${t.metricTypeId}#${t.periodId}`,
+        metricTypeId: t.metricTypeId,
+        label: meta?.label ?? t.metricTypeId,
+        description: meta?.description ?? '',
+        unit: meta?.unit ?? '',
+        domainLabel:
+          OBJECTIVE_DOMAIN_LABELS[domain as ObjectiveMetricDomain] ?? domain,
+        goalKind: meta?.goalKind ?? 'at_least',
+        autoSource: Boolean(meta?.autoSource),
+        plannedValue: t.plannedValue,
+        periodId: t.periodId,
+        actualValue: evo?.actualValue ?? null,
+        compliancePct: evo?.compliancePct ?? null,
+        status: evo?.status ?? 'critical',
+        statusLabel: evo?.statusLabel ?? 'Sin dato',
+      };
+    });
+  });
+
+  readonly programPeriodLabel = computed(() => {
+    const cards = this.programTargetCards();
+    const periods = [...new Set(cards.map((c) => c.periodId))];
+    if (periods.length === 1) return periods[0]!;
+    if (periods.length > 1) return `${periods.length} períodos`;
+    return this.draftPeriodId();
+  });
+
+  readonly programCompliancePct = computed(
+    () => this.evolution()?.globalCompliancePct ?? null,
+  );
+
+  readonly programTrackedCount = computed(
+    () => this.programTargetCards().filter((c) => c.actualValue != null).length,
+  );
+
+  readonly programCriticalCount = computed(
+    () =>
+      this.evolution()?.criticalCount ??
+      this.programTargetCards().filter((c) => c.status === 'critical').length,
+  );
 
   readonly chartRows = computed((): StatsComparisonRow[] => {
     const evo = this.evolution();
@@ -614,10 +905,20 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   readonly historyInTimeRange = computed(() => {
     const range = this.timeRange();
     const day = this.selectedDayIso();
-    return this.history().filter((item) =>
-      isoInAnalysisRange(item.startsAt, range, day),
+    // Historial = programas cerrados / no activos.
+    return this.history().filter(
+      (item) =>
+        item.status !== 'active' &&
+        !item.isActive &&
+        isoInAnalysisRange(item.startsAt, range, day),
     );
   });
+
+  readonly activePrograms = computed(() =>
+    this.history()
+      .filter((item) => item.status === 'active')
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+  );
 
   readonly filteredHistory = computed(() => {
     const filter = this.historyFilter();
@@ -644,10 +945,20 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   }
 
   onCadenceChange(): void {
-    const period =
-      this.cadence === 'weekly' ? currentIsoWeekPeriodId() : currentMonthPeriodId();
+    const period = this.draftPeriodId();
     this.draftTargets.update((rows) => rows.map((r) => ({ ...r, periodId: period })));
     this.execPeriodId = period;
+  }
+
+  draftPeriodId(): string {
+    return this.cadence === 'monthly' ? currentMonthPeriodId() : currentIsoWeekPeriodId();
+  }
+
+  formatDate(iso: string): string {
+    const day = iso.slice(0, 10);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    if (!match) return day;
+    return `${match[3]}/${match[2]}/${match[1]}`;
   }
 
   openProgramModal(mode: 'create' | 'edit'): void {
@@ -695,13 +1006,13 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
 
   closeModal(): void {
     this.modal.set(null);
+    this.helpMetricIndex.set(null);
     this.unlockBody();
   }
 
   addTargetRow(preferredMetricId?: string): void {
     const metrics = this.metrics();
-    const period =
-      this.cadence === 'weekly' ? currentIsoWeekPeriodId() : currentMonthPeriodId();
+    const period = this.draftPeriodId();
     const preferred =
       preferredMetricId && metrics.some((m) => m.id === preferredMetricId)
         ? preferredMetricId
@@ -720,6 +1031,11 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
 
   removeTargetRow(index: number): void {
     this.draftTargets.update((rows) => rows.filter((_, i) => i !== index));
+    this.helpMetricIndex.update((current) => {
+      if (current == null) return null;
+      if (current === index) return null;
+      return current > index ? current - 1 : current;
+    });
   }
 
   metricLabel(id: string): string {
@@ -730,9 +1046,69 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     return this.metrics().find((m) => m.id === id)?.unit ?? '';
   }
 
+  metricDescription(id: string): string {
+    return (
+      this.metrics().find((m) => m.id === id)?.description ??
+      'Sin descripción para este parámetro.'
+    );
+  }
+
+  metricGoalKindLabel(id: string): string {
+    const m = this.metrics().find((x) => x.id === id);
+    if (!m) return '—';
+    return m.goalKind === 'at_most'
+      ? 'Tope máximo (cuanto menos, mejor)'
+      : 'Meta mínima (cuanto más, mejor)';
+  }
+
+  metricSourceLabel(id: string): string {
+    const m = this.metrics().find((x) => x.id === id);
+    if (!m) return '—';
+    return m.autoSource
+      ? 'Automático desde partidas (Sincronizar)'
+      : 'Manual (lo cargás en Realidad)';
+  }
+
+  metricHelpTitle(id: string): string {
+    return this.metricDescription(id);
+  }
+
+  toggleMetricHelp(index: number): void {
+    this.helpMetricIndex.update((current) => (current === index ? null : index));
+  }
+
+  metricOptionLabel(m: ObjectiveMetricTypeView): string {
+    return `${m.label} (${m.unit})`;
+  }
+
   goalPlaceholder(metricTypeId: string): string {
     const m = this.metrics().find((x) => x.id === metricTypeId);
     return m?.goalKind === 'at_most' ? 'Tope máx' : 'Meta mín';
+  }
+
+  setDraftMetric(index: number, metricTypeId: string): void {
+    this.draftTargets.update((rows) =>
+      rows.map((row, i) => (i === index ? { ...row, metricTypeId } : row)),
+    );
+    this.helpMetricIndex.set(index);
+  }
+
+  setDraftPlanned(index: number, value: number | string | null): void {
+    const plannedValue =
+      value === '' || value == null ? null : Number(value);
+    this.draftTargets.update((rows) =>
+      rows.map((row, i) =>
+        i === index
+          ? {
+              ...row,
+              plannedValue:
+                plannedValue != null && Number.isFinite(plannedValue)
+                  ? plannedValue
+                  : null,
+            }
+          : row,
+      ),
+    );
   }
 
   async syncFromMatches(): Promise<void> {
@@ -775,6 +1151,37 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     return 'muted';
   }
 
+  statAccentForStatus(status: string): 'default' | 'lime' | 'cyan' | 'pink' | 'gold' {
+    if (status === 'aligned') return 'lime';
+    if (status === 'above') return 'cyan';
+    if (status === 'critical') return 'pink';
+    return 'default';
+  }
+
+  programHeroStatus(): string {
+    const pct = this.programCompliancePct();
+    if (pct == null) return 'critical';
+    if (pct < 90) return 'critical';
+    if (pct > 115) return 'above';
+    return 'aligned';
+  }
+
+  programHeroOutcome(): 'win' | 'loss' | 'neutral' {
+    const status = this.programHeroStatus();
+    if (status === 'aligned' || status === 'above') return 'win';
+    if (this.programTrackedCount() === 0) return 'neutral';
+    return 'loss';
+  }
+
+  /** Listón: máx ~8 caracteres para no desbordar la cinta. */
+  programHeroStatusLabel(): string {
+    if (this.programTrackedCount() === 0) return 'Sin dato';
+    const status = this.programHeroStatus();
+    if (status === 'aligned') return 'Alineado';
+    if (status === 'above') return 'Excedido';
+    return 'Crítico';
+  }
+
   outcomeTone(outcome: string): 'lime' | 'cyan' | 'purple' | 'pink' | 'muted' | 'gold' {
     if (outcome === 'fulfilled') return 'lime';
     if (outcome === 'in_progress') return 'cyan';
@@ -789,6 +1196,28 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   openHistory(): void {
     this.tab.set('history');
     void this.refreshHistory(this.userId());
+  }
+
+  roundPct(value: number): number {
+    return Math.round(value);
+  }
+
+  async selectActiveProgram(item: TargetProgramHistoryItemView): Promise<void> {
+    const uid = this.userId();
+    if (!uid) return;
+    if (this.program()?.programId === item.programId) return;
+
+    this.error.set(null);
+    try {
+      const evo = await this.objectives.getEvolutionOnce(uid, item.programId);
+      this.evolution.set(evo);
+      this.program.set(programFromHistoryAndEvolution(item, evo));
+      this.execMetricId = this.program()?.targets[0]?.metricTypeId ?? '';
+      this.execPeriodId =
+        item.cadence === 'monthly' ? currentMonthPeriodId() : currentIsoWeekPeriodId();
+    } catch (err) {
+      this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo abrir el programa.');
+    }
   }
 
   async closeActiveProgram(): Promise<void> {
@@ -808,8 +1237,14 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
       this.title = 'Mi programa de objetivos';
       this.draftTargets.set([]);
       await this.refreshHistory(uid);
+      const remaining = this.activePrograms();
+      if (remaining[0]) {
+        await this.selectActiveProgram(remaining[0]);
+        this.tab.set('builder');
+      } else {
+        this.tab.set('history');
+      }
       this.dataChanged.emit();
-      this.tab.set('history');
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo cerrar el programa.');
     } finally {
@@ -823,9 +1258,9 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     this.error.set(null);
     try {
       await this.refreshEvolution(uid, item.programId);
-      this.tab.set('evolution');
+      this.tab.set('compliance');
     } catch (err) {
-      this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo abrir la evolución.');
+      this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo abrir el cumplimiento.');
     }
   }
 
@@ -833,11 +1268,12 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     const uid = this.userId();
     if (!uid) return;
 
+    const periodId = this.draftPeriodId();
     const targets = this.draftTargets()
-      .filter((r) => r.metricTypeId && r.periodId && r.plannedValue != null && r.plannedValue >= 0)
+      .filter((r) => r.metricTypeId && r.plannedValue != null && r.plannedValue >= 0)
       .map((r) => ({
         metricTypeId: r.metricTypeId,
-        periodId: r.periodId.trim(),
+        periodId,
         plannedValue: Number(r.plannedValue),
       }));
 
@@ -867,7 +1303,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
       await this.refreshHistory(uid);
       this.dataChanged.emit();
       this.closeModal();
-      this.tab.set('reality');
+      this.tab.set('builder');
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo guardar el programa.');
     } finally {
@@ -898,7 +1334,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
       await this.refreshHistory(uid);
       this.dataChanged.emit();
       this.closeModal();
-      this.tab.set('evolution');
+      this.tab.set('compliance');
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo registrar la ejecución.');
     } finally {
@@ -908,16 +1344,16 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
 
   private async bootstrap(userId: string): Promise<void> {
     this.error.set(null);
+    // Catálogo local siempre disponible (no depende de AppSync).
+    this.metrics.set(seedMetricCatalog());
+
     try {
-      const [metricTypes, active] = await Promise.all([
-        this.objectives.listMetricTypesOnce(),
-        this.objectives.getActiveProgramOnce(userId),
-      ]);
-      this.metrics.set(metricTypes);
-      this.program.set(active);
       await this.refreshHistory(userId);
+      const active = await this.objectives.getActiveProgramOnce(userId);
+      const actives = this.activePrograms();
 
       if (active) {
+        this.program.set(active);
         this.title = active.title;
         this.cadence = active.cadence === 'monthly' ? 'monthly' : 'weekly';
         this.startsAt = active.startsAt.slice(0, 10);
@@ -932,6 +1368,11 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
         this.execPeriodId =
           active.cadence === 'monthly' ? currentMonthPeriodId() : currentIsoWeekPeriodId();
         await this.refreshEvolution(userId, active.programId);
+      } else if (actives[0]) {
+        await this.selectActiveProgram(actives[0]);
+      } else {
+        this.program.set(null);
+        this.evolution.set(null);
       }
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo cargar el módulo de objetivos.');
@@ -959,4 +1400,53 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   private unlockBody(): void {
     this.document.body.classList.remove('sg-obj-modal-lock');
   }
+}
+
+function seedMetricCatalog(): ObjectiveMetricTypeView[] {
+  return OBJECTIVE_METRIC_TYPES.map((m) => ({
+    id: m.id,
+    label: m.label,
+    unit: m.unit,
+    description: m.description,
+    higherIsBetter: m.higherIsBetter,
+    goalKind: m.goalKind,
+    aggregation: m.aggregation,
+    domain: m.domain,
+    autoSource: m.autoSource,
+  }));
+}
+
+function programFromHistoryAndEvolution(
+  item: TargetProgramHistoryItemView,
+  evo: ObjectiveEvolutionView | null,
+): TargetProgramView {
+  const seen = new Set<string>();
+  const targets = (evo?.rows ?? [])
+    .filter((row) => {
+      const key = `${row.metricTypeId}#${row.periodId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((row) => ({
+      programId: item.programId,
+      metricTypeId: row.metricTypeId,
+      periodId: row.periodId,
+      plannedValue: row.plannedValue,
+      createdAt: item.createdAt,
+    }));
+
+  return {
+    programId: item.programId,
+    userId: item.userId,
+    title: item.title,
+    cadence: item.cadence,
+    status: item.status,
+    platform: item.platform,
+    startsAt: item.startsAt,
+    endsAt: item.endsAt,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    targets,
+  };
 }

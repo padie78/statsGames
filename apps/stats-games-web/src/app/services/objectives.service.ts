@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { OBJECTIVE_METRIC_TYPES } from '@stats-games/common';
 import { generateClient } from 'aws-amplify/api';
 import { firstValueFrom, from, map } from 'rxjs';
 
@@ -117,17 +118,23 @@ export interface TargetProgramHistoryItemView {
   isActive: boolean;
 }
 
-const METRIC_FIELDS = /* GraphQL */ `
-  id
-  label
-  unit
-  description
-  higherIsBetter
-  goalKind
-  aggregation
-  domain
-  autoSource
-`;
+/**
+ * El catálogo es data de compilación (`libs/common`): no depende del deploy de
+ * AppSync, así el selector de parámetros siempre tiene opciones.
+ */
+const LOCAL_METRIC_TYPES: readonly ObjectiveMetricTypeView[] = OBJECTIVE_METRIC_TYPES.map(
+  (m) => ({
+    id: m.id,
+    label: m.label,
+    unit: m.unit,
+    description: m.description,
+    higherIsBetter: m.higherIsBetter,
+    goalKind: m.goalKind,
+    aggregation: m.aggregation,
+    domain: m.domain,
+    autoSource: m.autoSource,
+  }),
+);
 
 const PROGRAM_FIELDS = /* GraphQL */ `
   programId
@@ -188,23 +195,7 @@ export class ObjectivesService {
   private readonly client = generateClient();
 
   listMetricTypesOnce(): Promise<ObjectiveMetricTypeView[]> {
-    return firstValueFrom(
-      from(
-        this.client.graphql({
-          query: /* GraphQL */ `
-            query ListObjectiveMetricTypes {
-              listObjectiveMetricTypes { ${METRIC_FIELDS} }
-            }
-          `,
-        }),
-      ).pipe(
-        map(
-          (resp) =>
-            (resp as { data: { listObjectiveMetricTypes: ObjectiveMetricTypeView[] } }).data
-              .listObjectiveMetricTypes,
-        ),
-      ),
-    );
+    return Promise.resolve(LOCAL_METRIC_TYPES.map((m) => ({ ...m })));
   }
 
   getActiveProgramOnce(userId: string): Promise<TargetProgramView | null> {
