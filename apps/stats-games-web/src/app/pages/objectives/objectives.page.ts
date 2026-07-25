@@ -6,6 +6,9 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
 import { AnalysisRangeService } from '../../core/analysis/analysis-range.service';
@@ -105,6 +108,7 @@ import {
               [platform]="backendPlatform()"
               [timeRange]="analysisRange.range()"
               [selectedDayIso]="analysisRange.selectedDayIso()"
+              [reloadNonce]="reloadNonce()"
               (dataChanged)="refreshKpis()"
             />
           } @else {
@@ -120,7 +124,10 @@ export class ObjectivesPageComponent {
   private readonly gameContext = inject(GameContextService);
   readonly analysisRange = inject(AnalysisRangeService);
   private readonly objectives = inject(ObjectivesService);
+  private readonly router = inject(Router);
   private readonly evolution = signal<ObjectiveEvolutionView | null>(null);
+  /** Incrementa al navegar a /tabs/objectives → fuerza recarga del panel. */
+  readonly reloadNonce = signal(0);
 
   readonly activePlatform = computed(
     (): SelectedGame => this.gameContext.activeGame() ?? 'fortnite',
@@ -147,10 +154,44 @@ export class ObjectivesPageComponent {
   });
 
   constructor() {
-    effect(() => {
-      const userId = this.auth.userId();
-      if (userId) void this.loadKpis(userId);
-    });
+    effect(
+      () => {
+        const userId = this.auth.userId();
+        if (!userId) return;
+        void (async () => {
+          await this.objectives.prefetchHistory(userId);
+          await this.loadKpis(userId);
+        })();
+      },
+      { allowSignalWrites: true },
+    );
+
+    // No usamos IonRouterOutlet: ionViewWillEnter no corre. Escuchar el router.
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        filter((e) => e.urlAfterRedirects.includes('/tabs/objectives')),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        this.reloadPrograms();
+      });
+
+    // Primera entrada (si ya estamos en la ruta al crear la página).
+    if (this.router.url.includes('/tabs/objectives')) {
+      queueMicrotask(() => this.reloadPrograms());
+    }
+  }
+
+  private reloadPrograms(): void {
+    const userId = this.auth.userId();
+    this.reloadNonce.update((n) => n + 1);
+    if (!userId) return;
+    this.objectives.invalidateHistory(userId);
+    void (async () => {
+      await this.objectives.listHistoryOnce(userId, 20, { force: true }).catch(() => []);
+      await this.loadKpis(userId);
+    })();
   }
 
   onAnalysisRangeChange(id: AnalysisRangeId): void {

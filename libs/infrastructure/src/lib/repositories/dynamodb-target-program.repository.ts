@@ -135,11 +135,25 @@ export class DynamoDbTargetProgramRepository implements ITargetProgramRepository
       }),
     );
     return (result.Items ?? [])
-      .filter(
-        (item) =>
-          item['entityType'] === EntityType.TargetProgram &&
-          item['SK'] !== DynamoKeys.targetProgramActiveSk(),
-      )
+      .filter((item) => {
+        const sk = String(item['SK'] ?? '');
+        // Excluir punteros meta (activo), no programas reales.
+        if (
+          sk === DynamoKeys.targetProgramActiveSk() ||
+          sk === DynamoKeys.targetProgramActiveSkLegacy() ||
+          sk === 'TARGET_PROGRAM#ACTIVE'
+        ) {
+          return false;
+        }
+        if (!sk.startsWith('TARGET_PROGRAM#')) return false;
+        const entityType = item['entityType'];
+        // Aceptar legacy sin entityType (altas anteriores al campo).
+        return (
+          entityType === EntityType.TargetProgram ||
+          entityType == null ||
+          (typeof item['programId'] === 'string' && typeof item['title'] === 'string')
+        );
+      })
       .map(mapProgram)
       .filter((p) => Boolean(p.programId) && p.programId !== 'ACTIVE');
   }

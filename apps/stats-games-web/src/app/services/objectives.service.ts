@@ -194,9 +194,29 @@ const EVOLUTION_FIELDS = /* GraphQL */ `
 @Injectable({ providedIn: 'root' })
 export class ObjectivesService {
   private readonly client = generateClient();
+  private readonly historyMemory = new Map<string, TargetProgramHistoryItemView[]>();
+  private readonly historyInflight = new Map<string, Promise<TargetProgramHistoryItemView[]>>();
 
   listMetricTypesOnce(): Promise<ObjectiveMetricTypeView[]> {
     return Promise.resolve(LOCAL_METRIC_TYPES.map((m) => ({ ...m })));
+  }
+
+  /** Prefetch para que el panel pinte activos en el primer paint. */
+  prefetchHistory(userId: string, limit = 20): Promise<TargetProgramHistoryItemView[]> {
+    return this.listHistoryOnce(userId, limit).catch(() => []);
+  }
+
+  peekHistory(userId: string, limit = 20): TargetProgramHistoryItemView[] | null {
+    return this.historyMemory.get(historyCacheKey(userId, limit)) ?? null;
+  }
+
+  invalidateHistory(userId: string): void {
+    for (const key of [...this.historyMemory.keys()]) {
+      if (key.startsWith(`${userId}:`)) this.historyMemory.delete(key);
+    }
+    for (const key of [...this.historyInflight.keys()]) {
+      if (key.startsWith(`${userId}:`)) this.historyInflight.delete(key);
+    }
   }
 
   getActiveProgramOnce(userId: string): Promise<TargetProgramView | null> {
@@ -213,7 +233,10 @@ export class ObjectivesService {
       ).pipe(
         map((resp) => {
           const data = assertGraphqlData<{ getActiveTargetProgram: TargetProgramView | null }>(
-            resp as { data?: { getActiveTargetProgram: TargetProgramView | null }; errors?: Array<{ message?: string }> },
+            resp as {
+              data?: { getActiveTargetProgram: TargetProgramView | null };
+              errors?: Array<{ message?: string }>;
+            },
           );
           return data.getActiveTargetProgram;
         }),
@@ -248,14 +271,29 @@ export class ObjectivesService {
     );
   }
 
-  listHistoryOnce(userId: string, limit = 20): Promise<TargetProgramHistoryItemView[]> {
+  listHistoryOnce(
+    userId: string,
+    limit = 20,
+    options?: { force?: boolean },
+  ): Promise<TargetProgramHistoryItemView[]> {
+    const key = historyCacheKey(userId, limit);
+    if (options?.force) {
+      this.historyMemory.delete(key);
+      this.historyInflight.delete(key);
+    } else {
+      const cached = this.historyMemory.get(key);
+      if (cached) return Promise.resolve(cached);
+      const inflight = this.historyInflight.get(key);
+      if (inflight) return inflight;
+    }
+
     const mapRows = (rows: Array<Partial<TargetProgramHistoryItemView> & { programId: string }>) =>
       (rows ?? []).map((row) => ({
         programId: row.programId,
         userId: row.userId ?? userId,
         title: row.title ?? '',
         cadence: row.cadence ?? 'weekly',
-        status: row.status ?? 'archived',
+        status: String(row.status ?? 'archived').toLowerCase(),
         platform: row.platform,
         startsAt: row.startsAt ?? '',
         endsAt: row.endsAt,
@@ -312,7 +350,21 @@ export class ObjectivesService {
         ),
       );
 
-    return run(true).catch(() => run(false));
+    const promise = run(true)
+      .catch(() => run(false))
+      .then((rows) => {
+        // Nunca cachear vacío: un cold start / null parcial bloqueaba el primer paint.
+        if (rows.length > 0) this.historyMemory.set(key, rows);
+        this.historyInflight.delete(key);
+        return rows;
+      })
+      .catch((err) => {
+        this.historyInflight.delete(key);
+        throw err;
+      });
+
+    this.historyInflight.set(key, promise);
+    return promise;
   }
 
   /** Caché local para no perder la UI si AppSync falla al refrescar. */
@@ -381,7 +433,10 @@ export class ObjectivesService {
           return data.closeTargetProgram;
         }),
       ),
-    );
+    ).then((result) => {
+      this.invalidateHistory(input.userId);
+      return result;
+    });
   }
 
   upsertProgramOnce(input: {
@@ -421,7 +476,10 @@ export class ObjectivesService {
           return data.upsertTargetProgram;
         }),
       ),
-    );
+    ).then((result) => {
+      this.invalidateHistory(input.userId);
+      return result;
+    });
   }
 
   upsertExecutionOnce(input: {
@@ -524,4 +582,8 @@ export function currentMonthPeriodId(date = new Date()): string {
 
 function cacheKey(userId: string): string {
   return `sg.objectives.activePrograms.${userId}`;
+}
+
+function historyCacheKey(userId: string, limit: number): string {
+  return `${userId}:${limit}`;
 }

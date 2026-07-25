@@ -81,7 +81,7 @@ interface DraftTargetRow {
             class="sg-obj-panel__tab"
             [class.sg-obj-panel__tab--active]="tab() === 'builder'"
             [attr.aria-selected]="tab() === 'builder'"
-            (click)="tab.set('builder')"
+            (click)="openBuilder()"
           >
             Programa
           </button>
@@ -780,6 +780,8 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   /** Rango compartido (Día / Semana / 30d / 90d) para filtrar historial. */
   readonly timeRange = input<AnalysisRangeId>('week');
   readonly selectedDayIso = input<string>(todayPeriodId());
+  /** La página lo incrementa en ionViewWillEnter para forzar recarga. */
+  readonly reloadNonce = input(0);
   readonly dataChanged = output<void>();
 
   readonly tab = signal<ObjTab>('builder');
@@ -921,14 +923,33 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
 
   readonly activePrograms = computed(() => {
     const byId = new Map<string, TargetProgramHistoryItemView>();
+    const rows = this.history();
 
-    for (const item of this.history()) {
-      if (item.status === 'active' || item.isActive) {
-        byId.set(item.programId, item);
+    const isListedActive = (item: TargetProgramHistoryItemView): boolean => {
+      const status = String(item.status ?? '').toLowerCase();
+      if (status === 'active' || item.isActive) return true;
+      if (status === 'archived' || status === 'closed' || status === 'completed') return false;
+      // En curso / draft / desconocido: mostrar en la lista de programas.
+      return item.outcome === 'in_progress' || status === 'draft' || status === '';
+    };
+
+    for (const item of rows) {
+      if (isListedActive(item)) byId.set(item.programId, item);
+    }
+
+    // Si el filtro dejó todo afuera pero hay historial, mostrar no-archivados.
+    if (!byId.size && rows.length) {
+      for (const item of rows) {
+        const status = String(item.status ?? '').toLowerCase();
+        if (status !== 'archived') byId.set(item.programId, item);
       }
     }
 
-    // Caché local: evita parpadeos cuando el historial API llega vacío/tarde.
+    // Último recurso: si hay programas en historial, listarlos todos.
+    if (!byId.size && rows.length) {
+      for (const item of rows) byId.set(item.programId, item);
+    }
+
     for (const cached of this.cachedPrograms()) {
       if (!byId.has(cached.programId)) {
         byId.set(cached.programId, historyItemFromProgram(cached));
@@ -953,11 +974,17 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   private bootstrapSeq = 0;
 
   constructor() {
-    effect(() => {
-      const uid = this.userId();
-      if (!uid) return;
-      void this.bootstrap(uid);
-    });
+    // Angular 17: sin allowSignalWrites, un .set() dentro del effect aborta y
+    // bootstrap nunca corre → al entrar a Objetivos no se ven los programas.
+    effect(
+      () => {
+        const uid = this.userId();
+        const nonce = this.reloadNonce();
+        if (!uid) return;
+        void this.bootstrap(uid, nonce > 0);
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   ngOnDestroy(): void {
@@ -1218,9 +1245,18 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     return pct != null ? `${Math.round(pct)}% cumplimiento` : 'Sin ejecución cargada';
   }
 
+  openBuilder(): void {
+    this.tab.set('builder');
+    const uid = this.userId();
+    if (!uid) return;
+    // Al volver a Programa, forzar historial por si el primer paint llegó vacío.
+    void this.ensureProgramsLoaded(uid, this.bootstrapSeq, true);
+  }
+
   openHistory(): void {
     this.tab.set('history');
-    void this.refreshHistory(this.userId());
+    const uid = this.userId();
+    if (uid) void this.refreshHistory(uid);
   }
 
   roundPct(value: number): number {
@@ -1372,11 +1408,14 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     }
   }
 
-  private async bootstrap(userId: string): Promise<void> {
+  private async bootstrap(userId: string, force = false): Promise<void> {
     const seq = ++this.bootstrapSeq;
     this.error.set(null);
     this.loading.set(true);
     this.metrics.set(seedMetricCatalog());
+
+    const peeked = this.objectives.peekHistory(userId);
+    if (peeked?.length) this.history.set(peeked);
 
     const cached = this.objectives.readCachedPrograms(userId);
     this.cachedPrograms.set(cached);
@@ -1385,65 +1424,13 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
       this.applyProgramForm(cached[0]);
     }
 
+    // Si ya hay activos en memoria (prefetch), pintar de inmediato.
+    if (this.activePrograms().length) {
+      this.loading.set(false);
+    }
+
     try {
-      const history = await this.objectives.listHistoryOnce(userId).catch((err: unknown) => {
-        if (!this.error()) {
-          this.error.set(
-            extractGraphqlErrorMessage(err) ||
-              'No se pudo cargar el historial de programas.',
-          );
-        }
-        return null;
-      });
-      if (seq !== this.bootstrapSeq) return;
-      if (history) this.history.set(history);
-
-      let active: TargetProgramView | null = null;
-      try {
-        active = await this.objectives.getActiveProgramOnce(userId);
-      } catch (err) {
-        if (seq !== this.bootstrapSeq) return;
-        this.error.set(
-          extractGraphqlErrorMessage(err) || 'No se pudo leer el programa activo.',
-        );
-      }
-      if (seq !== this.bootstrapSeq) return;
-
-      if (active) {
-        this.program.set(active);
-        this.applyProgramForm(active);
-        this.objectives.upsertCachedProgram(userId, active);
-        this.cachedPrograms.set(this.objectives.readCachedPrograms(userId));
-        try {
-          await this.refreshEvolution(userId, active.programId);
-        } catch {
-          /* evolución opcional; no borrar el programa por esto */
-        }
-        if (seq !== this.bootstrapSeq) return;
-      } else {
-        const fromActiveList = this.activePrograms()[0];
-        const fromHistoryAny = [...(history ?? this.history())].sort((a, b) =>
-          b.updatedAt.localeCompare(a.updatedAt),
-        )[0];
-        const fallbackItem = fromActiveList ?? fromHistoryAny;
-
-        if (fallbackItem) {
-          await this.selectActiveProgram(fallbackItem);
-          if (seq !== this.bootstrapSeq) return;
-        } else if (cached[0]) {
-          this.program.set(cached[0]);
-          this.applyProgramForm(cached[0]);
-          this.syncHint.set(
-            'Mostrando programas guardados en este dispositivo; la API no devolvió activos.',
-          );
-        }
-        // Importante: NO limpiar program/evolution si la API falló o llegó vacía
-        // de forma intermitente y ya teníamos algo en pantalla/caché.
-      }
-
-      const focused = this.program();
-      if (focused) this.objectives.upsertCachedProgram(userId, focused);
-      this.cachedPrograms.set(this.objectives.readCachedPrograms(userId));
+      await this.ensureProgramsLoaded(userId, seq, force);
     } catch (err) {
       if (seq !== this.bootstrapSeq) return;
       this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo cargar el módulo de objetivos.');
@@ -1454,6 +1441,97 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     } finally {
       if (seq === this.bootstrapSeq) this.loading.set(false);
     }
+  }
+
+  /**
+   * Carga historial + activo. El historial se aplica siempre (aunque haya otra
+   * corrida en curso): antes se descartaba por carrera y los activos solo
+   * aparecían al abrir la pestaña Historial.
+   */
+  private async ensureProgramsLoaded(
+    userId: string,
+    seq = this.bootstrapSeq,
+    force = false,
+  ): Promise<void> {
+    const history = await this.loadHistoryWithRetry(userId, force);
+    if (history) this.history.set(history);
+
+    let active: TargetProgramView | null = null;
+    try {
+      active = await this.objectives.getActiveProgramOnce(userId);
+    } catch (err) {
+      if (seq === this.bootstrapSeq) {
+        this.error.set(
+          extractGraphqlErrorMessage(err) || 'No se pudo leer el programa activo.',
+        );
+      }
+    }
+
+    if (seq !== this.bootstrapSeq) return;
+
+    if (active) {
+      this.program.set(active);
+      this.applyProgramForm(active);
+      this.objectives.upsertCachedProgram(userId, active);
+      this.cachedPrograms.set(this.objectives.readCachedPrograms(userId));
+      try {
+        await this.refreshEvolution(userId, active.programId);
+      } catch {
+        /* evolución opcional */
+      }
+      if (seq !== this.bootstrapSeq) return;
+    } else if (!this.program()) {
+      const fromActiveList = this.activePrograms()[0];
+      const fromHistoryAny = [...(history ?? this.history())].sort((a, b) =>
+        b.updatedAt.localeCompare(a.updatedAt),
+      )[0];
+      const fallbackItem = fromActiveList ?? fromHistoryAny;
+      if (fallbackItem) {
+        await this.selectActiveProgram(fallbackItem);
+        if (seq !== this.bootstrapSeq) return;
+      } else {
+        const cached = this.objectives.readCachedPrograms(userId);
+        if (cached[0]) {
+          this.program.set(cached[0]);
+          this.applyProgramForm(cached[0]);
+          this.syncHint.set(
+            'Mostrando programas guardados en este dispositivo; la API no devolvió activos.',
+          );
+        }
+      }
+    }
+
+    const focused = this.program();
+    if (focused) this.objectives.upsertCachedProgram(userId, focused);
+    this.cachedPrograms.set(this.objectives.readCachedPrograms(userId));
+  }
+
+  private async loadHistoryWithRetry(
+    userId: string,
+    force = false,
+    attempts = 5,
+  ): Promise<TargetProgramHistoryItemView[] | null> {
+    let lastErr: unknown;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await this.objectives.listHistoryOnce(userId, 20, {
+          force: force || i > 0,
+        });
+      } catch (err) {
+        lastErr = err;
+        if (i < attempts - 1) {
+          await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+          this.objectives.invalidateHistory(userId);
+        }
+      }
+    }
+    if (!this.error()) {
+      this.error.set(
+        extractGraphqlErrorMessage(lastErr) ||
+          'No se pudo cargar el historial de programas.',
+      );
+    }
+    return null;
   }
 
   private applyProgramForm(active: TargetProgramView): void {
@@ -1479,17 +1557,8 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
 
   private async refreshHistory(userId: string): Promise<void> {
     if (!userId) return;
-    try {
-      this.history.set(await this.objectives.listHistoryOnce(userId));
-    } catch (err) {
-      // No silenciar del todo: sin historial la lista de activos queda incompleta.
-      if (!this.error()) {
-        this.error.set(
-          extractGraphqlErrorMessage(err) ||
-            'No se pudo cargar el historial de programas.',
-        );
-      }
-    }
+    const history = await this.loadHistoryWithRetry(userId);
+    if (history) this.history.set(history);
   }
 
   private lockBody(): void {
