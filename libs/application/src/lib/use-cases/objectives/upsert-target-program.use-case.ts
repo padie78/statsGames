@@ -36,6 +36,19 @@ export class UpsertTargetProgramUseCase {
     await this.repo.saveProgram(program);
 
     if (input.status === 'active') {
+      // Un solo activo: archivar el anterior para historial.
+      const previousActiveId = await this.repo.getActiveProgramId(input.userId);
+      if (previousActiveId && previousActiveId !== programId) {
+        const previous = await this.repo.getProgram(input.userId, previousActiveId);
+        if (previous && previous.status === 'active') {
+          await this.repo.saveProgram({
+            ...previous,
+            status: 'archived',
+            endsAt: previous.endsAt ?? now.slice(0, 10),
+            updatedAt: now,
+          });
+        }
+      }
       await this.repo.setActivePointer(input.userId, programId);
     }
 

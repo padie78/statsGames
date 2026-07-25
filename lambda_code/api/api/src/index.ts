@@ -1,6 +1,7 @@
 import type { AppSyncResolverEvent, AppSyncResolverHandler } from 'aws-lambda';
 import type { MatchStatsRollupDto, MatchUpdateDto } from '@stats-games/application';
 import {
+  closeTargetProgram,
   getActiveTargetProgram,
   getCommunityBenchmarks,
   getEvolutionAiReport,
@@ -15,6 +16,7 @@ import {
   listPlayerDailyTrend,
   listPlayerMatches,
   listPlayerStatsRollups,
+  listTargetProgramHistory,
   listWeeklyLeaderboard,
   requestEvolutionAiReport,
   searchPlayers,
@@ -80,8 +82,13 @@ type ResolverArgs =
       fieldName: 'getObjectiveEvolution';
       args: { userId: string; programId?: string | null };
     }
+  | {
+      fieldName: 'listTargetProgramHistory';
+      args: { userId: string; limit?: number | null };
+    }
   | { fieldName: 'upsertTargetProgram'; args: { input: Record<string, unknown> } }
   | { fieldName: 'upsertActualExecution'; args: { input: Record<string, unknown> } }
+  | { fieldName: 'closeTargetProgram'; args: { input: Record<string, unknown> } }
   | { fieldName: 'upsertPlayerProfile'; args: { input: Record<string, unknown> } }
   | { fieldName: 'linkPlatformAccount'; args: { input: Record<string, unknown> } }
   | { fieldName: 'ping'; args: { message: string } };
@@ -238,11 +245,20 @@ async function dispatch(op: ResolverArgs): Promise<unknown> {
         programId: op.args.programId ?? undefined,
       });
 
+    case 'listTargetProgramHistory':
+      return listTargetProgramHistory.execute({
+        userId: op.args.userId,
+        limit: op.args.limit ?? undefined,
+      });
+
     case 'upsertTargetProgram':
       return upsertTargetProgram.execute(op.args.input);
 
     case 'upsertActualExecution':
       return upsertActualExecution.execute(op.args.input);
+
+    case 'closeTargetProgram':
+      return closeTargetProgram.execute(op.args.input);
 
     case 'upsertPlayerProfile':
       return upsertPlayerProfile.execute(op.args.input);

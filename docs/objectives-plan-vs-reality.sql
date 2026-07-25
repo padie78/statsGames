@@ -70,11 +70,29 @@ INSERT INTO metric_types (metric_type_id, label, unit, description, higher_is_be
   ('kilometers',      'Kilómetros recorridos', 'km', 'Volumen de desplazamiento / cardio', TRUE),
   ('weight_lifted',   'Peso levantado',        'kg', 'Carga acumulada en fuerza', TRUE),
   ('training_hours',  'Horas de entrenamiento','h',  'Tiempo efectivo de práctica', TRUE),
+  ('sessions_count',  'Sesiones de práctica',  'n',  'Cantidad de sesiones', TRUE),
   ('accuracy_pct',    'Porcentaje de acierto', '%',  'Precisión en drills / aiming', TRUE),
+  ('wins',            'Victorias',             'n',  'Partidas ganadas', TRUE),
+  ('losses',          'Derrotas',              'n',  'Partidas perdidas (tope)', FALSE),
+  ('draws',           'Empates',               'n',  'Partidas empatadas', FALSE),
+  ('matches_played',  'Partidas jugadas',      'n',  'Volumen de matches', TRUE),
   ('win_rate',        'Win rate',              '%',  'Ratio de victorias', TRUE),
+  ('win_streak',      'Racha de victorias',    'n',  'Mejor racha del período', TRUE),
+  ('kills',           'Kills totales',         'n',  'Eliminaciones acumuladas', TRUE),
+  ('deaths',          'Muertes totales',       'n',  'Muertes acumuladas (tope)', FALSE),
+  ('assists',         'Asistencias totales',   'n',  'Asistencias acumuladas', TRUE),
   ('kills_avg',       'Kills promedio',        'n',  'Eliminaciones por partida', TRUE),
+  ('deaths_avg',      'Muertes promedio',      'n',  'Muertes por partida (tope)', FALSE),
+  ('assists_avg',     'Asistencias promedio',  'n',  'Asistencias por partida', TRUE),
+  ('kd_ratio',        'K/D',                   'x',  'Ratio kills/deaths', TRUE),
+  ('kda_ratio',       'KDA',                   'x',  'Ratio (K+A)/D', TRUE),
+  ('headshot_pct',    'Headshot %',            '%',  'Porcentaje de headshots', TRUE),
+  ('adr',             'ADR',                   'n',  'Daño promedio por ronda', TRUE),
+  ('placement_avg',   'Placement promedio',    'n',  'Posición media (más bajo mejor)', FALSE),
   ('cs_avg',          'CS promedio',           'n',  'Farm / minions (LoL)', TRUE),
-  ('vision_avg',      'Visión promedio',       'n',  'Vision score (LoL)', TRUE);
+  ('vision_avg',      'Visión promedio',       'n',  'Vision score (LoL)', TRUE),
+  ('goals',           'Goles',                 'n',  'Goles (Rocket League)', TRUE),
+  ('saves',           'Saves',                 'n',  'Atajadas', TRUE);
 
 -- =============================================================================
 -- Mapping DynamoDB single-table (PK = USER#<userId>)

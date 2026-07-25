@@ -7,6 +7,7 @@ import type {
   ObjectiveAlignment,
   ObjectiveEvolutionDto,
   ObjectiveEvolutionRowDto,
+  ProgramOutcome,
   ProgramTargetDto,
   TargetProgramDto,
 } from '../../dto/objectives/objectives.dto';
@@ -14,6 +15,8 @@ import type {
 /** Umbrales de alineación (cumplimiento = real/meta * 100). */
 const ALIGNED_MIN = 90;
 const ALIGNED_MAX = 115;
+/** Programa cerrado se considera cumplido desde este % global. */
+const PROGRAM_FULFILLED_MIN = 90;
 
 export function computeCompliancePct(actual: number, planned: number): number | null {
   if (planned <= 0) return null;
@@ -118,4 +121,19 @@ export function assertValidMetricTypeIds(ids: string[]): void {
   if (invalid.length) {
     throw new Error(`metricTypeId inválido: ${invalid.join(', ')}`);
   }
+}
+
+export function classifyProgramOutcome(input: {
+  status: TargetProgramDto['status'];
+  globalCompliancePct: number | null;
+}): { outcome: ProgramOutcome; outcomeLabel: string } {
+  if (input.status === 'active' || input.status === 'draft') {
+    return { outcome: 'in_progress', outcomeLabel: 'En curso' };
+  }
+
+  const pct = input.globalCompliancePct;
+  if (pct != null && pct >= PROGRAM_FULFILLED_MIN) {
+    return { outcome: 'fulfilled', outcomeLabel: 'Cumplido' };
+  }
+  return { outcome: 'not_fulfilled', outcomeLabel: 'No cumplido' };
 }

@@ -4,6 +4,7 @@ export type AppNavIcon =
   | 'dashboard'
   | 'matches'
   | 'analytics'
+  | 'objectives'
   | 'coach'
   | 'profile'
   | 'talent'
@@ -55,6 +56,15 @@ export const PLAYER_SUBNAV_ITEMS: AppSubnavItem[] = [
     route: '/tabs/matches',
     icon: 'matches',
     exact: false,
+  },
+  {
+    id: 'objectives',
+    label: 'Objetivos',
+    title: 'Objetivos',
+    description: 'Programa, realidad y cumplimiento',
+    route: '/tabs/objectives',
+    icon: 'objectives',
+    tone: 'purple',
   },
   {
     id: 'analytics',
@@ -148,6 +158,7 @@ export const APP_ROUTE_TITLES: Record<string, string> = {
   dashboard: 'Inicio',
   matches: 'Partidas',
   analytics: 'Evolución',
+  objectives: 'Objetivos',
   profile: 'Mi perfil',
   talent: 'Buscador de Talento',
   radar: 'Mi Radar',

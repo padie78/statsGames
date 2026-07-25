@@ -74,6 +74,11 @@ export const APP_ROUTES: Routes = [
           import('./pages/analytics/analytics.page').then((m) => m.AnalyticsPageComponent),
       },
       {
+        path: 'objectives',
+        loadComponent: () =>
+          import('./pages/objectives/objectives.page').then((m) => m.ObjectivesPageComponent),
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./pages/profile/profile.page').then((m) => m.ProfilePageComponent),

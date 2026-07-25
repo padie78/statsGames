@@ -146,6 +146,13 @@ import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component'
               <path d="M4 19V5M4 19h16"/><path d="m7 14 4-4 3 3 5-6"/>
             </svg>
           }
+          @case ('objectives') {
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <circle cx="12" cy="12" r="8"/>
+              <circle cx="12" cy="12" r="4"/>
+              <circle cx="12" cy="12" r="1.25" fill="currentColor" stroke="none"/>
+            </svg>
+          }
           @case ('coach') {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
               <path d="M12 3.5 4.5 7v5c0 4.4 3.1 7.8 7.5 9 4.4-1.2 7.5-4.6 7.5-9V7L12 3.5Z"/>

@@ -44,6 +44,9 @@ type Query {
   getObjectiveEvolution(userId: ID!, programId: ID): ObjectiveEvolution
     @aws_api_key
     @aws_cognito_user_pools
+  listTargetProgramHistory(userId: ID!, limit: Int): [TargetProgramHistoryItem!]!
+    @aws_api_key
+    @aws_cognito_user_pools
 }
 
 type PlayerProfile @aws_api_key @aws_cognito_user_pools {
@@ -348,6 +351,31 @@ type ObjectiveEvolution @aws_api_key @aws_cognito_user_pools {
   byMetric: [ObjectiveEvolutionMetricSummary!]!
 }
 
+type TargetProgramHistoryItem @aws_api_key @aws_cognito_user_pools {
+  programId: ID!
+  userId: ID!
+  title: String!
+  cadence: String!
+  status: String!
+  platform: String
+  startsAt: AWSDate!
+  endsAt: AWSDate
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  targetCount: Int!
+  executionCount: Int!
+  globalCompliancePct: Float
+  outcome: String!
+  outcomeLabel: String!
+  isActive: Boolean!
+}
+
+input CloseTargetProgramInput {
+  userId: ID!
+  programId: ID!
+  endsAt: AWSDate
+}
+
 type Mutation {
   ping(message: String!): String! @aws_api_key @aws_cognito_user_pools
   upsertPlayerProfile(input: UpsertPlayerProfileInput!): PlayerProfile!
@@ -363,6 +391,9 @@ type Mutation {
     @aws_api_key
     @aws_cognito_user_pools
   upsertActualExecution(input: UpsertActualExecutionInput!): ActualExecution!
+    @aws_api_key
+    @aws_cognito_user_pools
+  closeTargetProgram(input: CloseTargetProgramInput!): TargetProgram!
     @aws_api_key
     @aws_cognito_user_pools
   publishMatchUpdate(input: MatchUpdateInput!): MatchUpdate @aws_api_key

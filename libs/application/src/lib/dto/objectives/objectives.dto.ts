@@ -122,3 +122,34 @@ export const ObjectiveEvolutionDtoSchema = z.object({
   ),
 });
 export type ObjectiveEvolutionDto = z.infer<typeof ObjectiveEvolutionDtoSchema>;
+
+/** Resultado histórico del programa completo. */
+export const ProgramOutcomeSchema = z.enum(['in_progress', 'fulfilled', 'not_fulfilled']);
+export type ProgramOutcome = z.infer<typeof ProgramOutcomeSchema>;
+
+export const TargetProgramHistoryItemDtoSchema = z.object({
+  programId: z.string().min(1),
+  userId: z.string().min(1),
+  title: z.string().min(1),
+  cadence: ObjectiveCadenceSchema,
+  status: ObjectiveProgramStatusSchema,
+  platform: z.string().optional(),
+  startsAt: z.string().min(1),
+  endsAt: z.string().optional(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  targetCount: z.number().int().nonnegative(),
+  executionCount: z.number().int().nonnegative(),
+  globalCompliancePct: z.number().nullable(),
+  outcome: ProgramOutcomeSchema,
+  outcomeLabel: z.string().min(1),
+  isActive: z.boolean(),
+});
+export type TargetProgramHistoryItemDto = z.infer<typeof TargetProgramHistoryItemDtoSchema>;
+
+export const CloseTargetProgramInputSchema = z.object({
+  userId: z.string().min(1),
+  programId: z.string().min(1),
+  endsAt: z.string().optional(),
+});
+export type CloseTargetProgramInput = z.infer<typeof CloseTargetProgramInputSchema>;

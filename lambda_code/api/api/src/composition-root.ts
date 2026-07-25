@@ -1,4 +1,5 @@
 import {
+  CloseTargetProgramUseCase,
   GetCommunityBenchmarksUseCase,
   GetEvolutionAiReportUseCase,
   GetMatchAiReportUseCase,
@@ -13,6 +14,7 @@ import {
   ListPlayerDailyTrendUseCase,
   ListPlayerMatchesUseCase,
   ListPlayerStatsRollupsUseCase,
+  ListTargetProgramHistoryUseCase,
   ListWeeklyLeaderboardUseCase,
   RequestEvolutionAiReportUseCase,
   SearchPlayersUseCase,
@@ -75,3 +77,5 @@ export const getActiveTargetProgram = new GetActiveTargetProgramUseCase(targetPr
 export const upsertTargetProgram = new UpsertTargetProgramUseCase(targetPrograms);
 export const upsertActualExecution = new UpsertActualExecutionUseCase(targetPrograms);
 export const getObjectiveEvolution = new GetObjectiveEvolutionUseCase(targetPrograms);
+export const listTargetProgramHistory = new ListTargetProgramHistoryUseCase(targetPrograms);
+export const closeTargetProgram = new CloseTargetProgramUseCase(targetPrograms);

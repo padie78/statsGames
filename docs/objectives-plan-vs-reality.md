@@ -16,12 +16,15 @@
  * | API Lambda | `lambda_code/api/api/src/` |
  * | Angular service | `apps/stats-games-web/src/app/services/objectives.service.ts` |
  * | UI 3 tabs | `.../ui/molecules/objectives-plan-panel/` |
- * | Integración | pestaña **Evolución** (`analytics.page.ts`) |
+ * | Página / nav | `/tabs/objectives` — menú jugador **Objetivos** |
+ * | Historial | `listTargetProgramHistory` + tab Historial (En curso / Cumplido / No cumplido) |
  *
  * ## GraphQL (equiv. REST)
  * - `listObjectiveMetricTypes`
  * - `getActiveTargetProgram(userId)`
+ * - `listTargetProgramHistory(userId, limit)`
  * - `upsertTargetProgram(input)`
+ * - `closeTargetProgram(input)` — archiva y deja outcome histórico
  * - `upsertActualExecution(input)`
  * - `getObjectiveEvolution(userId, programId?)`  ← endpoint Evolución
  *
@@ -30,6 +33,11 @@
  * - Alineado: 90–115%
  * - Por encima: >115%
  * - Crítico: <90% o sin dato
+ *
+ * ## Outcome de programa (historial)
+ * - En curso: `status = active|draft`
+ * - Cumplido: cerrado (`archived`) y cumplimiento global ≥ 90%
+ * - No cumplido: cerrado y < 90% o sin ejecución
  *
  * ## Deploy
  * 1. `terraform apply` (schema + resolvers AppSync)

@@ -7,6 +7,7 @@ import type {
 export interface ITargetProgramRepository {
   saveProgram(program: Omit<TargetProgramDto, 'targets'>): Promise<void>;
   setActivePointer(userId: string, programId: string): Promise<void>;
+  clearActivePointer(userId: string): Promise<void>;
   getActiveProgramId(userId: string): Promise<string | null>;
   getProgram(userId: string, programId: string): Promise<Omit<TargetProgramDto, 'targets'> | null>;
   listPrograms(userId: string): Promise<Array<Omit<TargetProgramDto, 'targets'>>>;

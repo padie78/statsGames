@@ -57,6 +57,19 @@ export class DynamoDbTargetProgramRepository implements ITargetProgramRepository
     );
   }
 
+  async clearActivePointer(userId: string): Promise<void> {
+    const client = getDocumentClient();
+    await client.send(
+      new DeleteCommand({
+        TableName: this.tableName,
+        Key: {
+          PK: DynamoKeys.userPk(userId),
+          SK: DynamoKeys.targetProgramActiveSk(),
+        },
+      }),
+    );
+  }
+
   async getActiveProgramId(userId: string): Promise<string | null> {
     const client = getDocumentClient();
     const result = await client.send(

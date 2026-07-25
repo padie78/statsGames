@@ -346,6 +346,16 @@ resource "aws_appsync_resolver" "get_objective_evolution" {
   response_template = local.direct_lambda_response_template
 }
 
+resource "aws_appsync_resolver" "list_target_program_history" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Query"
+  field             = "listTargetProgramHistory"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
 resource "aws_appsync_resolver" "upsert_target_program" {
   api_id            = aws_appsync_graphql_api.this.id
   type              = "Mutation"
@@ -360,6 +370,16 @@ resource "aws_appsync_resolver" "upsert_actual_execution" {
   api_id            = aws_appsync_graphql_api.this.id
   type              = "Mutation"
   field             = "upsertActualExecution"
+  data_source       = aws_appsync_datasource.api.name
+  depends_on        = [terraform_data.appsync_datasources_ready]
+  request_template  = local.direct_lambda_request_template
+  response_template = local.direct_lambda_response_template
+}
+
+resource "aws_appsync_resolver" "close_target_program" {
+  api_id            = aws_appsync_graphql_api.this.id
+  type              = "Mutation"
+  field             = "closeTargetProgram"
   data_source       = aws_appsync_datasource.api.name
   depends_on        = [terraform_data.appsync_datasources_ready]
   request_template  = local.direct_lambda_request_template

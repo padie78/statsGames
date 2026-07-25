@@ -80,6 +80,27 @@ export interface ObjectiveEvolutionView {
   }>;
 }
 
+export type ProgramOutcomeView = 'in_progress' | 'fulfilled' | 'not_fulfilled' | string;
+
+export interface TargetProgramHistoryItemView {
+  programId: string;
+  userId: string;
+  title: string;
+  cadence: string;
+  status: string;
+  platform?: string | null;
+  startsAt: string;
+  endsAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  targetCount: number;
+  executionCount: number;
+  globalCompliancePct?: number | null;
+  outcome: ProgramOutcomeView;
+  outcomeLabel: string;
+  isActive: boolean;
+}
+
 const METRIC_FIELDS = /* GraphQL */ `
   id
   label
@@ -206,6 +227,68 @@ export class ObjectivesService {
           (resp) =>
             (resp as { data: { getObjectiveEvolution: ObjectiveEvolutionView | null } }).data
               .getObjectiveEvolution,
+        ),
+      ),
+    );
+  }
+
+  listHistoryOnce(userId: string, limit = 20): Promise<TargetProgramHistoryItemView[]> {
+    return firstValueFrom(
+      from(
+        this.client.graphql({
+          query: /* GraphQL */ `
+            query ListTargetProgramHistory($userId: ID!, $limit: Int) {
+              listTargetProgramHistory(userId: $userId, limit: $limit) {
+                programId
+                userId
+                title
+                cadence
+                status
+                platform
+                startsAt
+                endsAt
+                createdAt
+                updatedAt
+                targetCount
+                executionCount
+                globalCompliancePct
+                outcome
+                outcomeLabel
+                isActive
+              }
+            }
+          `,
+          variables: { userId, limit },
+        }),
+      ).pipe(
+        map(
+          (resp) =>
+            (resp as { data: { listTargetProgramHistory: TargetProgramHistoryItemView[] } }).data
+              .listTargetProgramHistory,
+        ),
+      ),
+    );
+  }
+
+  closeProgramOnce(input: {
+    userId: string;
+    programId: string;
+    endsAt?: string;
+  }): Promise<TargetProgramView> {
+    return firstValueFrom(
+      from(
+        this.client.graphql({
+          query: /* GraphQL */ `
+            mutation CloseTargetProgram($input: CloseTargetProgramInput!) {
+              closeTargetProgram(input: $input) { ${PROGRAM_FIELDS} }
+            }
+          `,
+          variables: { input },
+        }),
+      ).pipe(
+        map(
+          (resp) =>
+            (resp as { data: { closeTargetProgram: TargetProgramView } }).data.closeTargetProgram,
         ),
       ),
     );
