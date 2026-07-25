@@ -1,5 +1,8 @@
-/** Ventanas de análisis para Inicio / Evolución. */
-export type AnalysisRangeId = 'day' | 'week' | '30d' | '90d';
+/** Ventanas de análisis para Inicio / Evolución / Coach / Objetivos. */
+export type AnalysisRangeId = 'day' | 'week' | '30d' | '90d' | 'all';
+
+/** Partidas usa exactamente los mismos rangos globales. */
+export type MatchDateFilter = AnalysisRangeId;
 
 export interface AnalysisRangeMeta {
   id: AnalysisRangeId;
@@ -19,6 +22,17 @@ export interface AnalysisRangeMeta {
 }
 
 export const ANALYSIS_RANGE_OPTIONS: readonly AnalysisRangeMeta[] = [
+  {
+    id: 'all',
+    label: 'Todo',
+    shortLabel: 'Todo',
+    days: 90,
+    formWeeks: 13,
+    dailyApiDays: 30,
+    description: 'Todo el historial disponible',
+    preferWeeklyRollup: false,
+    isSingleDay: false,
+  },
   {
     id: 'day',
     label: 'Día',
@@ -65,14 +79,38 @@ export const ANALYSIS_RANGE_OPTIONS: readonly AnalysisRangeMeta[] = [
   },
 ] as const;
 
+export const MATCH_DATE_FILTER_OPTIONS: ReadonlyArray<{
+  value: MatchDateFilter;
+  label: string;
+  shortLabel: string;
+  description: string;
+}> = ANALYSIS_RANGE_OPTIONS.map((opt) => ({
+    value: opt.id as MatchDateFilter,
+    label: opt.label,
+    shortLabel: opt.shortLabel,
+    description: opt.description,
+  }));
+
 const BY_ID = new Map(ANALYSIS_RANGE_OPTIONS.map((opt) => [opt.id, opt]));
 
 export function isAnalysisRangeId(value: unknown): value is AnalysisRangeId {
   return typeof value === 'string' && BY_ID.has(value as AnalysisRangeId);
 }
 
+export function isMatchDateFilter(value: unknown): value is MatchDateFilter {
+  return isAnalysisRangeId(value);
+}
+
+/** Migra query params viejos (`7d`) al vocabulario unificado. */
+export function normalizeMatchDateFilter(value: string | null | undefined): MatchDateFilter | null {
+  if (value == null) return null;
+  if (value === '7d') return 'week';
+  if (isMatchDateFilter(value)) return value;
+  return null;
+}
+
 export function getAnalysisRangeMeta(id: AnalysisRangeId): AnalysisRangeMeta {
-  return BY_ID.get(id) ?? ANALYSIS_RANGE_OPTIONS[1];
+  return BY_ID.get(id) ?? ANALYSIS_RANGE_OPTIONS[2];
 }
 
 /**
@@ -81,6 +119,8 @@ export function getAnalysisRangeMeta(id: AnalysisRangeId): AnalysisRangeMeta {
  */
 export function analysisRangeWeekSpan(id: AnalysisRangeId): number {
   switch (id) {
+    case 'all':
+      return 13;
     case 'day':
     case 'week':
       return 1;
@@ -122,6 +162,8 @@ export function formatDayLabel(dayIso: string): string {
 
 export function analysisRangeNoun(id: AnalysisRangeId, dayIso?: string): string {
   switch (id) {
+    case 'all':
+      return 'todo el historial disponible';
     case 'day':
       return dayIso ? formatDayLabel(dayIso) : 'el día';
     case 'week':
@@ -135,6 +177,8 @@ export function analysisRangeNoun(id: AnalysisRangeId, dayIso?: string): string 
 
 export function analysisRangeCompareTitle(id: AnalysisRangeId): string {
   switch (id) {
+    case 'all':
+      return 'Todo el historial disponible';
     case 'day':
       return 'Día elegido vs el anterior';
     case 'week':
@@ -148,6 +192,8 @@ export function analysisRangeCompareTitle(id: AnalysisRangeId): string {
 
 export function analysisRangeCompareSubtitle(id: AnalysisRangeId): string {
   switch (id) {
+    case 'all':
+      return 'Sin período anterior: se analiza todo el historial disponible.';
     case 'day':
       return 'Delta de partidas, kills y resultados respecto al día calendario previo.';
     case 'week':
@@ -157,4 +203,35 @@ export function analysisRangeCompareSubtitle(id: AnalysisRangeId): string {
     case '90d':
       return 'Delta de partidas, kills y resultados respecto a los 90 días previos.';
   }
+}
+
+/** True si un ISO timestamp cae dentro del rango de análisis. */
+export function isoInAnalysisRange(
+  iso: string,
+  range: MatchDateFilter,
+  selectedDayIso?: string,
+): boolean {
+  if (range === 'all') return true;
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return false;
+
+  if (range === 'day') {
+    const day = selectedDayIso ?? todayPeriodId();
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    if (!match) return false;
+    const start = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return t >= start && t < start + 86_400_000;
+  }
+
+  if (range === 'week') {
+    const now = new Date();
+    const tmp = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const day = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() - (day - 1));
+    const startMs = tmp.getTime();
+    return t >= startMs && t < startMs + 7 * 86_400_000;
+  }
+
+  const days = getAnalysisRangeMeta(range).days;
+  return t >= Date.now() - days * 86_400_000;
 }

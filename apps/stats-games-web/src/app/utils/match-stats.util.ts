@@ -216,6 +216,24 @@ export function filterMatchesInPreviousIsoWeek(matches: MatchUpdateView[]): Matc
   });
 }
 
+/**
+ * Filtro unificado Día / Semana / 30d / 90d / Todo (Partidas, Coach, Inicio…).
+ */
+export function filterMatchesByAnalysisRange(
+  matches: MatchUpdateView[],
+  range: 'all' | 'day' | 'week' | '30d' | '90d',
+  selectedDayIso?: string,
+): MatchUpdateView[] {
+  if (range === 'all') return matches;
+  if (range === 'day') {
+    return filterMatchesOnCalendarDay(matches, selectedDayIso ?? new Date().toISOString().slice(0, 10));
+  }
+  if (range === 'week') return filterMatchesInCurrentIsoWeek(matches);
+  if (range === '30d') return filterMatchesWithinDays(matches, 30);
+  if (range === '90d') return filterMatchesWithinDays(matches, 90);
+  return matches;
+}
+
 function currentIsoWeekBoundsUtc(): { startMs: number; endMs: number } {
   const now = new Date();
   const tmp = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));

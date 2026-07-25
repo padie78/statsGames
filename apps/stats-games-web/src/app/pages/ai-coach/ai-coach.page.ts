@@ -3,6 +3,13 @@ import { Router, RouterLink } from '@angular/router';
 import { IonContent } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { AnalysisRangeService } from '../../core/analysis/analysis-range.service';
+import {
+  analysisRangeNoun,
+  analysisRangeWeekSpan,
+  isoInAnalysisRange,
+  type AnalysisRangeId,
+} from '../../core/analysis/analysis-range';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import { lolChampionSplashUrl, lolCoachBannerSplashUrl } from '../../core/game/lol-ddragon.util';
@@ -21,6 +28,8 @@ import { PlayerService, type PlayerProfileView } from '../../services/player.ser
 import {
   StatsService,
   currentWeeklyPeriodIdForStats,
+  isoWeeklyPeriodIdForDay,
+  listRecentWeeklyPeriodIds,
   type LeaderboardEntryView,
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
@@ -31,6 +40,7 @@ import {
   filterMockMatchesByPlatform,
 } from '../../data/match-mock.data';
 import {
+  AnalysisFiltersPanelComponent,
   NeonBadgeComponent,
   WeekHeroBrandComponent,
   WeeklyAiCoachPanelComponent,
@@ -38,13 +48,16 @@ import {
 import { matchDetailRoute } from '../../utils/match-analysis.util';
 import {
   aggregateMatchStats,
-  filterMatchesWithinDays,
+  filterMatchesByAnalysisRange,
   formatMatchRelativeTime,
 } from '../../utils/match-stats.util';
 import { aggregatePlatformMatchStats } from '../../utils/platform-stats.util';
 import { mapCommunityBenchmarksFromApi } from '../../utils/community-stats.util';
 import { buildWeeklyAiCoachSummary } from '../../utils/weekly-ai-summary.util';
-import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.util';
+import {
+  buildWeeklyCommunityRankView,
+  mergeLeaderboardsAcrossPeriods,
+} from '../../utils/weekly-community-rank.util';
 
 @Component({
   standalone: true,
@@ -56,6 +69,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
     NeonBadgeComponent,
     WeekHeroBrandComponent,
     WeeklyAiCoachPanelComponent,
+    AnalysisFiltersPanelComponent,
   ],
   template: `
     <ion-content class="sg-page-content">
@@ -92,7 +106,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
                 informe macro de progreso está en Evolución.
               </p>
 
-              <div class="sg-dashboard__week-kpis" aria-label="KPIs del coach">
+              <div class="sg-dashboard__week-kpis" [attr.aria-label]="'KPIs · ' + rangeNoun()">
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">{{ heroKpis().winRate }}</span>
                   <span class="sg-dashboard__week-kpi-label">Win rate</span>
@@ -115,6 +129,25 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
         </section>
 
         <div class="sg-coach__body page-shell page-shell--fluid">
+          <section class="sg-dashboard__block" aria-labelledby="coach-filters">
+            <div class="sg-dashboard__block-head">
+              <div>
+                <h2 id="coach-filters" class="sg-dashboard__block-title">Filtros</h2>
+                <p class="sg-dashboard__block-desc">
+                  Mismo período que Inicio, Partidas y Evolución.
+                </p>
+              </div>
+            </div>
+            <sg-analysis-filters-panel
+              title="Período de análisis"
+              [subtitle]="'Activo: ' + rangeMeta().label"
+              [value]="analysisRange.range()"
+              [selectedDayIso]="analysisRange.selectedDayIso()"
+              (rangeChange)="onAnalysisRangeChange($event)"
+              (dayChange)="onAnalysisDayChange($event)"
+            />
+          </section>
+
           @if (loading()) {
             <div
               class="sg-coach__loading"
@@ -219,9 +252,11 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
               <section class="sg-dashboard__block sg-coach__weekly-slim" aria-labelledby="coach-weekly">
                 <div class="sg-dashboard__block-head">
                   <div>
-                    <h2 id="coach-weekly" class="sg-dashboard__block-title">Resumen semanal</h2>
+                    <h2 id="coach-weekly" class="sg-dashboard__block-title">
+                      Resumen · {{ rangeMeta().label }}
+                    </h2>
                     <p class="sg-dashboard__block-desc">
-                      Lectura local. El informe IA macro está en Evolución.
+                      Lectura local del rango elegido. El informe IA macro está en Evolución.
                     </p>
                   </div>
                   <a routerLink="/tabs/analytics" class="sg-dashboard__block-link">
@@ -248,6 +283,7 @@ import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.
 export class AiCoachPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly gameContext = inject(GameContextService);
+  readonly analysisRange = inject(AnalysisRangeService);
   private readonly matchAi = inject(MatchAiService);
   private readonly matchService = inject(MatchService);
   private readonly playerService = inject(PlayerService);
@@ -272,6 +308,10 @@ export class AiCoachPageComponent implements OnInit {
   });
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.activePlatform()));
+  readonly rangeMeta = computed(() => this.analysisRange.meta());
+  readonly rangeNoun = computed(() =>
+    analysisRangeNoun(this.analysisRange.range(), this.analysisRange.selectedDayIso()),
+  );
 
   readonly heroArtSrc = computed(() => {
     const meta = this.platformMeta();
@@ -307,7 +347,11 @@ export class AiCoachPageComponent implements OnInit {
   });
 
   readonly weekMatches = computed(() =>
-    filterMatchesWithinDays(this.effectiveRecentMatches(), 7),
+    filterMatchesByAnalysisRange(
+      this.effectiveRecentMatches(),
+      this.analysisRange.range(),
+      this.analysisRange.selectedDayIso(),
+    ),
   );
 
   readonly weekSummary = computed(() => aggregateMatchStats(this.weekMatches()));
@@ -319,17 +363,25 @@ export class AiCoachPageComponent implements OnInit {
   readonly heroKpis = computed(() => {
     const s = this.platformWeekSummary();
     const useKda = this.kdLabel() === 'KDA';
+    const rangeReports = this.reportsInRange().length;
     return {
       winRate: s.matchCount ? s.winRate : '—',
       kd: s.matchCount ? (useKda ? s.kda : s.kd) : '—',
       wins: s.winCount,
-      reports: this.reports().length,
+      reports: rangeReports,
     };
   });
 
-  readonly hasWeekData = computed(() => {
-    const w = this.weekly();
-    return !!w && w.matchCount > 0;
+  readonly hasWeekData = computed(() => this.weekMatches().length > 0);
+
+  readonly reportsInRange = computed(() => {
+    const range = this.analysisRange.range();
+    const day = this.analysisRange.selectedDayIso();
+    const matchIds = new Set(this.weekMatches().map((m) => m.matchId));
+    return this.reports().filter((report) => {
+      if (matchIds.has(report.matchId)) return true;
+      return isoInAnalysisRange(report.createdAt, range, day);
+    });
   });
 
   readonly reportCards = computed(() => {
@@ -338,7 +390,7 @@ export class AiCoachPageComponent implements OnInit {
     );
     const platform = this.activePlatform();
 
-    return this.reports().map((report) => {
+    return this.reportsInRange().map((report) => {
       const match = matchesById.get(report.matchId);
       const stats = match?.stats;
       const identity =
@@ -401,6 +453,8 @@ export class AiCoachPageComponent implements OnInit {
         kd,
         winRate,
         kills: summary.totalKills,
+        deaths: summary.totalDeaths,
+        assists: summary.totalAssists,
         matches: summary.matchCount,
         winCount: summary.winCount,
       },
@@ -429,6 +483,16 @@ export class AiCoachPageComponent implements OnInit {
     this.heroArtFailed.set(true);
   }
 
+  onAnalysisRangeChange(id: AnalysisRangeId): void {
+    this.analysisRange.setRange(id);
+    void this.refreshRangeLeaderboard();
+  }
+
+  onAnalysisDayChange(dayIso: string): void {
+    this.analysisRange.setDay(dayIso);
+    void this.refreshRangeLeaderboard();
+  }
+
   detailLink(matchId: string): string {
     return matchDetailRoute(matchId);
   }
@@ -439,6 +503,29 @@ export class AiCoachPageComponent implements OnInit {
 
   goToEvolution(): void {
     void this.router.navigateByUrl('/tabs/analytics');
+  }
+
+  private async refreshRangeLeaderboard(): Promise<void> {
+    const platform = matchBackendPlatform(this.activePlatform());
+    this.communityLeaderboardApi.set(await this.loadRangeLeaderboard(platform));
+  }
+
+  private async loadRangeLeaderboard(
+    platform: ReturnType<typeof matchBackendPlatform>,
+  ): Promise<LeaderboardEntryView[]> {
+    const range = this.rangeMeta();
+    const boardPlatform = platform ?? 'fortnite';
+    const periodIds = range.isSingleDay
+      ? [isoWeeklyPeriodIdForDay(this.analysisRange.selectedDayIso())]
+      : listRecentWeeklyPeriodIds(analysisRangeWeekSpan(range.id));
+    const boards = await Promise.all(
+      periodIds.map((id) =>
+        firstValueFrom(
+          this.statsService.listWeeklyLeaderboard(boardPlatform, id, 40),
+        ).catch(() => [] as LeaderboardEntryView[]),
+      ),
+    );
+    return mergeLeaderboardsAcrossPeriods(boards);
   }
 
   private async load(): Promise<void> {
@@ -461,13 +548,16 @@ export class AiCoachPageComponent implements OnInit {
         'fortnite';
       const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
+      const range = this.rangeMeta();
+      const matchLimit =
+        range.id === 'all' ? 150 : Math.min(150, Math.max(50, range.days + 40));
 
       const [reports, matches, weeklyRows, community, leaderboard] = await Promise.all([
         this.matchAi
           .listMatchAiReportsOnce(userId, { platform: platform ?? undefined, limit: 30 })
           .catch(() => [] as MatchAiReportView[]),
         this.matchService
-          .listPlayerMatchesOnce(userId, { platform: platform ?? undefined, limit: 50 })
+          .listPlayerMatchesOnce(userId, { platform: platform ?? undefined, limit: matchLimit })
           .catch(() => [] as MatchUpdateView[]),
         firstValueFrom(
           this.statsService.listPlayerStatsRollups(userId, 'WEEKLY', periodId, platform),
@@ -475,9 +565,7 @@ export class AiCoachPageComponent implements OnInit {
         firstValueFrom(
           this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
         ).catch(() => null),
-        firstValueFrom(
-          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 40),
-        ).catch(() => [] as LeaderboardEntryView[]),
+        this.loadRangeLeaderboard(platform),
       ]);
 
       this.recentMatches.set(matches);

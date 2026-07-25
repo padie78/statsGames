@@ -1,10 +1,15 @@
 import { Component, EventEmitter, Input, Output, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import {
+  MATCH_DATE_FILTER_OPTIONS,
+  todayPeriodId,
+  type MatchDateFilter,
+} from '../../../core/analysis/analysis-range';
 import { SelectComponent, type SelectOption } from '../../atoms/select/select.component';
 import type { MatchSortKey } from '../../../utils/match-stats.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
-export type MatchDateFilter = 'all' | '7d' | '30d';
+export type { MatchDateFilter } from '../../../core/analysis/analysis-range';
 export type MatchResultFilter = 'all' | 'wins' | 'losses';
 
 @Component({
@@ -63,12 +68,26 @@ export type MatchResultFilter = 'all' | 'wins' | 'losses';
                 type="button"
                 class="sg-match-filters__chip"
                 [class.sg-match-filters__chip--active]="dateRange === option.value"
+                [attr.title]="option.description"
                 (click)="dateRangeChange.emit(option.value)"
               >
-                {{ option.label }}
+                <span class="sg-match-filters__chip-short">{{ option.shortLabel }}</span>
+                <span class="sg-match-filters__chip-full">{{ option.label }}</span>
               </button>
             }
           </div>
+          @if (dateRange === 'day') {
+            <label class="sg-match-filters__day">
+              <span class="sg-match-filters__day-label">Fecha</span>
+              <input
+                type="date"
+                class="sg-match-filters__day-input"
+                [value]="selectedDayIso"
+                [max]="maxDay"
+                (change)="onDayInput($event)"
+              />
+            </label>
+          }
         </div>
 
         <div class="sg-match-filters__group">
@@ -123,6 +142,7 @@ export type MatchResultFilter = 'all' | 'wins' | 'losses';
 })
 export class MatchFiltersToolbarComponent {
   @Input() dateRange: MatchDateFilter = 'all';
+  @Input() selectedDayIso = todayPeriodId();
   @Input() result: MatchResultFilter = 'all';
   @Input() sort: MatchSortKey = 'newest';
   @Input() query = '';
@@ -137,20 +157,18 @@ export class MatchFiltersToolbarComponent {
   @Input() usingMockData = false;
   @Input() hasActiveFilters = false;
 
-  @Output() dateRangeChange = new EventEmitter<MatchDateFilter>();
-  @Output() resultChange = new EventEmitter<MatchResultFilter>();
-  @Output() sortChange = new EventEmitter<MatchSortKey>();
-  @Output() queryChange = new EventEmitter<string>();
-  @Output() modeChange = new EventEmitter<string>();
-  @Output() identityChange = new EventEmitter<string>();
-  @Output() mapChange = new EventEmitter<string>();
-  @Output() clearFilters = new EventEmitter<void>();
+  @Output() readonly dateRangeChange = new EventEmitter<MatchDateFilter>();
+  @Output() readonly dayChange = new EventEmitter<string>();
+  @Output() readonly resultChange = new EventEmitter<MatchResultFilter>();
+  @Output() readonly sortChange = new EventEmitter<MatchSortKey>();
+  @Output() readonly queryChange = new EventEmitter<string>();
+  @Output() readonly modeChange = new EventEmitter<string>();
+  @Output() readonly identityChange = new EventEmitter<string>();
+  @Output() readonly mapChange = new EventEmitter<string>();
+  @Output() readonly clearFilters = new EventEmitter<void>();
 
-  readonly dateOptions = [
-    { value: 'all' as const, label: 'Todo' },
-    { value: '7d' as const, label: '7 días' },
-    { value: '30d' as const, label: '30 días' },
-  ];
+  readonly dateOptions = MATCH_DATE_FILTER_OPTIONS;
+  readonly maxDay = todayPeriodId();
 
   readonly resultOptions = [
     { value: 'all' as const, label: 'Todos' },
@@ -179,6 +197,12 @@ export class MatchFiltersToolbarComponent {
 
   onSortChange(value: string): void {
     this.sortChange.emit(value as MatchSortKey);
+  }
+
+  onDayInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    if (!value) return;
+    this.dayChange.emit(value);
   }
 
   private toSelectOptions(values: string[], allLabel: string): SelectOption[] {

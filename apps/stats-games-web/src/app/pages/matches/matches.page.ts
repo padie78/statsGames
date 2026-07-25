@@ -2,6 +2,12 @@ import { Component, OnInit, ViewEncapsulation, computed, effect, inject, signal 
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { IonContent, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
+import { AnalysisRangeService } from '../../core/analysis/analysis-range.service';
+import {
+  isAnalysisRangeId,
+  normalizeMatchDateFilter,
+  type MatchDateFilter,
+} from '../../core/analysis/analysis-range';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import {
@@ -23,11 +29,11 @@ import {
   MatchPreviewModalComponent,
   WeekHeroBrandComponent,
   sgFadeSlideIn,
-  type MatchDateFilter,
   type MatchHistoryListItem,
   type MatchResultFilter,
 } from '../../ui';
 import {
+  filterMatchesByAnalysisRange,
   formatMatchRelativeTime,
   groupMatchesByDay,
   isMatchWin,
@@ -198,6 +204,7 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
             </div>
             <sg-match-filters-toolbar
               [dateRange]="dateFilter()"
+              [selectedDayIso]="analysisRange.selectedDayIso()"
               [result]="resultFilter()"
               [sort]="sortKey()"
               [query]="searchQuery()"
@@ -212,6 +219,7 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
               [usingMockData]="usingMockData()"
               [hasActiveFilters]="hasActiveFilters()"
               (dateRangeChange)="setDateFilter($event)"
+              (dayChange)="onAnalysisDayChange($event)"
               (resultChange)="setResultFilter($event)"
               (sortChange)="setSortKey($event)"
               (queryChange)="setSearchQuery($event)"
@@ -312,6 +320,7 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
 })
 export class MatchesPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  readonly analysisRange = inject(AnalysisRangeService);
   private readonly gameContext = inject(GameContextService);
   private readonly matchService = inject(MatchService);
   private readonly realtime = inject(AppSyncRealtimeService);
@@ -320,7 +329,7 @@ export class MatchesPageComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly allMatches = signal<MatchUpdateView[]>([]);
-  readonly dateFilter = signal<MatchDateFilter>('all');
+  readonly dateFilter = signal<MatchDateFilter>(this.analysisRange.range());
   readonly resultFilter = signal<MatchResultFilter>('all');
   readonly sortKey = signal<MatchSortKey>('newest');
   readonly searchQuery = signal('');
@@ -429,12 +438,11 @@ export class MatchesPageComponent implements OnInit {
   readonly filteredMatches = computed(() => {
     let rows = this.platformScopedMatches();
 
-    const range = this.dateFilter();
-    if (range !== 'all') {
-      const days = range === '7d' ? 7 : 30;
-      const cutoff = Date.now() - days * 86_400_000;
-      rows = rows.filter((m) => new Date(m.updatedAt).getTime() >= cutoff);
-    }
+    rows = filterMatchesByAnalysisRange(
+      rows,
+      this.dateFilter(),
+      this.analysisRange.selectedDayIso(),
+    );
 
     const result = this.resultFilter();
     if (result === 'wins') {
@@ -618,7 +626,7 @@ export class MatchesPageComponent implements OnInit {
         this.heroArtFailed.set(false);
         if (tick === 0) return;
         this.searchQuery.set('');
-        this.dateFilter.set('all');
+        this.dateFilter.set(this.analysisRange.range());
         this.resultFilter.set('all');
         this.sortKey.set('newest');
         this.resetDetailFilters();
@@ -653,8 +661,17 @@ export class MatchesPageComponent implements OnInit {
   }
 
   private applyQueryParams(params: ParamMap): void {
-    const date = params.get('date');
-    if (date === '7d' || date === '30d' || date === 'all') this.dateFilter.set(date);
+    const date = normalizeMatchDateFilter(params.get('date'));
+    if (date) {
+      this.dateFilter.set(date);
+      if (isAnalysisRangeId(date)) this.analysisRange.setRange(date);
+    }
+
+    const day = params.get('day');
+    if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      this.analysisRange.setDay(day);
+      this.dateFilter.set('day');
+    }
 
     const result = params.get('result');
     if (result === 'wins' || result === 'losses' || result === 'all') {
@@ -687,6 +704,14 @@ export class MatchesPageComponent implements OnInit {
 
   setDateFilter(value: MatchDateFilter): void {
     this.dateFilter.set(value);
+    if (isAnalysisRangeId(value)) {
+      this.analysisRange.setRange(value);
+    }
+  }
+
+  onAnalysisDayChange(dayIso: string): void {
+    this.analysisRange.setDay(dayIso);
+    this.dateFilter.set('day');
   }
 
   setResultFilter(value: MatchResultFilter): void {
@@ -714,7 +739,7 @@ export class MatchesPageComponent implements OnInit {
   }
 
   clearFilters(): void {
-    this.dateFilter.set('all');
+    this.setDateFilter('all');
     this.resultFilter.set('all');
     this.sortKey.set('newest');
     this.searchQuery.set('');

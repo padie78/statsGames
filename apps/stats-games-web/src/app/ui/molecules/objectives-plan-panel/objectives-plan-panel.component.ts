@@ -22,6 +22,11 @@ import {
   type TargetProgramView,
 } from '../../../services/objectives.service';
 import {
+  isoInAnalysisRange,
+  todayPeriodId,
+  type AnalysisRangeId,
+} from '../../../core/analysis/analysis-range';
+import {
   StatsComparisonChartComponent,
   type StatsComparisonRow,
 } from '../stats-comparison-chart/stats-comparison-chart.component';
@@ -261,7 +266,7 @@ interface DraftTargetRow {
               [class.sg-obj-history-filter--active]="historyFilter() === 'all'"
               (click)="historyFilter.set('all')"
             >
-              Todos ({{ history().length }})
+              Todos ({{ historyInTimeRange().length }})
             </button>
             <button
               type="button"
@@ -507,6 +512,9 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
 
   readonly userId = input.required<string>();
   readonly platform = input<string | null>(null);
+  /** Rango compartido (Día / Semana / 30d / 90d) para filtrar historial. */
+  readonly timeRange = input<AnalysisRangeId>('week');
+  readonly selectedDayIso = input<string>(todayPeriodId());
   readonly dataChanged = output<void>();
 
   readonly tab = signal<ObjTab>('builder');
@@ -551,7 +559,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   });
 
   readonly historyCounts = computed(() => {
-    const rows = this.history();
+    const rows = this.historyInTimeRange();
     return {
       in_progress: rows.filter((r) => r.outcome === 'in_progress').length,
       fulfilled: rows.filter((r) => r.outcome === 'fulfilled').length,
@@ -559,9 +567,17 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     };
   });
 
+  readonly historyInTimeRange = computed(() => {
+    const range = this.timeRange();
+    const day = this.selectedDayIso();
+    return this.history().filter((item) =>
+      isoInAnalysisRange(item.startsAt, range, day),
+    );
+  });
+
   readonly filteredHistory = computed(() => {
     const filter = this.historyFilter();
-    const rows = this.history();
+    const rows = this.historyInTimeRange();
     if (filter === 'all') return rows;
     return rows.filter((r) => r.outcome === filter);
   });

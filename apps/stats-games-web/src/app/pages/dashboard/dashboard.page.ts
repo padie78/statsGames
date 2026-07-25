@@ -51,13 +51,13 @@ import {
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
 import {
-  AgentOfWeekComponent,
-  AnalysisRangeToggleComponent,
+  AnalysisFiltersPanelComponent,
   CommunityRankTableComponent,
   MatchHighlightCardComponent,
   TrackStartPanelComponent,
   WeekHeroBrandComponent,
   WeeklyHomeSummaryComponent,
+  AgentOfWeekComponent,
   sgFadeSlideIn,
 } from '../../ui';
 import type { AgentOfWeekView } from '../../ui/molecules/agent-of-week/agent-of-week.component';
@@ -65,8 +65,7 @@ import { matchDetailRoute } from '../../utils/match-analysis.util';
 import {
   aggregateMatchStats,
   computeKdRatio,
-  filterMatchesInCurrentIsoWeek,
-  filterMatchesOnCalendarDay,
+  filterMatchesByAnalysisRange,
   filterMatchesWithinDays,
   isMatchWin,
   mergeMatchUpdates,
@@ -95,7 +94,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     WeekHeroBrandComponent,
     WeeklyHomeSummaryComponent,
     AgentOfWeekComponent,
-    AnalysisRangeToggleComponent,
+    AnalysisFiltersPanelComponent,
   ],
   animations: [sgFadeSlideIn],
   template: `
@@ -163,16 +162,6 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 }
               </p>
 
-              <div class="sg-dashboard__week-range">
-                <sg-analysis-range-toggle
-                  [value]="analysisRange.range()"
-                  [selectedDayIso]="analysisRange.selectedDayIso()"
-                  ariaLabel="Rango de análisis"
-                  (rangeChange)="onAnalysisRangeChange($event)"
-                  (dayChange)="onAnalysisDayChange($event)"
-                />
-              </div>
-
               <div class="sg-dashboard__week-kpis" [attr.aria-label]="'KPIs · ' + rangeNoun()">
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">{{ weekSummary().winRate }}</span>
@@ -196,6 +185,25 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
         </section>
 
         <div class="sg-dashboard__body">
+          <section class="sg-dashboard__block" aria-labelledby="dash-section-filters">
+            <div class="sg-dashboard__block-head">
+              <div>
+                <h2 id="dash-section-filters" class="sg-dashboard__block-title">Filtros</h2>
+                <p class="sg-dashboard__block-desc">
+                  Mismo período que Partidas, Evolución y Coach.
+                </p>
+              </div>
+            </div>
+            <sg-analysis-filters-panel
+              title="Período de análisis"
+              [subtitle]="'Activo: ' + rangeMeta().label"
+              [value]="analysisRange.range()"
+              [selectedDayIso]="analysisRange.selectedDayIso()"
+              (rangeChange)="onAnalysisRangeChange($event)"
+              (dayChange)="onAnalysisDayChange($event)"
+            />
+          </section>
+
           <section class="sg-dashboard__block" aria-labelledby="dash-section-analysis">
             <div class="sg-dashboard__block-head">
               <div>
@@ -527,17 +535,13 @@ export class DashboardPageComponent implements OnInit {
     return '—';
   });
 
-  readonly weekMatches = computed(() => {
-    const matches = this.effectiveRecentMatches();
-    const meta = this.rangeMeta();
-    if (meta.isSingleDay) {
-      return filterMatchesOnCalendarDay(matches, this.analysisRange.selectedDayIso());
-    }
-    if (meta.preferWeeklyRollup) {
-      return filterMatchesInCurrentIsoWeek(matches);
-    }
-    return filterMatchesWithinDays(matches, meta.days);
-  });
+  readonly weekMatches = computed(() =>
+    filterMatchesByAnalysisRange(
+      this.effectiveRecentMatches(),
+      this.analysisRange.range(),
+      this.analysisRange.selectedDayIso(),
+    ),
+  );
 
   readonly weekSummary = computed(() => aggregateMatchStats(this.weekMatches()));
 
@@ -901,7 +905,9 @@ export class DashboardPageComponent implements OnInit {
         'fortnite';
       const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
-      const matchLimit = Math.min(150, Math.max(50, this.rangeMeta().days + 40));
+      const range = this.rangeMeta();
+      const matchLimit =
+        range.id === 'all' ? 150 : Math.min(150, Math.max(50, range.days + 40));
 
       const [matches, weeklyRows, community, leaderboard, aiReports] = await Promise.all([
         this.matchService.listPlayerMatchesOnce(userId, {

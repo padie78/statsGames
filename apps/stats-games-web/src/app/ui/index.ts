@@ -85,6 +85,7 @@ export { MatchHighlightCardComponent } from './molecules/match-highlight-card/ma
 export { CommunityComparisonPanelComponent } from './molecules/community-comparison-panel/community-comparison-panel.component';
 export { CommunityRankTableComponent } from './molecules/community-rank-table/community-rank-table.component';
 export { AnalysisRangeToggleComponent } from './molecules/analysis-range-toggle/analysis-range-toggle.component';
+export { AnalysisFiltersPanelComponent } from './molecules/analysis-filters-panel/analysis-filters-panel.component';
 export { WeekComparisonPanelComponent } from './molecules/week-comparison-panel/week-comparison-panel.component';
 export { MatchFiltersToolbarComponent,
   type MatchDateFilter,

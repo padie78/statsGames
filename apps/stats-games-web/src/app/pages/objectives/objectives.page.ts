@@ -8,6 +8,11 @@ import {
 } from '@angular/core';
 import { IonContent } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/auth/auth.service';
+import { AnalysisRangeService } from '../../core/analysis/analysis-range.service';
+import {
+  analysisRangeNoun,
+  type AnalysisRangeId,
+} from '../../core/analysis/analysis-range';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import { matchBackendPlatform, type SelectedGame } from '../../core/game/selected-game';
@@ -15,13 +20,22 @@ import {
   ObjectivesService,
   type ObjectiveEvolutionView,
 } from '../../services/objectives.service';
-import { ObjectivesPlanPanelComponent, WeekHeroBrandComponent } from '../../ui';
+import {
+  AnalysisFiltersPanelComponent,
+  ObjectivesPlanPanelComponent,
+  WeekHeroBrandComponent,
+} from '../../ui';
 
 @Component({
   standalone: true,
   selector: 'app-objectives-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [IonContent, WeekHeroBrandComponent, ObjectivesPlanPanelComponent],
+  imports: [
+    IonContent,
+    WeekHeroBrandComponent,
+    ObjectivesPlanPanelComponent,
+    AnalysisFiltersPanelComponent,
+  ],
   template: `
     <ion-content class="sg-page-content">
       <div class="sg-objectives-page" [attr.data-game]="activePlatform()">
@@ -37,7 +51,8 @@ import { ObjectivesPlanPanelComponent, WeekHeroBrandComponent } from '../../ui';
               <p class="sg-dashboard__week-eyebrow">{{ platformMeta().label }} · Metas</p>
               <h1 class="sg-dashboard__week-title">Objetivos</h1>
               <p class="sg-dashboard__week-lede u-m-0">
-                Armá el programa, registrá la realidad y medí el cumplimiento.
+                Armá el programa, registrá la realidad y medí el cumplimiento · foco
+                {{ rangeNoun() }}.
               </p>
 
               <div class="sg-dashboard__week-kpis" aria-label="KPIs del programa de objetivos">
@@ -65,10 +80,31 @@ import { ObjectivesPlanPanelComponent, WeekHeroBrandComponent } from '../../ui';
         </section>
 
         <div class="page-shell page-shell--fluid sg-objectives__body">
+          <section class="sg-dashboard__block" aria-labelledby="objectives-filters">
+            <div class="sg-dashboard__block-head">
+              <div>
+                <h2 id="objectives-filters" class="sg-dashboard__block-title">Filtros</h2>
+                <p class="sg-dashboard__block-desc">
+                  Mismo período que Inicio, Partidas y Evolución.
+                </p>
+              </div>
+            </div>
+            <sg-analysis-filters-panel
+              title="Período de análisis"
+              [subtitle]="'Activo: ' + analysisRange.meta().label"
+              [value]="analysisRange.range()"
+              [selectedDayIso]="analysisRange.selectedDayIso()"
+              (rangeChange)="onAnalysisRangeChange($event)"
+              (dayChange)="onAnalysisDayChange($event)"
+            />
+          </section>
+
           @if (auth.userId(); as userId) {
             <sg-objectives-plan-panel
               [userId]="userId"
               [platform]="backendPlatform()"
+              [timeRange]="analysisRange.range()"
+              [selectedDayIso]="analysisRange.selectedDayIso()"
               (dataChanged)="refreshKpis()"
             />
           } @else {
@@ -82,6 +118,7 @@ import { ObjectivesPlanPanelComponent, WeekHeroBrandComponent } from '../../ui';
 export class ObjectivesPageComponent {
   readonly auth = inject(AuthService);
   private readonly gameContext = inject(GameContextService);
+  readonly analysisRange = inject(AnalysisRangeService);
   private readonly objectives = inject(ObjectivesService);
   private readonly evolution = signal<ObjectiveEvolutionView | null>(null);
 
@@ -91,6 +128,9 @@ export class ObjectivesPageComponent {
   readonly platformMeta = computed(() => gamePlatformMeta(this.activePlatform()));
   readonly backendPlatform = computed(
     () => matchBackendPlatform(this.activePlatform()) ?? null,
+  );
+  readonly rangeNoun = computed(() =>
+    analysisRangeNoun(this.analysisRange.range(), this.analysisRange.selectedDayIso()),
   );
 
   readonly heroKpis = computed(() => {
@@ -111,6 +151,14 @@ export class ObjectivesPageComponent {
       const userId = this.auth.userId();
       if (userId) void this.loadKpis(userId);
     });
+  }
+
+  onAnalysisRangeChange(id: AnalysisRangeId): void {
+    this.analysisRange.setRange(id);
+  }
+
+  onAnalysisDayChange(dayIso: string): void {
+    this.analysisRange.setDay(dayIso);
   }
 
   refreshKpis(): void {

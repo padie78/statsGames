@@ -394,20 +394,20 @@ export class EvolutionAiReportPanelComponent {
     else if (/derrota|loss|lose|perdid/.test(t)) {
       return {
         route: '/tabs/matches',
-        queryParams: { topic: 'losses', result: 'losses', date: '7d' },
+        queryParams: { topic: 'losses', result: 'losses', date: 'week' },
         cta: 'Ver derrotas',
       };
     } else if (/victoria|win|clutch/.test(t)) {
       return {
         route: '/tabs/matches',
-        queryParams: { topic: 'wins', result: 'wins', date: '7d' },
+        queryParams: { topic: 'wins', result: 'wins', date: 'week' },
         cta: 'Ver victorias',
       };
     }
 
     return {
       route: '/tabs/matches',
-      queryParams: { topic, date: '7d', sort: topic === 'deaths' ? 'kills' : 'newest' },
+      queryParams: { topic, date: 'week', sort: topic === 'deaths' ? 'kills' : 'newest' },
       cta: 'Revisar en Partidas',
     };
   }
