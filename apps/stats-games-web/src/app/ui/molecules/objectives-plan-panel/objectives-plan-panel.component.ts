@@ -789,6 +789,8 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   readonly program = signal<TargetProgramView | null>(null);
   readonly evolution = signal<ObjectiveEvolutionView | null>(null);
   readonly history = signal<TargetProgramHistoryItemView[]>([]);
+  /** Snapshot local para no perder activos entre cargas concurrentes / refresh. */
+  readonly cachedPrograms = signal<TargetProgramView[]>([]);
   readonly historyFilter = signal<HistoryFilter>('all');
   readonly draftTargets = signal<DraftTargetRow[]>([]);
   readonly helpMetricIndex = signal<number | null>(null);
@@ -918,13 +920,23 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   });
 
   readonly activePrograms = computed(() => {
-    const fromHistory = this.history().filter(
-      (item) => item.status === 'active' || item.isActive,
-    );
-    const byId = new Map(fromHistory.map((item) => [item.programId, item]));
+    const byId = new Map<string, TargetProgramHistoryItemView>();
+
+    for (const item of this.history()) {
+      if (item.status === 'active' || item.isActive) {
+        byId.set(item.programId, item);
+      }
+    }
+
+    // Caché local: evita parpadeos cuando el historial API llega vacío/tarde.
+    for (const cached of this.cachedPrograms()) {
+      if (!byId.has(cached.programId)) {
+        byId.set(cached.programId, historyItemFromProgram(cached));
+      }
+    }
 
     const focused = this.program();
-    if (focused && focused.status === 'active' && !byId.has(focused.programId)) {
+    if (focused && !byId.has(focused.programId)) {
       byId.set(focused.programId, historyItemFromProgram(focused));
     }
 
@@ -937,6 +949,8 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     if (filter === 'all') return rows;
     return rows.filter((r) => r.outcome === filter);
   });
+
+  private bootstrapSeq = 0;
 
   constructor() {
     effect(() => {
@@ -1244,6 +1258,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
         programId: prog.programId,
       });
       this.objectives.removeCachedProgram(uid, prog.programId);
+      this.cachedPrograms.set(this.objectives.readCachedPrograms(uid));
       this.program.set(null);
       this.evolution.set(null);
       this.title = 'Mi programa de objetivos';
@@ -1312,6 +1327,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
       this.program.set(saved);
       this.applyProgramForm(saved);
       this.objectives.upsertCachedProgram(uid, saved);
+      this.cachedPrograms.set(this.objectives.readCachedPrograms(uid));
       this.execMetricId = saved.targets[0]?.metricTypeId ?? '';
       await this.refreshEvolution(uid, saved.programId);
       await this.refreshHistory(uid);
@@ -1357,63 +1373,86 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   }
 
   private async bootstrap(userId: string): Promise<void> {
+    const seq = ++this.bootstrapSeq;
     this.error.set(null);
     this.loading.set(true);
-    // Catálogo local siempre disponible (no depende de AppSync).
     this.metrics.set(seedMetricCatalog());
 
-    // Hidratar desde caché inmediatamente para que un refresh no muestre vacío.
     const cached = this.objectives.readCachedPrograms(userId);
+    this.cachedPrograms.set(cached);
     if (cached[0] && !this.program()) {
       this.program.set(cached[0]);
       this.applyProgramForm(cached[0]);
     }
 
     try {
-      await this.refreshHistory(userId);
+      const history = await this.objectives.listHistoryOnce(userId).catch((err: unknown) => {
+        if (!this.error()) {
+          this.error.set(
+            extractGraphqlErrorMessage(err) ||
+              'No se pudo cargar el historial de programas.',
+          );
+        }
+        return null;
+      });
+      if (seq !== this.bootstrapSeq) return;
+      if (history) this.history.set(history);
+
       let active: TargetProgramView | null = null;
       try {
         active = await this.objectives.getActiveProgramOnce(userId);
       } catch (err) {
+        if (seq !== this.bootstrapSeq) return;
         this.error.set(
           extractGraphqlErrorMessage(err) || 'No se pudo leer el programa activo.',
         );
       }
+      if (seq !== this.bootstrapSeq) return;
 
       if (active) {
         this.program.set(active);
         this.applyProgramForm(active);
         this.objectives.upsertCachedProgram(userId, active);
-        await this.refreshEvolution(userId, active.programId);
-      } else if (this.activePrograms()[0]) {
-        await this.selectActiveProgram(this.activePrograms()[0]!);
-      } else if (cached[0]) {
-        this.program.set(cached[0]);
-        this.applyProgramForm(cached[0]);
-        this.syncHint.set(
-          'Mostrando programas guardados en este dispositivo; la API no devolvió activos.',
-        );
+        this.cachedPrograms.set(this.objectives.readCachedPrograms(userId));
+        try {
+          await this.refreshEvolution(userId, active.programId);
+        } catch {
+          /* evolución opcional; no borrar el programa por esto */
+        }
+        if (seq !== this.bootstrapSeq) return;
       } else {
-        this.program.set(null);
-        this.evolution.set(null);
+        const fromActiveList = this.activePrograms()[0];
+        const fromHistoryAny = [...(history ?? this.history())].sort((a, b) =>
+          b.updatedAt.localeCompare(a.updatedAt),
+        )[0];
+        const fallbackItem = fromActiveList ?? fromHistoryAny;
+
+        if (fallbackItem) {
+          await this.selectActiveProgram(fallbackItem);
+          if (seq !== this.bootstrapSeq) return;
+        } else if (cached[0]) {
+          this.program.set(cached[0]);
+          this.applyProgramForm(cached[0]);
+          this.syncHint.set(
+            'Mostrando programas guardados en este dispositivo; la API no devolvió activos.',
+          );
+        }
+        // Importante: NO limpiar program/evolution si la API falló o llegó vacía
+        // de forma intermitente y ya teníamos algo en pantalla/caché.
       }
 
-      // Persistir snapshot de activos conocidos (API + foco).
-      const snapshot = this.activePrograms()
-        .map((item) => {
-          if (this.program()?.programId === item.programId) return this.program()!;
-          return cached.find((c) => c.programId === item.programId) ?? null;
-        })
-        .filter((p): p is TargetProgramView => p != null);
-      if (snapshot.length) this.objectives.writeCachedPrograms(userId, snapshot);
+      const focused = this.program();
+      if (focused) this.objectives.upsertCachedProgram(userId, focused);
+      this.cachedPrograms.set(this.objectives.readCachedPrograms(userId));
     } catch (err) {
+      if (seq !== this.bootstrapSeq) return;
       this.error.set(extractGraphqlErrorMessage(err) || 'No se pudo cargar el módulo de objetivos.');
       if (!this.program() && cached[0]) {
         this.program.set(cached[0]);
         this.applyProgramForm(cached[0]);
       }
     } finally {
-      this.loading.set(false);
+      if (seq === this.bootstrapSeq) this.loading.set(false);
     }
   }
 

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { OBJECTIVE_METRIC_TYPES } from '@stats-games/common';
 import { generateClient } from 'aws-amplify/api';
 import { firstValueFrom, from, map } from 'rxjs';
+import { assertGraphqlData } from '../utils/graphql-error.util';
 
 export interface ObjectiveMetricTypeView {
   id: string;
@@ -210,11 +211,12 @@ export class ObjectivesService {
           variables: { userId },
         }),
       ).pipe(
-        map(
-          (resp) =>
-            (resp as { data: { getActiveTargetProgram: TargetProgramView | null } }).data
-              .getActiveTargetProgram,
-        ),
+        map((resp) => {
+          const data = assertGraphqlData<{ getActiveTargetProgram: TargetProgramView | null }>(
+            resp as { data?: { getActiveTargetProgram: TargetProgramView | null }; errors?: Array<{ message?: string }> },
+          );
+          return data.getActiveTargetProgram;
+        }),
       ),
     );
   }
@@ -233,11 +235,15 @@ export class ObjectivesService {
           variables: { userId, programId: programId ?? null },
         }),
       ).pipe(
-        map(
-          (resp) =>
-            (resp as { data: { getObjectiveEvolution: ObjectiveEvolutionView | null } }).data
-              .getObjectiveEvolution,
-        ),
+        map((resp) => {
+          const data = assertGraphqlData<{ getObjectiveEvolution: ObjectiveEvolutionView | null }>(
+            resp as {
+              data?: { getObjectiveEvolution: ObjectiveEvolutionView | null };
+              errors?: Array<{ message?: string }>;
+            },
+          );
+          return data.getObjectiveEvolution;
+        }),
       ),
     );
   }
@@ -292,12 +298,17 @@ export class ObjectivesService {
             variables: { userId, limit },
           }),
         ).pipe(
-          map((resp) =>
-            mapRows(
-              (resp as { data: { listTargetProgramHistory: TargetProgramHistoryItemView[] } }).data
-                .listTargetProgramHistory,
-            ),
-          ),
+          map((resp) => {
+            const data = assertGraphqlData<{
+              listTargetProgramHistory: TargetProgramHistoryItemView[];
+            }>(
+              resp as {
+                data?: { listTargetProgramHistory: TargetProgramHistoryItemView[] };
+                errors?: Array<{ message?: string }>;
+              },
+            );
+            return mapRows(data.listTargetProgramHistory ?? []);
+          }),
         ),
       );
 
@@ -310,7 +321,8 @@ export class ObjectivesService {
       const raw = localStorage.getItem(cacheKey(userId));
       if (!raw) return [];
       const parsed = JSON.parse(raw) as TargetProgramView[];
-      return Array.isArray(parsed) ? parsed.filter((p) => p?.programId && p.status === 'active') : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((p) => p?.programId);
     } catch {
       return [];
     }
@@ -318,8 +330,11 @@ export class ObjectivesService {
 
   writeCachedPrograms(userId: string, programs: TargetProgramView[]): void {
     try {
-      const actives = programs.filter((p) => p.status === 'active');
-      localStorage.setItem(cacheKey(userId), JSON.stringify(actives));
+      const dedup = new Map<string, TargetProgramView>();
+      for (const p of programs) {
+        if (p?.programId) dedup.set(p.programId, p);
+      }
+      localStorage.setItem(cacheKey(userId), JSON.stringify([...dedup.values()]));
     } catch {
       /* ignore quota / private mode */
     }
@@ -329,7 +344,7 @@ export class ObjectivesService {
     const current = this.readCachedPrograms(userId).filter(
       (p) => p.programId !== program.programId,
     );
-    if (program.status === 'active') current.unshift(program);
+    current.unshift(program);
     this.writeCachedPrograms(userId, current);
   }
 
@@ -356,10 +371,15 @@ export class ObjectivesService {
           variables: { input },
         }),
       ).pipe(
-        map(
-          (resp) =>
-            (resp as { data: { closeTargetProgram: TargetProgramView } }).data.closeTargetProgram,
-        ),
+        map((resp) => {
+          const data = assertGraphqlData<{ closeTargetProgram: TargetProgramView }>(
+            resp as {
+              data?: { closeTargetProgram: TargetProgramView };
+              errors?: Array<{ message?: string }>;
+            },
+          );
+          return data.closeTargetProgram;
+        }),
       ),
     );
   }
@@ -391,10 +411,15 @@ export class ObjectivesService {
           variables: { input },
         }),
       ).pipe(
-        map(
-          (resp) =>
-            (resp as { data: { upsertTargetProgram: TargetProgramView } }).data.upsertTargetProgram,
-        ),
+        map((resp) => {
+          const data = assertGraphqlData<{ upsertTargetProgram: TargetProgramView }>(
+            resp as {
+              data?: { upsertTargetProgram: TargetProgramView };
+              errors?: Array<{ message?: string }>;
+            },
+          );
+          return data.upsertTargetProgram;
+        }),
       ),
     );
   }
