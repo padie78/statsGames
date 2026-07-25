@@ -15,6 +15,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AnalysisRangeService } from '../../core/analysis/analysis-range.service';
 import {
   analysisRangeNoun,
+  analysisRangeWeekSpan,
   type AnalysisRangeId,
 } from '../../core/analysis/analysis-range';
 import { GameContextService } from '../../core/game/game-context.service';
@@ -44,6 +45,8 @@ import { PlayerService, type PlayerProfileView } from '../../services/player.ser
 import {
   StatsService,
   currentWeeklyPeriodIdForStats,
+  isoWeeklyPeriodIdForDay,
+  listRecentWeeklyPeriodIds,
   type LeaderboardEntryView,
   type PlayerStatsRollupView,
 } from '../../services/stats.service';
@@ -62,6 +65,8 @@ import { matchDetailRoute } from '../../utils/match-analysis.util';
 import {
   aggregateMatchStats,
   computeKdRatio,
+  filterMatchesInCurrentIsoWeek,
+  filterMatchesOnCalendarDay,
   filterMatchesWithinDays,
   isMatchWin,
   mergeMatchUpdates,
@@ -69,7 +74,10 @@ import {
 } from '../../utils/match-stats.util';
 import { formatCommunitySampleSize, mapCommunityBenchmarksFromApi } from '../../utils/community-stats.util';
 import { buildWeeklyAiCoachSummary } from '../../utils/weekly-ai-summary.util';
-import { buildWeeklyCommunityRankView } from '../../utils/weekly-community-rank.util';
+import {
+  buildWeeklyCommunityRankView,
+  mergeLeaderboardsAcrossPeriods,
+} from '../../utils/weekly-community-rank.util';
 import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
 
 @Component({
@@ -158,8 +166,10 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               <div class="sg-dashboard__week-range">
                 <sg-analysis-range-toggle
                   [value]="analysisRange.range()"
+                  [selectedDayIso]="analysisRange.selectedDayIso()"
                   ariaLabel="Rango de análisis"
                   (rangeChange)="onAnalysisRangeChange($event)"
+                  (dayChange)="onAnalysisDayChange($event)"
                 />
               </div>
 
@@ -226,10 +236,10 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               <div class="sg-dashboard__block-head">
                 <div>
                   <h2 id="dash-section-community" class="sg-dashboard__block-title">
-                    Tu puesto esta semana
+                    {{ communityBlockTitle() }}
                   </h2>
                   <p class="sg-dashboard__block-desc">
-                    Ranking comunitario semanal (referencia). Quién está justo arriba y abajo.
+                    {{ communityScopeDesc() }}
                     @if (communityUsesMock()) {
                       <span class="sg-analytics__badge">preview</span>
                     }
@@ -359,7 +369,9 @@ export class DashboardPageComponent implements OnInit {
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.heroPlatform()));
   readonly rangeMeta = computed(() => this.analysisRange.meta());
-  readonly rangeNoun = computed(() => analysisRangeNoun(this.analysisRange.range()));
+  readonly rangeNoun = computed(() =>
+    analysisRangeNoun(this.analysisRange.range(), this.analysisRange.selectedDayIso()),
+  );
   private readonly weekBannerFailed = signal(false);
   /** Tras fallo del splash del campeón, probar splash curado una vez. */
   private readonly weekBannerRetried = signal(false);
@@ -515,9 +527,17 @@ export class DashboardPageComponent implements OnInit {
     return '—';
   });
 
-  readonly weekMatches = computed(() =>
-    filterMatchesWithinDays(this.effectiveRecentMatches(), this.rangeMeta().days),
-  );
+  readonly weekMatches = computed(() => {
+    const matches = this.effectiveRecentMatches();
+    const meta = this.rangeMeta();
+    if (meta.isSingleDay) {
+      return filterMatchesOnCalendarDay(matches, this.analysisRange.selectedDayIso());
+    }
+    if (meta.preferWeeklyRollup) {
+      return filterMatchesInCurrentIsoWeek(matches);
+    }
+    return filterMatchesWithinDays(matches, meta.days);
+  });
 
   readonly weekSummary = computed(() => aggregateMatchStats(this.weekMatches()));
 
@@ -669,11 +689,9 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly communityRank = computed<CommunityRankTableView | null>(() => {
-    // Ranking comunitario siempre semanal (backend WEEKLY).
-    const weeklyMatches = filterMatchesWithinDays(this.effectiveRecentMatches(), 7);
-    const summary = this.rangeMeta().preferWeeklyRollup
-      ? this.weekSummary()
-      : aggregateMatchStats(weeklyMatches);
+    // Los peers salen del leaderboard semanal (backend WEEKLY), pero tu fila
+    // refleja el rango elegido (día / semana / 30d / 90d).
+    const summary = this.weekSummary();
     const kd =
       summary.totalDeaths > 0
         ? summary.totalKills / summary.totalDeaths
@@ -694,10 +712,26 @@ export class DashboardPageComponent implements OnInit {
         kd,
         winRate,
         kills: summary.totalKills,
+        deaths: summary.totalDeaths,
+        assists: summary.totalAssists,
         matches: summary.matchCount,
         winCount: summary.winCount,
       },
     });
+  });
+
+  readonly communityBlockTitle = computed(() => {
+    if (this.rangeMeta().preferWeeklyRollup) return 'Tu puesto esta semana';
+    return `Tu puesto · ${this.rangeMeta().label}`;
+  });
+
+  readonly communityScopeDesc = computed(() => {
+    const weeks = analysisRangeWeekSpan(this.analysisRange.range());
+    if (this.rangeMeta().isSingleDay) {
+      return 'Rivales de la semana ISO que contiene el día elegido.';
+    }
+    if (weeks === 1) return 'Rivales de la semana ISO en curso: quién está arriba y abajo tuyo.';
+    return `Rivales acumulados de las últimas ${weeks} semanas ISO.`;
   });
 
   readonly communitySampleLabel = computed(() => {
@@ -711,7 +745,7 @@ export class DashboardPageComponent implements OnInit {
     const rank = this.communityRank();
     const label = this.platformMeta().label;
     if (!rank) return `${label} · sin peers reales esta semana`;
-    return `${label} · #${rank.yourRank} · rivales ±2 puestos`;
+    return `${label} · #${rank.yourRank} · ${this.rangeMeta().label} · rivales ±2 puestos`;
   });
 
   readonly aiCtaLabel = computed(() => {
@@ -729,6 +763,40 @@ export class DashboardPageComponent implements OnInit {
 
   onAnalysisRangeChange(id: AnalysisRangeId): void {
     this.analysisRange.setRange(id);
+    void this.refreshRangeLeaderboard();
+  }
+
+  onAnalysisDayChange(dayIso: string): void {
+    this.analysisRange.setDay(dayIso);
+    void this.refreshRangeLeaderboard();
+  }
+
+  private async refreshRangeLeaderboard(): Promise<void> {
+    const platform = matchBackendPlatform(this.heroPlatform());
+    this.leaderboardApi.set(await this.loadRangeLeaderboard(platform));
+  }
+
+  /**
+   * Board del rango. El backend solo guarda leaderboards semanales: 30d/90d se
+   * agregan sumando semanas ISO y "Día" usa la semana que contiene ese día.
+   */
+  private async loadRangeLeaderboard(
+    platform: ReturnType<typeof matchBackendPlatform>,
+  ): Promise<LeaderboardEntryView[]> {
+    const range = this.rangeMeta();
+    const boardPlatform = platform ?? 'fortnite';
+    const periodIds = range.isSingleDay
+      ? [isoWeeklyPeriodIdForDay(this.analysisRange.selectedDayIso())]
+      : listRecentWeeklyPeriodIds(analysisRangeWeekSpan(range.id));
+
+    const boards = await Promise.all(
+      periodIds.map((id) =>
+        firstValueFrom(
+          this.statsService.listWeeklyLeaderboard(boardPlatform, id, 40),
+        ).catch(() => [] as LeaderboardEntryView[]),
+      ),
+    );
+    return mergeLeaderboardsAcrossPeriods(boards);
   }
 
   async refresh(event: CustomEvent): Promise<void> {
@@ -846,9 +914,7 @@ export class DashboardPageComponent implements OnInit {
         firstValueFrom(
           this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
         ).catch(() => null),
-        firstValueFrom(
-          this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 40),
-        ).catch(() => [] as LeaderboardEntryView[]),
+        this.loadRangeLeaderboard(platform),
         this.matchAi
           .listMatchAiReportsOnce(userId, {
             platform: platform ?? undefined,

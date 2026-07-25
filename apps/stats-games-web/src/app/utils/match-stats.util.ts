@@ -181,6 +181,50 @@ export function filterMatchesInDayRange(
   });
 }
 
+/** Partidas de un día calendario UTC (`YYYY-MM-DD`). */
+export function filterMatchesOnCalendarDay(
+  matches: MatchUpdateView[],
+  dayIso: string,
+): MatchUpdateView[] {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayIso.trim());
+  if (!match) return [];
+  const start = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const end = start + 86_400_000;
+  return matches.filter((m) => {
+    const t = new Date(m.updatedAt).getTime();
+    return t >= start && t < end;
+  });
+}
+
+/** Partidas dentro de la semana ISO actual (lun 00:00 UTC → lun siguiente). */
+export function filterMatchesInCurrentIsoWeek(matches: MatchUpdateView[]): MatchUpdateView[] {
+  const { startMs, endMs } = currentIsoWeekBoundsUtc();
+  return matches.filter((m) => {
+    const t = new Date(m.updatedAt).getTime();
+    return t >= startMs && t < endMs;
+  });
+}
+
+/** Partidas de la semana ISO previa. */
+export function filterMatchesInPreviousIsoWeek(matches: MatchUpdateView[]): MatchUpdateView[] {
+  const { startMs } = currentIsoWeekBoundsUtc();
+  const prevStart = startMs - 7 * 86_400_000;
+  const prevEnd = startMs;
+  return matches.filter((m) => {
+    const t = new Date(m.updatedAt).getTime();
+    return t >= prevStart && t < prevEnd;
+  });
+}
+
+function currentIsoWeekBoundsUtc(): { startMs: number; endMs: number } {
+  const now = new Date();
+  const tmp = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = tmp.getUTCDay() || 7; // 1=lun … 7=dom
+  tmp.setUTCDate(tmp.getUTCDate() - (day - 1));
+  const startMs = tmp.getTime();
+  return { startMs, endMs: startMs + 7 * 86_400_000 };
+}
+
 export interface WeekComparisonItem {
   label: string;
   value: string | number;

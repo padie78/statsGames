@@ -5204,6 +5204,13 @@ sg-trend-chart {
   background: rgba(0, 0, 0, 0.28);
 }
 
+.sg-analysis-range-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
 .sg-analysis-range__btn {
   appearance: none;
   border: 0;
@@ -5233,6 +5240,43 @@ sg-trend-chart {
 
 .sg-analysis-range__short {
   display: inline;
+}
+
+.sg-analysis-range__day {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.sg-analysis-range__day-label {
+  font-size: 0.62rem;
+  font-weight: var(--sg-fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(176, 188, 210, 0.72);
+}
+
+.sg-analysis-range__day-input {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--sg-neon-gold, #f0d060);
+  font-size: var(--sg-fs-xs);
+  font-weight: var(--sg-fw-semibold);
+  font-family: inherit;
+  padding: 0.2rem 0.15rem;
+  max-width: 10.5rem;
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.sg-analysis-range__day-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.85) sepia(0.4) saturate(3) hue-rotate(5deg);
+  cursor: pointer;
 }
 
 @media (min-width: 640px) {

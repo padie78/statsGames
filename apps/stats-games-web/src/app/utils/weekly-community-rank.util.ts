@@ -42,6 +42,129 @@ function trueKda(kills: number, deaths: number, assists: number): number {
   return Math.round(((kills + assists) / Math.max(1, deaths)) * 100) / 100;
 }
 
+/**
+ * Suma varios leaderboards semanales en una sola tabla (por userId) para rangos
+ * largos (30d / 90d). Recalcula score justo, WR y puesto; el delta compara el
+ * score de la semana más nueva contra la más vieja donde aparece el jugador.
+ */
+export function mergeLeaderboardsAcrossPeriods(
+  boardsOldestFirst: LeaderboardEntryView[][],
+): LeaderboardEntryView[] {
+  const boards = boardsOldestFirst.filter((board) => board.length > 0);
+  if (boards.length === 0) return [];
+  if (boards.length === 1) return boards[0];
+
+  interface Acc {
+    entry: LeaderboardEntryView;
+    totalKills: number;
+    totalDeaths: number;
+    totalAssists: number;
+    winCount: number;
+    matchCount: number;
+    firstScore: number | null;
+    lastScore: number | null;
+  }
+
+  const byUser = new Map<string, Acc>();
+
+  boards.forEach((board) => {
+    for (const entry of board) {
+      if (!entry.userId) continue;
+      const winCount =
+        entry.winCount ?? Math.round((entry.winRate / 100) * entry.matchCount);
+      const weekScore = computeFairCommunityScore({
+        totalKills: entry.totalKills,
+        totalDeaths: entry.totalDeaths,
+        totalAssists: entry.totalAssists ?? 0,
+        winCount,
+        matchCount: entry.matchCount,
+      });
+
+      const acc = byUser.get(entry.userId);
+      if (!acc) {
+        byUser.set(entry.userId, {
+          entry,
+          totalKills: entry.totalKills,
+          totalDeaths: entry.totalDeaths,
+          totalAssists: entry.totalAssists ?? 0,
+          winCount,
+          matchCount: entry.matchCount,
+          firstScore: weekScore > 0 ? weekScore : null,
+          lastScore: weekScore > 0 ? weekScore : null,
+        });
+        continue;
+      }
+
+      // Identidad y LP de la semana más reciente en la que aparece.
+      acc.entry = { ...acc.entry, ...pickIdentity(entry) };
+      acc.totalKills += entry.totalKills;
+      acc.totalDeaths += entry.totalDeaths;
+      acc.totalAssists += entry.totalAssists ?? 0;
+      acc.winCount += winCount;
+      acc.matchCount += entry.matchCount;
+      if (weekScore > 0) {
+        acc.firstScore ??= weekScore;
+        acc.lastScore = weekScore;
+      }
+    }
+  });
+
+  const merged: LeaderboardEntryView[] = [...byUser.values()].map((acc) => {
+    const score = computeFairCommunityScore({
+      totalKills: acc.totalKills,
+      totalDeaths: acc.totalDeaths,
+      totalAssists: acc.totalAssists,
+      winCount: acc.winCount,
+      matchCount: acc.matchCount,
+    });
+    const winRate =
+      acc.matchCount > 0 ? Math.round((acc.winCount / acc.matchCount) * 1000) / 10 : 0;
+
+    return {
+      ...acc.entry,
+      rank: 0,
+      score,
+      totalKills: acc.totalKills,
+      totalDeaths: acc.totalDeaths,
+      totalAssists: acc.totalAssists,
+      winCount: acc.winCount,
+      matchCount: acc.matchCount,
+      winRate,
+      kd: trueKda(acc.totalKills, acc.totalDeaths, acc.totalAssists),
+      ...scoreTrend(acc.firstScore, acc.lastScore),
+    } satisfies LeaderboardEntryView;
+  });
+
+  merged.sort((a, b) => b.score - a.score || b.totalKills - a.totalKills);
+  merged.forEach((entry, index) => {
+    entry.rank = index + 1;
+  });
+  return merged;
+}
+
+function pickIdentity(entry: LeaderboardEntryView): Partial<LeaderboardEntryView> {
+  const identity: Partial<LeaderboardEntryView> = {};
+  if (entry.gamerTag && entry.gamerTag !== entry.userId) identity.gamerTag = entry.gamerTag;
+  if (entry.avatarUrl) identity.avatarUrl = entry.avatarUrl;
+  if (entry.leaguePoints != null) identity.leaguePoints = entry.leaguePoints;
+  return identity;
+}
+
+function scoreTrend(
+  first: number | null,
+  last: number | null,
+): { delta: string; trend: 'up' | 'down' | 'flat' } {
+  if (first == null || last == null || first === last) {
+    return { delta: '—', trend: 'flat' };
+  }
+  const diffPct = Math.round(((last - first) / Math.max(1, first)) * 100);
+  if (Math.abs(diffPct) < 3) return { delta: '=', trend: 'flat' };
+  return {
+    delta: `${diffPct > 0 ? '+' : '−'}${Math.abs(diffPct)}%`,
+    trend: diffPct > 0 ? 'up' : 'down',
+  };
+}
+
 function toRow(input: {
   rank: number;
   gamerTag: string;

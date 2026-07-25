@@ -253,6 +253,18 @@ export function listRecentWeeklyPeriodIds(count: number): string[] {
   return ids;
 }
 
+/** ISO week id (`2026-W30`) que contiene un día `YYYY-MM-DD`. */
+export function isoWeeklyPeriodIdForDay(dayIso: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayIso.trim());
+  if (!match) return currentWeeklyPeriodId();
+  const tmp = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  const day = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
 export function weeklyPeriodIdWeeksAgo(weeksAgo: number): string {
   const now = new Date();
   const tmp = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));

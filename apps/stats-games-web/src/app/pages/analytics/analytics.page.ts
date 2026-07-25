@@ -16,6 +16,8 @@ import {
   analysisRangeCompareSubtitle,
   analysisRangeCompareTitle,
   analysisRangeNoun,
+  analysisRangeWeekSpan,
+  previousPeriodId,
   type AnalysisRangeId,
 } from '../../core/analysis/analysis-range';
 import { GameContextService } from '../../core/game/game-context.service';
@@ -36,6 +38,7 @@ import {
 import {
   StatsService,
   currentWeeklyPeriodIdForStats,
+  isoWeeklyPeriodIdForDay,
   listRecentWeeklyPeriodIds,
   previousWeeklyPeriodIdForStats,
   type LeaderboardEntryView,
@@ -66,7 +69,10 @@ import {
   aggregateMatchStats,
   buildWeekComparison,
   computeKdRatio,
+  filterMatchesInCurrentIsoWeek,
   filterMatchesInDayRange,
+  filterMatchesInPreviousIsoWeek,
+  filterMatchesOnCalendarDay,
   filterMatchesWithinDays,
   isMatchWin,
 } from '../../utils/match-stats.util';
@@ -86,6 +92,7 @@ import {
 import {
   buildWeeklyCommunityRankView,
   computeFairCommunityScore,
+  mergeLeaderboardsAcrossPeriods,
 } from '../../utils/weekly-community-rank.util';
 
 @Component({
@@ -137,8 +144,10 @@ import {
               <div class="sg-analytics__hero-range">
                 <sg-analysis-range-toggle
                   [value]="analysisRange.range()"
+                  [selectedDayIso]="analysisRange.selectedDayIso()"
                   ariaLabel="Rango de análisis"
                   (rangeChange)="onAnalysisRangeChange($event)"
+                  (dayChange)="onAnalysisDayChange($event)"
                 />
               </div>
 
@@ -383,8 +392,7 @@ import {
             <div>
               <h2 id="analytics-community" class="sg-dashboard__block-title">Tu lugar en la comunidad</h2>
               <p class="sg-dashboard__block-desc">
-                Ranking semanal de la muestra (siempre ISO week). El score justo prioriza ratios
-                (ventana ≥5 games).
+                {{ communityScopeDesc() }} El score justo prioriza ratios (ventana ≥5 games).
               </p>
             </div>
             <span class="sg-analytics__sample-badge" [attr.title]="communityContextBadge()">
@@ -485,11 +493,22 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
 
   readonly rangeMeta = computed(() => this.analysisRange.meta());
 
-  readonly rangeNoun = computed(() => analysisRangeNoun(this.analysisRange.range()));
+  readonly rangeNoun = computed(() =>
+    analysisRangeNoun(this.analysisRange.range(), this.analysisRange.selectedDayIso()),
+  );
 
   readonly formWeeks = computed(() => this.rangeMeta().formWeeks);
 
   readonly compareTitle = computed(() => analysisRangeCompareTitle(this.analysisRange.range()));
+
+  readonly communityScopeDesc = computed(() => {
+    const weeks = analysisRangeWeekSpan(this.analysisRange.range());
+    if (this.rangeMeta().isSingleDay) {
+      return 'Muestra de la semana ISO que contiene el día elegido.';
+    }
+    if (weeks === 1) return 'Muestra de la semana ISO en curso.';
+    return `Muestra acumulada de las últimas ${weeks} semanas ISO (${this.rangeMeta().label}).`;
+  });
 
   readonly compareSubtitle = computed(() =>
     analysisRangeCompareSubtitle(this.analysisRange.range()),
@@ -562,13 +581,32 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
     return filterMockMatchesByPlatform(source, platform);
   });
 
-  readonly weekMatches = computed(() =>
-    filterMatchesWithinDays(this.effectiveRecentMatches(), this.rangeMeta().days),
-  );
+  readonly weekMatches = computed(() => {
+    const matches = this.effectiveRecentMatches();
+    const meta = this.rangeMeta();
+    if (meta.isSingleDay) {
+      return filterMatchesOnCalendarDay(matches, this.analysisRange.selectedDayIso());
+    }
+    if (meta.preferWeeklyRollup) {
+      return filterMatchesInCurrentIsoWeek(matches);
+    }
+    return filterMatchesWithinDays(matches, meta.days);
+  });
 
   readonly previousWeekMatches = computed(() => {
-    const days = this.rangeMeta().days;
-    return filterMatchesInDayRange(this.effectiveRecentMatches(), days, days * 2);
+    const matches = this.effectiveRecentMatches();
+    const meta = this.rangeMeta();
+    if (meta.isSingleDay) {
+      return filterMatchesOnCalendarDay(
+        matches,
+        previousPeriodId(this.analysisRange.selectedDayIso()),
+      );
+    }
+    if (meta.preferWeeklyRollup) {
+      return filterMatchesInPreviousIsoWeek(matches);
+    }
+    const days = meta.days;
+    return filterMatchesInDayRange(matches, days, days * 2);
   });
 
   readonly weekSummary = computed(() => aggregateMatchStats(this.weekMatches()));
@@ -691,20 +729,28 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
   });
 
   readonly chartDailyTrend = computed(() => {
-    const days = this.rangeMeta().days;
+    const meta = this.rangeMeta();
+    const userId = this.auth.userId() ?? 'mock-user-demo';
+    const platform = this.activePlatform();
+
+    if (meta.isSingleDay) {
+      const dayIso = this.analysisRange.selectedDayIso();
+      const fromApi = this.dailyTrend().find((d) => d.periodId === dayIso);
+      if (fromApi) return [fromApi];
+      return buildDailyTrendFromMatches(this.weekMatches(), userId, platform, 1).map((row) => ({
+        ...row,
+        periodId: dayIso,
+      }));
+    }
+
+    const days = meta.days;
     const api = this.dailyTrend();
     const hasSignal = api.some((day) => day.matchCount > 0 || day.totalKills > 0);
     // API diario topea en 30 días: para 90d (o API vacía) armamos desde partidas.
     if (hasSignal && days <= 30 && api.length >= Math.min(days, 7)) {
       return api.slice(-days);
     }
-    const userId = this.auth.userId() ?? 'mock-user-demo';
-    return buildDailyTrendFromMatches(
-      this.weekMatches(),
-      userId,
-      this.activePlatform(),
-      days,
-    );
+    return buildDailyTrendFromMatches(this.weekMatches(), userId, platform, days);
   });
 
   readonly weeklyForCharts = computed(() => {
@@ -957,12 +1003,14 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
   );
 
   readonly communityRank = computed<CommunityRankTableView | null>(() => {
+    // Peers y self comparten la ventana del rango elegido.
     const summary = this.weekSummary();
-    const weekly = this.weeklyForCharts();
-    const kd = parsePlayerKdForCommunity(this.weeklyKd()) ?? 1.0;
-    const winRate = parsePlayerWinRateForCommunity(summary.winRate) ?? 0;
-    const kills = weekly?.totalKills || summary.totalKills || 0;
-    const matches = weekly?.matchCount || summary.matchCount || 0;
+    const kd =
+      summary.totalDeaths > 0
+        ? summary.totalKills / summary.totalDeaths
+        : summary.totalKills;
+    const winRate =
+      summary.matchCount > 0 ? (summary.winCount / summary.matchCount) * 100 : 0;
 
     return buildWeeklyCommunityRankView({
       platform: this.activePlatform(),
@@ -975,8 +1023,10 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
         avatarUrl: this.avatarUrl(),
         kd,
         winRate,
-        kills,
-        matches,
+        kills: summary.totalKills,
+        deaths: summary.totalDeaths,
+        assists: summary.totalAssists,
+        matches: summary.matchCount,
         winCount: summary.winCount,
       },
     });
@@ -1180,35 +1230,65 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
     void this.reloadForRange();
   }
 
+  onAnalysisDayChange(dayIso: string): void {
+    this.analysisRange.setDay(dayIso);
+    void this.reloadForRange();
+  }
+
   private async reloadForRange(): Promise<void> {
     const userId = this.auth.userId();
     if (!userId) return;
-    const platform = matchBackendPlatform(this.activePlatform());
-    const meta = this.rangeMeta();
     try {
-      const [daily] = await Promise.all([
-        firstValueFrom(
-          this.statsService.listPlayerDailyTrend(userId, platform, meta.dailyApiDays),
-        ).catch(() => [] as PlayerStatsRollupView[]),
-        this.reloadPeerMedianHistory(),
-      ]);
-      this.dailyTrend.set(daily);
+      await this.loadRangeScopedData(userId, matchBackendPlatform(this.activePlatform()));
     } catch {
-      /* keep previous trend */
+      /* keep previous data */
     }
   }
 
-  private async reloadPeerMedianHistory(): Promise<void> {
-    const platform = matchBackendPlatform(this.activePlatform()) ?? 'fortnite';
-    const historyPeriodIds = listRecentWeeklyPeriodIds(this.formWeeks());
-    const historyBoards = await Promise.all(
-      historyPeriodIds.map((id) =>
-        firstValueFrom(this.statsService.listWeeklyLeaderboard(platform, id, 40)).catch(
-          () => [] as LeaderboardEntryView[],
+  /**
+   * Curva diaria + leaderboard del rango. El backend solo tiene boards semanales:
+   * 30d/90d se agregan sumando semanas ISO; "Día" usa la semana que contiene ese día.
+   */
+  private async loadRangeScopedData(
+    userId: string,
+    platform: ReturnType<typeof matchBackendPlatform>,
+  ): Promise<void> {
+    const range = this.rangeMeta();
+    const boardPlatform = platform ?? 'fortnite';
+    const weekSpan = analysisRangeWeekSpan(range.id);
+    const historyPeriodIds = listRecentWeeklyPeriodIds(
+      Math.max(range.formWeeks, weekSpan),
+    );
+    const rangeWeekIds = range.isSingleDay
+      ? [isoWeeklyPeriodIdForDay(this.analysisRange.selectedDayIso())]
+      : historyPeriodIds.slice(-weekSpan);
+    const allPeriodIds = [...new Set([...historyPeriodIds, ...rangeWeekIds])];
+
+    const [daily, boards] = await Promise.all([
+      firstValueFrom(
+        this.statsService.listPlayerDailyTrend(userId, platform, range.dailyApiDays),
+      ).catch(() => [] as PlayerStatsRollupView[]),
+      Promise.all(
+        allPeriodIds.map((id) =>
+          firstValueFrom(
+            this.statsService.listWeeklyLeaderboard(boardPlatform, id, 40),
+          ).catch(() => [] as LeaderboardEntryView[]),
         ),
       ),
+    ]);
+
+    const byPeriod = new Map(allPeriodIds.map((id, index) => [id, boards[index] ?? []]));
+
+    this.dailyTrend.set(daily);
+    this.leaderboardApi.set(
+      mergeLeaderboardsAcrossPeriods(rangeWeekIds.map((id) => byPeriod.get(id) ?? [])),
     );
-    this.peerMedianByPeriod.set(buildPeerMedianByPeriod(historyPeriodIds, historyBoards));
+    this.peerMedianByPeriod.set(
+      buildPeerMedianByPeriod(
+        historyPeriodIds,
+        historyPeriodIds.map((id) => byPeriod.get(id) ?? []),
+      ),
+    );
   }
 
   async onRequestEvolutionAi(force: boolean): Promise<void> {
@@ -1344,10 +1424,9 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
       const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
       const range = this.rangeMeta();
-      const historyPeriodIds = listRecentWeeklyPeriodIds(range.formWeeks);
       const matchLimit = Math.min(150, Math.max(80, range.days + 40));
 
-      const [profile, matches, weeklyRows, previousWeeklyRows, daily, community, leaderboard, evoReport, historyBoards] =
+      const [profile, matches, weeklyRows, previousWeeklyRows, community, evoReport] =
         await Promise.all([
           this.playerService.getPlayerProfileOrNull(userId).catch(() => null),
           this.matchService.listPlayerMatchesOnce(userId, {
@@ -1366,34 +1445,22 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
             ),
           ),
           firstValueFrom(
-            this.statsService.listPlayerDailyTrend(userId, platform, range.dailyApiDays),
-          ),
-          firstValueFrom(
             this.statsService.getCommunityBenchmarks(platform ?? 'fortnite', periodId),
           ).catch(() => null),
-          firstValueFrom(
-            this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', periodId, 40),
-          ).catch(() => [] as LeaderboardEntryView[]),
           platform
             ? this.evolutionAi
                 .getEvolutionAiReport(userId, platform, periodId)
                 .catch(() => null)
             : Promise.resolve(null),
-          Promise.all(
-            historyPeriodIds.map((id) =>
-              firstValueFrom(
-                this.statsService.listWeeklyLeaderboard(platform ?? 'fortnite', id, 40),
-              ).catch(() => [] as LeaderboardEntryView[]),
-            ),
-          ),
         ]);
+
+      await this.loadRangeScopedData(userId, platform);
 
       this.gamerTag.set(profile?.gamerTag ?? '');
       this.avatarUrl.set(profile?.avatarUrl ?? undefined);
       this.recentMatches.set(matches);
       this.weekly.set(weeklyRows[0] ?? null);
       this.previousWeekly.set(previousWeeklyRows[0] ?? null);
-      this.dailyTrend.set(daily);
       this.evolutionAiReport.set(evoReport);
       if (evoReport?.status === 'ready') {
         this.evolutionAiStaleReady.set(null);
@@ -1427,11 +1494,6 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
         this.communityBenchmarksApi.set(null);
         this.communityUsesMock.set(true);
       }
-
-      this.leaderboardApi.set(leaderboard ?? []);
-      this.peerMedianByPeriod.set(
-        buildPeerMedianByPeriod(historyPeriodIds, historyBoards ?? []),
-      );
     } catch (err) {
       this.error.set(extractGraphqlErrorMessage(err, 'Error cargando estadísticas'));
     } finally {
