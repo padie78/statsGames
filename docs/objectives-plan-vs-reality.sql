@@ -10,11 +10,21 @@ CREATE TABLE players (
 );
 
 CREATE TABLE metric_types (
-  metric_type_id  TEXT PRIMARY KEY,          -- ej: kilometers, training_hours, accuracy_pct
-  label           TEXT NOT NULL,
-  unit            TEXT NOT NULL,             -- km, kg, h, %
-  description     TEXT,
-  higher_is_better BOOLEAN NOT NULL DEFAULT TRUE
+  metric_type_id   TEXT PRIMARY KEY,
+  label            TEXT NOT NULL,
+  unit             TEXT NOT NULL,             -- km, kg, h, %, min, ms, n, x, σ
+  description      TEXT,
+  higher_is_better BOOLEAN NOT NULL DEFAULT TRUE, -- legacy; preferir goal_kind
+  goal_kind        TEXT NOT NULL DEFAULT 'at_least'
+                   CHECK (goal_kind IN ('at_least', 'at_most')),
+  aggregation      TEXT NOT NULL DEFAULT 'sum'
+                   CHECK (aggregation IN ('sum', 'avg', 'max', 'last')),
+  domain           TEXT NOT NULL
+                   CHECK (domain IN (
+                     'athlete', 'competitive', 'discipline',
+                     'mental', 'economy', 'technical', 'career'
+                   )),
+  auto_source      TEXT                          -- stat:<f>:<op> | derived:<id> | NULL
 );
 
 CREATE TABLE target_programs (
@@ -65,34 +75,13 @@ CREATE TABLE actual_executions (
 CREATE INDEX idx_actual_executions_user_period
   ON actual_executions (user_id, period_id);
 
--- Seed métricas atleta / jugador
-INSERT INTO metric_types (metric_type_id, label, unit, description, higher_is_better) VALUES
-  ('kilometers',      'Kilómetros recorridos', 'km', 'Volumen de desplazamiento / cardio', TRUE),
-  ('weight_lifted',   'Peso levantado',        'kg', 'Carga acumulada en fuerza', TRUE),
-  ('training_hours',  'Horas de entrenamiento','h',  'Tiempo efectivo de práctica', TRUE),
-  ('sessions_count',  'Sesiones de práctica',  'n',  'Cantidad de sesiones', TRUE),
-  ('accuracy_pct',    'Porcentaje de acierto', '%',  'Precisión en drills / aiming', TRUE),
-  ('wins',            'Victorias',             'n',  'Partidas ganadas', TRUE),
-  ('losses',          'Derrotas',              'n',  'Partidas perdidas (tope)', FALSE),
-  ('draws',           'Empates',               'n',  'Partidas empatadas', FALSE),
-  ('matches_played',  'Partidas jugadas',      'n',  'Volumen de matches', TRUE),
-  ('win_rate',        'Win rate',              '%',  'Ratio de victorias', TRUE),
-  ('win_streak',      'Racha de victorias',    'n',  'Mejor racha del período', TRUE),
-  ('kills',           'Kills totales',         'n',  'Eliminaciones acumuladas', TRUE),
-  ('deaths',          'Muertes totales',       'n',  'Muertes acumuladas (tope)', FALSE),
-  ('assists',         'Asistencias totales',   'n',  'Asistencias acumuladas', TRUE),
-  ('kills_avg',       'Kills promedio',        'n',  'Eliminaciones por partida', TRUE),
-  ('deaths_avg',      'Muertes promedio',      'n',  'Muertes por partida (tope)', FALSE),
-  ('assists_avg',     'Asistencias promedio',  'n',  'Asistencias por partida', TRUE),
-  ('kd_ratio',        'K/D',                   'x',  'Ratio kills/deaths', TRUE),
-  ('kda_ratio',       'KDA',                   'x',  'Ratio (K+A)/D', TRUE),
-  ('headshot_pct',    'Headshot %',            '%',  'Porcentaje de headshots', TRUE),
-  ('adr',             'ADR',                   'n',  'Daño promedio por ronda', TRUE),
-  ('placement_avg',   'Placement promedio',    'n',  'Posición media (más bajo mejor)', FALSE),
-  ('cs_avg',          'CS promedio',           'n',  'Farm / minions (LoL)', TRUE),
-  ('vision_avg',      'Visión promedio',       'n',  'Vision score (LoL)', TRUE),
-  ('goals',           'Goles',                 'n',  'Goles (Rocket League)', TRUE),
-  ('saves',           'Saves',                 'n',  'Atajadas', TRUE);
+-- Cumplimiento:
+--   at_least → actual / planned * 100
+--   at_most  → planned / actual * 100  (0 actual = overachieve)
+-- Rollup byMetric usa aggregation (sum|avg|max|last), no sumar ratios a ciegas.
+
+-- Seed: el catálogo canónico vive en libs/common/.../metric-types.ts
+-- (~60 métricas en 7 dominios). Este SQL es referencia, no la fuente de verdad.
 
 -- =============================================================================
 -- Mapping DynamoDB single-table (PK = USER#<userId>)

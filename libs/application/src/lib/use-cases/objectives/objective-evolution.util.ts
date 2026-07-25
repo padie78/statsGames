@@ -1,6 +1,8 @@
 import {
   getObjectiveMetricType,
   isObjectiveMetricTypeId,
+  type ObjectiveAggregation,
+  type ObjectiveGoalKind,
 } from '@stats-games/common';
 import type {
   ActualExecutionDto,
@@ -12,13 +14,32 @@ import type {
   TargetProgramDto,
 } from '../../dto/objectives/objectives.dto';
 
-/** Umbrales de alineación (cumplimiento = real/meta * 100). */
+/** Umbrales de alineación (cumplimiento relativo a la meta). */
 const ALIGNED_MIN = 90;
 const ALIGNED_MAX = 115;
 /** Programa cerrado se considera cumplido desde este % global. */
 const PROGRAM_FULFILLED_MIN = 90;
 
-export function computeCompliancePct(actual: number, planned: number): number | null {
+/**
+ * Cumplimiento según tipo de meta:
+ * - at_least: actual / planned (más = mejor)
+ * - at_most:  planned / actual (menos = mejor; 0 actual = overachieve)
+ */
+export function computeCompliancePct(
+  actual: number,
+  planned: number,
+  goalKind: ObjectiveGoalKind = 'at_least',
+): number | null {
+  if (planned < 0) return null;
+
+  if (goalKind === 'at_most') {
+    if (planned === 0) {
+      return actual <= 0 ? 100 : 0;
+    }
+    if (actual <= 0) return 200;
+    return Math.round((planned / actual) * 1000) / 10;
+  }
+
   if (planned <= 0) return null;
   return Math.round((actual / planned) * 1000) / 10;
 }
@@ -39,6 +60,28 @@ export function classifyAlignment(compliancePct: number | null): {
   return { status: 'aligned', statusLabel: 'Alineado' };
 }
 
+function periodSortKey(periodId: string): string {
+  return periodId;
+}
+
+function aggregateValues(
+  values: number[],
+  aggregation: ObjectiveAggregation,
+): number {
+  if (!values.length) return 0;
+  switch (aggregation) {
+    case 'avg':
+      return Math.round((values.reduce((s, v) => s + v, 0) / values.length) * 10) / 10;
+    case 'max':
+      return Math.max(...values);
+    case 'last':
+      return values[values.length - 1] ?? 0;
+    case 'sum':
+    default:
+      return Math.round(values.reduce((s, v) => s + v, 0) * 10) / 10;
+  }
+}
+
 export function buildObjectiveEvolution(input: {
   program: Omit<TargetProgramDto, 'targets'>;
   targets: ProgramTargetDto[];
@@ -50,9 +93,10 @@ export function buildObjectiveEvolution(input: {
 
   const rows: ObjectiveEvolutionRowDto[] = input.targets.map((t) => {
     const meta = getObjectiveMetricType(t.metricTypeId);
+    const goalKind: ObjectiveGoalKind = meta?.goalKind ?? 'at_least';
     const actual = execMap.get(`${t.metricTypeId}#${t.periodId}`) ?? null;
     const compliancePct =
-      actual == null ? null : computeCompliancePct(actual, t.plannedValue);
+      actual == null ? null : computeCompliancePct(actual, t.plannedValue, goalKind);
     const deviationPct =
       compliancePct == null ? null : Math.round((compliancePct - 100) * 10) / 10;
     const { status, statusLabel } = classifyAlignment(compliancePct);
@@ -82,21 +126,36 @@ export function buildObjectiveEvolution(input: {
 
   const metricIds = [...new Set(input.targets.map((t) => t.metricTypeId))];
   const byMetric = metricIds.map((metricTypeId) => {
-    const metricRows = rows.filter((r) => r.metricTypeId === metricTypeId);
-    const plannedTotal = metricRows.reduce((s, r) => s + r.plannedValue, 0);
-    const actualTotal = metricRows.reduce((s, r) => s + (r.actualValue ?? 0), 0);
-    const compliancePct = computeCompliancePct(actualTotal, plannedTotal);
-    const { status, statusLabel } = classifyAlignment(
-      metricRows.every((r) => r.actualValue == null) ? null : compliancePct,
-    );
     const meta = getObjectiveMetricType(metricTypeId);
+    const aggregation: ObjectiveAggregation = meta?.aggregation ?? 'sum';
+    const goalKind: ObjectiveGoalKind = meta?.goalKind ?? 'at_least';
+
+    const metricRows = [...rows.filter((r) => r.metricTypeId === metricTypeId)].sort(
+      (a, b) => periodSortKey(a.periodId).localeCompare(periodSortKey(b.periodId)),
+    );
+
+    const plannedValues = metricRows.map((r) => r.plannedValue);
+    const actualValues = metricRows
+      .filter((r) => r.actualValue != null)
+      .map((r) => r.actualValue as number);
+
+    const plannedTotal = aggregateValues(plannedValues, aggregation);
+    const actualTotal = actualValues.length
+      ? aggregateValues(actualValues, aggregation)
+      : 0;
+    const allMissing = metricRows.every((r) => r.actualValue == null);
+    const compliancePct = allMissing
+      ? null
+      : computeCompliancePct(actualTotal, plannedTotal, goalKind);
+    const { status, statusLabel } = classifyAlignment(compliancePct);
+
     return {
       metricTypeId,
       metricLabel: meta?.label ?? metricTypeId,
       unit: meta?.unit ?? '',
       plannedTotal,
       actualTotal,
-      compliancePct: metricRows.every((r) => r.actualValue == null) ? null : compliancePct,
+      compliancePct,
       status,
       statusLabel,
     };

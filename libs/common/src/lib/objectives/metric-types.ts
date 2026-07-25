@@ -1,228 +1,718 @@
 /**
- * Catálogo de métricas para Plan vs Realidad (atleta + jugador competitivo).
+ * Catálogo de métricas para Plan vs Realidad.
+ *
+ * - goalKind: `at_least` = meta mínima; `at_most` = tope máximo.
+ * - aggregation: cómo rollupear varios períodos en byMetric.
+ * - autoSource: stat de partida o derivado (null = solo carga manual).
  */
+
+export type ObjectiveMetricDomain =
+  | 'athlete'
+  | 'competitive'
+  | 'discipline'
+  | 'mental'
+  | 'economy'
+  | 'technical'
+  | 'career';
+
+export type ObjectiveGoalKind = 'at_least' | 'at_most';
+
+export type ObjectiveAggregation = 'sum' | 'avg' | 'max' | 'last';
+
+/**
+ * Origen automático desde telemetría de partidas.
+ * - `stat:<field>:<sum|avg|max>` — campo en statsJson
+ * - `derived:<id>` — cálculo compuesto
+ */
+export type ObjectiveAutoSource = string;
 
 export interface ObjectiveMetricType {
   id: string;
   label: string;
   unit: string;
   description: string;
+  /** @deprecated Preferir goalKind; se mantiene para clientes legacy. */
   higherIsBetter: boolean;
-  /** Ámbito sugerido en UI. */
-  domain: 'athlete' | 'competitive';
+  goalKind: ObjectiveGoalKind;
+  aggregation: ObjectiveAggregation;
+  domain: ObjectiveMetricDomain;
+  /** null = solo manual. */
+  autoSource: ObjectiveAutoSource | null;
+}
+
+export const OBJECTIVE_DOMAIN_LABELS: Record<ObjectiveMetricDomain, string> = {
+  competitive: 'Competitivo',
+  athlete: 'Atleta / hábitos',
+  discipline: 'Disciplina / rutina',
+  mental: 'Mental / resiliencia',
+  economy: 'Economía in-game',
+  technical: 'Técnica / mecánica',
+  career: 'Carrera / scouting',
+};
+
+export const OBJECTIVE_DOMAIN_ORDER: readonly ObjectiveMetricDomain[] = [
+  'competitive',
+  'discipline',
+  'mental',
+  'economy',
+  'technical',
+  'athlete',
+  'career',
+] as const;
+
+function metric(
+  partial: Omit<ObjectiveMetricType, 'higherIsBetter'> & { higherIsBetter?: boolean },
+): ObjectiveMetricType {
+  return {
+    ...partial,
+    higherIsBetter: partial.higherIsBetter ?? partial.goalKind === 'at_least',
+  };
 }
 
 export const OBJECTIVE_METRIC_TYPES: readonly ObjectiveMetricType[] = [
   // ── Atleta / hábitos ──
-  {
+  metric({
     id: 'kilometers',
     label: 'Kilómetros recorridos',
     unit: 'km',
     description: 'Volumen de desplazamiento / cardio',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'athlete',
-  },
-  {
+    autoSource: null,
+  }),
+  metric({
     id: 'weight_lifted',
     label: 'Peso levantado',
     unit: 'kg',
     description: 'Carga acumulada en fuerza',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'athlete',
-  },
-  {
+    autoSource: null,
+  }),
+  metric({
     id: 'training_hours',
     label: 'Horas de entrenamiento',
     unit: 'h',
-    description: 'Tiempo efectivo de práctica',
-    higherIsBetter: true,
+    description: 'Tiempo efectivo de práctica / drills',
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'athlete',
-  },
-  {
+    autoSource: null,
+  }),
+  metric({
     id: 'sessions_count',
     label: 'Sesiones de práctica',
     unit: 'n',
     description: 'Cantidad de sesiones en el período',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'athlete',
-  },
-  {
+    autoSource: null,
+  }),
+  metric({
     id: 'accuracy_pct',
     label: 'Porcentaje de acierto',
     unit: '%',
     description: 'Precisión en drills / aiming',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'athlete',
-  },
+    autoSource: null,
+  }),
+  metric({
+    id: 'sleep_hours',
+    label: 'Horas de sueño',
+    unit: 'h',
+    description: 'Sueño promedio diario en el período',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'athlete',
+    autoSource: null,
+  }),
+  metric({
+    id: 'rest_days',
+    label: 'Días de descanso',
+    unit: 'n',
+    description: 'Días sin ranked / carga competitiva',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'athlete',
+    autoSource: null,
+  }),
+
   // ── Competitivo / partidas ──
-  {
+  metric({
     id: 'wins',
     label: 'Victorias',
     unit: 'n',
     description: 'Partidas ganadas en el período',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'derived:wins',
+  }),
+  metric({
     id: 'losses',
     label: 'Derrotas',
     unit: 'n',
     description: 'Partidas perdidas (meta = tope máximo)',
-    higherIsBetter: false,
+    goalKind: 'at_most',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'derived:losses',
+  }),
+  metric({
     id: 'draws',
     label: 'Empates',
     unit: 'n',
-    description: 'Partidas empatadas',
-    higherIsBetter: false,
+    description: 'Partidas empatadas (meta = tope)',
+    goalKind: 'at_most',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'derived:draws',
+  }),
+  metric({
     id: 'matches_played',
     label: 'Partidas jugadas',
     unit: 'n',
     description: 'Volumen total de matches',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'derived:matches_played',
+  }),
+  metric({
     id: 'win_rate',
     label: 'Win rate',
     unit: '%',
     description: 'Ratio de victorias',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'derived:win_rate',
+  }),
+  metric({
     id: 'win_streak',
     label: 'Racha de victorias',
     unit: 'n',
     description: 'Mejor racha consecutiva del período',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'max',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'derived:win_streak',
+  }),
+  metric({
     id: 'kills',
     label: 'Kills totales',
     unit: 'n',
     description: 'Eliminaciones acumuladas',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:kills:sum',
+  }),
+  metric({
     id: 'deaths',
     label: 'Muertes totales',
     unit: 'n',
     description: 'Muertes acumuladas (meta = tope máximo)',
-    higherIsBetter: false,
+    goalKind: 'at_most',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:deaths:sum',
+  }),
+  metric({
     id: 'assists',
     label: 'Asistencias totales',
     unit: 'n',
     description: 'Asistencias acumuladas',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:assists:sum',
+  }),
+  metric({
     id: 'kills_avg',
     label: 'Kills promedio',
     unit: 'n',
     description: 'Eliminaciones por partida',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:kills:avg',
+  }),
+  metric({
     id: 'deaths_avg',
     label: 'Muertes promedio',
     unit: 'n',
     description: 'Muertes por partida (meta = tope máximo)',
-    higherIsBetter: false,
+    goalKind: 'at_most',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:deaths:avg',
+  }),
+  metric({
     id: 'assists_avg',
     label: 'Asistencias promedio',
     unit: 'n',
     description: 'Asistencias por partida',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:assists:avg',
+  }),
+  metric({
     id: 'kd_ratio',
     label: 'K/D',
     unit: 'x',
     description: 'Ratio kills/deaths',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'derived:kd_ratio',
+  }),
+  metric({
     id: 'kda_ratio',
     label: 'KDA',
     unit: 'x',
     description: 'Ratio (kills+assists)/deaths',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'derived:kda_ratio',
+  }),
+  metric({
     id: 'headshot_pct',
     label: 'Headshot %',
     unit: '%',
     description: 'Porcentaje de headshots',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:headshotPct:avg',
+  }),
+  metric({
     id: 'adr',
     label: 'ADR / daño por ronda',
     unit: 'n',
     description: 'Average damage per round',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:adr:avg',
+  }),
+  metric({
+    id: 'damage_avg',
+    label: 'Daño promedio',
+    unit: 'n',
+    description: 'Daño medio por partida',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'competitive',
+    autoSource: 'stat:damage:avg',
+  }),
+  metric({
     id: 'placement_avg',
     label: 'Placement promedio',
     unit: 'n',
     description: 'Posición media (más bajo = mejor)',
-    higherIsBetter: false,
+    goalKind: 'at_most',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:placement:avg',
+  }),
+  metric({
     id: 'cs_avg',
     label: 'CS promedio',
     unit: 'n',
     description: 'Farm / minions',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:cs:avg',
+  }),
+  metric({
     id: 'vision_avg',
     label: 'Visión promedio',
     unit: 'n',
     description: 'Vision score',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'avg',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:visionScore:avg',
+  }),
+  metric({
     id: 'goals',
     label: 'Goles',
     unit: 'n',
     description: 'Goles acumulados (Rocket League)',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
-  {
+    autoSource: 'stat:goals:sum',
+  }),
+  metric({
     id: 'saves',
     label: 'Saves',
     unit: 'n',
     description: 'Atajadas acumuladas',
-    higherIsBetter: true,
+    goalKind: 'at_least',
+    aggregation: 'sum',
     domain: 'competitive',
-  },
+    autoSource: 'stat:saves:sum',
+  }),
+  metric({
+    id: 'mvp_count',
+    label: 'MVPs',
+    unit: 'n',
+    description: 'Partidas con MVP / mejor rendimiento del equipo',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'competitive',
+    autoSource: 'derived:mvp_count',
+  }),
+  metric({
+    id: 'first_blood_pct',
+    label: 'First blood %',
+    unit: '%',
+    description: 'Porcentaje de partidas con first blood',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'competitive',
+    autoSource: 'derived:first_blood_pct',
+  }),
+
+  // ── Disciplina / rutina (anti-burnout) ──
+  metric({
+    id: 'play_hours',
+    label: 'Horas de juego',
+    unit: 'h',
+    description: 'Tiempo total en partidas (tope o mínimo según plan)',
+    goalKind: 'at_most',
+    aggregation: 'sum',
+    domain: 'discipline',
+    autoSource: 'derived:play_hours',
+  }),
+  metric({
+    id: 'play_hours_min',
+    label: 'Horas de juego (mínimo)',
+    unit: 'h',
+    description: 'Volumen mínimo de juego del período',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'discipline',
+    autoSource: 'derived:play_hours',
+  }),
+  metric({
+    id: 'avg_match_duration_min',
+    label: 'Duración promedio de partida',
+    unit: 'min',
+    description: 'Minutos medios por match',
+    goalKind: 'at_most',
+    aggregation: 'avg',
+    domain: 'discipline',
+    autoSource: 'derived:avg_match_duration_min',
+  }),
+  metric({
+    id: 'max_match_duration_min',
+    label: 'Duración máxima de partida',
+    unit: 'min',
+    description: 'Tope de minutos en una sola partida',
+    goalKind: 'at_most',
+    aggregation: 'max',
+    domain: 'discipline',
+    autoSource: 'derived:max_match_duration_min',
+  }),
+  metric({
+    id: 'matches_per_day_max',
+    label: 'Partidas por día (tope)',
+    unit: 'n',
+    description: 'Máximo de matches en un mismo día',
+    goalKind: 'at_most',
+    aggregation: 'max',
+    domain: 'discipline',
+    autoSource: 'derived:matches_per_day_max',
+  }),
+  metric({
+    id: 'late_night_matches',
+    label: 'Partidas nocturnas',
+    unit: 'n',
+    description: 'Matches después de las 02:00 (tope)',
+    goalKind: 'at_most',
+    aggregation: 'sum',
+    domain: 'discipline',
+    autoSource: 'derived:late_night_matches',
+  }),
+  metric({
+    id: 'tilt_matches',
+    label: 'Partidas en tilt',
+    unit: 'n',
+    description: 'Matches jugados tras 2 derrotas seguidas (tope)',
+    goalKind: 'at_most',
+    aggregation: 'sum',
+    domain: 'discipline',
+    autoSource: 'derived:tilt_matches',
+  }),
+  metric({
+    id: 'warmup_sessions',
+    label: 'Sesiones con calentamiento',
+    unit: 'n',
+    description: 'Sesiones con drill previo a ranked',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'discipline',
+    autoSource: null,
+  }),
+  metric({
+    id: 'break_minutes_between',
+    label: 'Pausa entre sesiones',
+    unit: 'min',
+    description: 'Minutos mínimos de descanso entre bloques de juego',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'discipline',
+    autoSource: null,
+  }),
+
+  // ── Mental / resiliencia ──
+  metric({
+    id: 'bounce_back_win_rate',
+    label: 'Win rate post-derrota',
+    unit: '%',
+    description: 'Victorias en la partida siguiente a una derrota',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'mental',
+    autoSource: 'derived:bounce_back_win_rate',
+  }),
+  metric({
+    id: 'comeback_rate',
+    label: 'Tasa de comeback',
+    unit: '%',
+    description: 'Partidas recuperadas tras ir abajo',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'mental',
+    autoSource: null,
+  }),
+  metric({
+    id: 'kda_consistency',
+    label: 'Consistencia KDA',
+    unit: 'σ',
+    description: 'Desvío estándar del KDA (más bajo = más estable)',
+    goalKind: 'at_most',
+    aggregation: 'avg',
+    domain: 'mental',
+    autoSource: 'derived:kda_consistency',
+  }),
+  metric({
+    id: 'remakes_ff',
+    label: 'Remakes / FF tempranos',
+    unit: 'n',
+    description: 'Abandonos o FF antes del minuto umbral (tope)',
+    goalKind: 'at_most',
+    aggregation: 'sum',
+    domain: 'mental',
+    autoSource: 'derived:remakes_ff',
+  }),
+  metric({
+    id: 'stress_resilience_score',
+    label: 'Stress resilience',
+    unit: 'n',
+    description: 'Score 0–100 de resiliencia bajo presión',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'mental',
+    autoSource: null,
+  }),
+  metric({
+    id: 'decision_speed_ms',
+    label: 'Velocidad de decisión',
+    unit: 'ms',
+    description: 'Tiempo medio de decisión en ms (más bajo = más rápido)',
+    goalKind: 'at_most',
+    aggregation: 'avg',
+    domain: 'mental',
+    autoSource: null,
+  }),
+  metric({
+    id: 'coach_actions_closed',
+    label: 'Acciones de Coach cerradas',
+    unit: 'n',
+    description: 'Pasos del plan IA marcados como hechos',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'mental',
+    autoSource: null,
+  }),
+
+  // ── Economía in-game ──
+  metric({
+    id: 'gold_per_min',
+    label: 'Oro por minuto',
+    unit: 'n',
+    description: 'Gold/min (LoL / MOBAs)',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'economy',
+    autoSource: 'derived:gold_per_min',
+  }),
+  metric({
+    id: 'cs_per_min',
+    label: 'CS por minuto',
+    unit: 'n',
+    description: 'Farm por minuto',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'economy',
+    autoSource: 'derived:cs_per_min',
+  }),
+  metric({
+    id: 'gold_diff_15',
+    label: 'Gold diff @15',
+    unit: 'n',
+    description: 'Diferencia de oro al minuto 15',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'economy',
+    autoSource: 'stat:goldDiff15:avg',
+  }),
+  metric({
+    id: 'damage_per_death',
+    label: 'Daño por muerte',
+    unit: 'n',
+    description: 'Daño infligido / muertes (eficiencia)',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'economy',
+    autoSource: 'derived:damage_per_death',
+  }),
+  metric({
+    id: 'damage_share_pct',
+    label: 'Share de daño',
+    unit: '%',
+    description: 'Porcentaje del daño del equipo',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'economy',
+    autoSource: 'stat:damageSharePct:avg',
+  }),
+  metric({
+    id: 'objective_participation_pct',
+    label: 'Participación en objetivos',
+    unit: '%',
+    description: 'Presencia en dragones / barones / spikes',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'economy',
+    autoSource: 'stat:objectiveParticipationPct:avg',
+  }),
+
+  // ── Técnica / mecánica ──
+  metric({
+    id: 'aim_trainer_score',
+    label: 'Score aim trainer',
+    unit: 'n',
+    description: 'Puntaje de sesión en aim trainer',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'technical',
+    autoSource: null,
+  }),
+  metric({
+    id: 'reaction_time_ms',
+    label: 'Tiempo de reacción',
+    unit: 'ms',
+    description: 'Reacción media en drills (tope)',
+    goalKind: 'at_most',
+    aggregation: 'avg',
+    domain: 'technical',
+    autoSource: null,
+  }),
+  metric({
+    id: 'edit_accuracy_pct',
+    label: 'Precisión de edits',
+    unit: '%',
+    description: 'Edits / builds correctos (Fortnite)',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'technical',
+    autoSource: null,
+  }),
+  metric({
+    id: 'apm_avg',
+    label: 'APM promedio',
+    unit: 'n',
+    description: 'Acciones por minuto',
+    goalKind: 'at_least',
+    aggregation: 'avg',
+    domain: 'technical',
+    autoSource: 'stat:apm:avg',
+  }),
+  metric({
+    id: 'first_death_pct',
+    label: 'First death %',
+    unit: '%',
+    description: 'Ser la primera muerte del equipo (tope)',
+    goalKind: 'at_most',
+    aggregation: 'avg',
+    domain: 'technical',
+    autoSource: 'derived:first_death_pct',
+  }),
+
+  // ── Carrera / scouting ──
+  metric({
+    id: 'rank_lp_delta',
+    label: 'Delta de LP / elo',
+    unit: 'n',
+    description: 'Cambio de LP o elo en el período',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'career',
+    autoSource: 'derived:rank_lp_delta',
+  }),
+  metric({
+    id: 'vods_uploaded',
+    label: 'VODs subidos',
+    unit: 'n',
+    description: 'Partidas con VOD publicado',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'career',
+    autoSource: null,
+  }),
+  metric({
+    id: 'clips_published',
+    label: 'Clips publicados',
+    unit: 'n',
+    description: 'Highlights / clips del período',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'career',
+    autoSource: null,
+  }),
+  metric({
+    id: 'macro_reports',
+    label: 'Fichas técnicas',
+    unit: 'n',
+    description: 'Reportes macro / fichas generadas',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'career',
+    autoSource: null,
+  }),
+  metric({
+    id: 'scout_contacts',
+    label: 'Contactos de scouts',
+    unit: 'n',
+    description: 'Mensajes o views de reclutadores',
+    goalKind: 'at_least',
+    aggregation: 'sum',
+    domain: 'career',
+    autoSource: null,
+  }),
 ] as const;
 
 export function getObjectiveMetricType(id: string): ObjectiveMetricType | undefined {
@@ -231,4 +721,10 @@ export function getObjectiveMetricType(id: string): ObjectiveMetricType | undefi
 
 export function isObjectiveMetricTypeId(id: string): boolean {
   return OBJECTIVE_METRIC_TYPES.some((m) => m.id === id);
+}
+
+export function listObjectiveMetricsByDomain(
+  domain: ObjectiveMetricDomain,
+): readonly ObjectiveMetricType[] {
+  return OBJECTIVE_METRIC_TYPES.filter((m) => m.domain === domain);
 }

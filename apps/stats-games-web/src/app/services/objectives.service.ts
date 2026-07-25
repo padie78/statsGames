@@ -8,7 +8,10 @@ export interface ObjectiveMetricTypeView {
   unit: string;
   description: string;
   higherIsBetter: boolean;
+  goalKind: 'at_least' | 'at_most' | string;
+  aggregation: 'sum' | 'avg' | 'max' | 'last' | string;
   domain: string;
+  autoSource?: string | null;
 }
 
 export interface ProgramTargetView {
@@ -82,6 +85,19 @@ export interface ObjectiveEvolutionView {
 
 export type ProgramOutcomeView = 'in_progress' | 'fulfilled' | 'not_fulfilled' | string;
 
+export interface SyncObjectiveActualsResultView {
+  programId: string;
+  periodId: string;
+  matchCount: number;
+  synced: Array<{
+    metricTypeId: string;
+    periodId: string;
+    actualValue: number;
+    source: string;
+  }>;
+  skipped: Array<{ metricTypeId: string; reason: string }>;
+}
+
 export interface TargetProgramHistoryItemView {
   programId: string;
   userId: string;
@@ -107,7 +123,10 @@ const METRIC_FIELDS = /* GraphQL */ `
   unit
   description
   higherIsBetter
+  goalKind
+  aggregation
   domain
+  autoSource
 `;
 
 const PROGRAM_FIELDS = /* GraphQL */ `
@@ -361,6 +380,52 @@ export class ObjectivesService {
           (resp) =>
             (resp as { data: { upsertActualExecution: ActualExecutionView } }).data
               .upsertActualExecution,
+        ),
+      ),
+    );
+  }
+
+  syncActualsFromMatchesOnce(input: {
+    userId: string;
+    programId?: string;
+    periodId?: string;
+    platform?: string;
+    matchLimit?: number;
+  }): Promise<SyncObjectiveActualsResultView> {
+    return firstValueFrom(
+      from(
+        this.client.graphql({
+          query: /* GraphQL */ `
+            mutation SyncObjectiveActualsFromMatches(
+              $input: SyncObjectiveActualsFromMatchesInput!
+            ) {
+              syncObjectiveActualsFromMatches(input: $input) {
+                programId
+                periodId
+                matchCount
+                synced {
+                  metricTypeId
+                  periodId
+                  actualValue
+                  source
+                }
+                skipped {
+                  metricTypeId
+                  reason
+                }
+              }
+            }
+          `,
+          variables: { input },
+        }),
+      ).pipe(
+        map(
+          (resp) =>
+            (
+              resp as {
+                data: { syncObjectiveActualsFromMatches: SyncObjectiveActualsResultView };
+              }
+            ).data.syncObjectiveActualsFromMatches,
         ),
       ),
     );

@@ -248,7 +248,13 @@ type ObjectiveMetricType @aws_api_key @aws_cognito_user_pools {
   unit: String!
   description: String!
   higherIsBetter: Boolean!
+  """at_least = meta mínima; at_most = tope máximo"""
+  goalKind: String!
+  """sum | avg | max | last — rollup multi-período"""
+  aggregation: String!
   domain: String!
+  """stat:<field>:<op> | derived:<id> | null (manual)"""
+  autoSource: String
 }
 
 type ProgramTarget @aws_api_key @aws_cognito_user_pools {
@@ -376,6 +382,27 @@ input CloseTargetProgramInput {
   endsAt: AWSDate
 }
 
+input SyncObjectiveActualsFromMatchesInput {
+  userId: ID!
+  programId: ID
+  periodId: String
+  platform: String
+  matchLimit: Int
+}
+
+type SyncObjectiveActualsSkipped @aws_api_key @aws_cognito_user_pools {
+  metricTypeId: String!
+  reason: String!
+}
+
+type SyncObjectiveActualsResult @aws_api_key @aws_cognito_user_pools {
+  programId: ID!
+  periodId: String!
+  matchCount: Int!
+  synced: [ActualExecution!]!
+  skipped: [SyncObjectiveActualsSkipped!]!
+}
+
 type Mutation {
   ping(message: String!): String! @aws_api_key @aws_cognito_user_pools
   upsertPlayerProfile(input: UpsertPlayerProfileInput!): PlayerProfile!
@@ -391,6 +418,9 @@ type Mutation {
     @aws_api_key
     @aws_cognito_user_pools
   upsertActualExecution(input: UpsertActualExecutionInput!): ActualExecution!
+    @aws_api_key
+    @aws_cognito_user_pools
+  syncObjectiveActualsFromMatches(input: SyncObjectiveActualsFromMatchesInput!): SyncObjectiveActualsResult!
     @aws_api_key
     @aws_cognito_user_pools
   closeTargetProgram(input: CloseTargetProgramInput!): TargetProgram!

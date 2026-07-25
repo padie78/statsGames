@@ -20,6 +20,7 @@ import {
   listWeeklyLeaderboard,
   requestEvolutionAiReport,
   searchPlayers,
+  syncObjectiveActualsFromMatches,
   upsertActualExecution,
   upsertPlayerProfile,
   upsertTargetProgram,
@@ -88,6 +89,7 @@ type ResolverArgs =
     }
   | { fieldName: 'upsertTargetProgram'; args: { input: Record<string, unknown> } }
   | { fieldName: 'upsertActualExecution'; args: { input: Record<string, unknown> } }
+  | { fieldName: 'syncObjectiveActualsFromMatches'; args: { input: Record<string, unknown> } }
   | { fieldName: 'closeTargetProgram'; args: { input: Record<string, unknown> } }
   | { fieldName: 'upsertPlayerProfile'; args: { input: Record<string, unknown> } }
   | { fieldName: 'linkPlatformAccount'; args: { input: Record<string, unknown> } }
@@ -256,6 +258,9 @@ async function dispatch(op: ResolverArgs): Promise<unknown> {
 
     case 'upsertActualExecution':
       return upsertActualExecution.execute(op.args.input);
+
+    case 'syncObjectiveActualsFromMatches':
+      return syncObjectiveActualsFromMatches.execute(op.args.input);
 
     case 'closeTargetProgram':
       return closeTargetProgram.execute(op.args.input);

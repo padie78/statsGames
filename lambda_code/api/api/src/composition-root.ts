@@ -18,6 +18,7 @@ import {
   ListWeeklyLeaderboardUseCase,
   RequestEvolutionAiReportUseCase,
   SearchPlayersUseCase,
+  SyncObjectiveActualsFromMatchesUseCase,
   UpsertActualExecutionUseCase,
   UpsertPlayerProfileUseCase,
   UpsertTargetProgramUseCase,
@@ -76,6 +77,10 @@ export const listObjectiveMetricTypes = new ListObjectiveMetricTypesUseCase();
 export const getActiveTargetProgram = new GetActiveTargetProgramUseCase(targetPrograms);
 export const upsertTargetProgram = new UpsertTargetProgramUseCase(targetPrograms);
 export const upsertActualExecution = new UpsertActualExecutionUseCase(targetPrograms);
+export const syncObjectiveActualsFromMatches = new SyncObjectiveActualsFromMatchesUseCase(
+  targetPrograms,
+  matchRepository,
+);
 export const getObjectiveEvolution = new GetObjectiveEvolutionUseCase(targetPrograms);
 export const listTargetProgramHistory = new ListTargetProgramHistoryUseCase(targetPrograms);
 export const closeTargetProgram = new CloseTargetProgramUseCase(targetPrograms);

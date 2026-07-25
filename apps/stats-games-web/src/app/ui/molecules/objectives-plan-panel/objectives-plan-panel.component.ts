@@ -172,13 +172,24 @@ interface DraftTargetRow {
             </div>
           } @else {
             <p class="sg-obj-hint u-m-0">
-              Registrá la ejecución real del período (victorias, derrotas, kills, etc.).
+              Registrá la ejecución real del período o sincronizá KPIs desde tus partidas.
             </p>
             <div class="sg-obj-actions">
               <button type="button" class="u-btn u-btn--gold" (click)="openExecutionModal()">
                 Registrar ejecución
               </button>
+              <button
+                type="button"
+                class="u-btn u-btn--ghost"
+                [disabled]="saving()"
+                (click)="syncFromMatches()"
+              >
+                {{ saving() ? 'Sincronizando…' : 'Sincronizar desde partidas' }}
+              </button>
             </div>
+            @if (syncHint()) {
+              <p class="sg-obj-hint u-m-0">{{ syncHint() }}</p>
+            }
           }
         </div>
       }
@@ -354,7 +365,7 @@ interface DraftTargetRow {
                 {{ programModalMode() === 'create' ? 'Nuevo programa' : 'Editar programa' }}
               </h3>
               <p class="sg-obj-modal__subtitle u-m-0">
-                Elegí parámetros: victorias, derrotas, KDA, win rate, farm y más.
+                Elegí parámetros por dominio: competitivo, disciplina, mental, economía, técnica y más.
               </p>
             </div>
             <button type="button" class="sg-obj-modal__close" aria-label="Cerrar" (click)="closeModal()">
@@ -393,16 +404,19 @@ interface DraftTargetRow {
               @for (row of draftTargets(); track i; let i = $index) {
                 <div class="sg-obj-target-row sg-obj-target-row--modal">
                   <select [(ngModel)]="row.metricTypeId" [attr.aria-label]="'Parámetro ' + (i + 1)">
-                    <optgroup label="Competitivo">
-                      @for (m of competitiveMetrics(); track m.id) {
-                        <option [value]="m.id">{{ m.label }} ({{ m.unit }})</option>
-                      }
-                    </optgroup>
-                    <optgroup label="Atleta / hábitos">
-                      @for (m of athleteMetrics(); track m.id) {
-                        <option [value]="m.id">{{ m.label }} ({{ m.unit }})</option>
-                      }
-                    </optgroup>
+                    @for (group of metricGroups(); track group.domain) {
+                      <optgroup [label]="group.label">
+                        @for (m of group.metrics; track m.id) {
+                          <option [value]="m.id">
+                            {{ m.label }} ({{ m.unit }})
+                            · {{ m.goalKind === 'at_most' ? 'tope' : 'mín' }}
+                            @if (m.autoSource) {
+                              · auto
+                            }
+                          </option>
+                        }
+                      </optgroup>
+                    }
                   </select>
                   <input
                     type="text"
@@ -416,7 +430,7 @@ interface DraftTargetRow {
                     step="0.1"
                     [(ngModel)]="row.plannedValue"
                     [attr.aria-label]="'Meta ' + (i + 1)"
-                    placeholder="Meta"
+                    [placeholder]="goalPlaceholder(row.metricTypeId)"
                   />
                   <button
                     type="button"
@@ -528,6 +542,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   readonly draftTargets = signal<DraftTargetRow[]>([]);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+  readonly syncHint = signal<string | null>(null);
 
   title = 'Mi programa de objetivos';
   cadence: 'weekly' | 'monthly' = 'weekly';
@@ -536,12 +551,41 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   execPeriodId = currentIsoWeekPeriodId();
   execValue: number | null = null;
 
-  readonly competitiveMetrics = computed(() =>
-    this.metrics().filter((m) => m.domain === 'competitive'),
-  );
-  readonly athleteMetrics = computed(() =>
-    this.metrics().filter((m) => m.domain === 'athlete'),
-  );
+  private static readonly DOMAIN_LABELS: Record<string, string> = {
+    competitive: 'Competitivo',
+    discipline: 'Disciplina / rutina',
+    mental: 'Mental / resiliencia',
+    economy: 'Economía in-game',
+    technical: 'Técnica / mecánica',
+    athlete: 'Atleta / hábitos',
+    career: 'Carrera / scouting',
+  };
+
+  private static readonly DOMAIN_ORDER = [
+    'competitive',
+    'discipline',
+    'mental',
+    'economy',
+    'technical',
+    'athlete',
+    'career',
+  ] as const;
+
+  readonly metricGroups = computed(() => {
+    const byDomain = new Map<string, ObjectiveMetricTypeView[]>();
+    for (const m of this.metrics()) {
+      const list = byDomain.get(m.domain) ?? [];
+      list.push(m);
+      byDomain.set(m.domain, list);
+    }
+    return ObjectivesPlanPanelComponent.DOMAIN_ORDER.filter((d) => byDomain.has(d)).map(
+      (domain) => ({
+        domain,
+        label: ObjectivesPlanPanelComponent.DOMAIN_LABELS[domain] ?? domain,
+        metrics: byDomain.get(domain) ?? [],
+      }),
+    );
+  });
 
   readonly programMetrics = computed(() => {
     const ids = this.program()?.targets.map((t) => t.metricTypeId) ?? [];
@@ -684,6 +728,44 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
 
   metricUnit(id: string): string {
     return this.metrics().find((m) => m.id === id)?.unit ?? '';
+  }
+
+  goalPlaceholder(metricTypeId: string): string {
+    const m = this.metrics().find((x) => x.id === metricTypeId);
+    return m?.goalKind === 'at_most' ? 'Tope máx' : 'Meta mín';
+  }
+
+  async syncFromMatches(): Promise<void> {
+    const uid = this.userId();
+    const prog = this.program();
+    if (!uid || !prog) return;
+
+    this.saving.set(true);
+    this.error.set(null);
+    this.syncHint.set(null);
+    try {
+      const periodId =
+        this.cadence === 'monthly' ? currentMonthPeriodId() : currentIsoWeekPeriodId();
+      const result = await this.objectives.syncActualsFromMatchesOnce({
+        userId: uid,
+        programId: prog.programId,
+        periodId,
+        platform: this.platform() ?? prog.platform ?? undefined,
+      });
+      this.syncHint.set(
+        `Sincronizado ${result.synced.length} métricas desde ${result.matchCount} partidas` +
+          (result.skipped.length ? ` · ${result.skipped.length} omitidas` : '') +
+          ` · ${result.periodId}.`,
+      );
+      await this.refreshEvolution(uid, prog.programId);
+      this.dataChanged.emit();
+    } catch (err) {
+      this.error.set(
+        extractGraphqlErrorMessage(err) || 'No se pudo sincronizar desde partidas.',
+      );
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   statusTone(status: string): 'lime' | 'cyan' | 'purple' | 'pink' | 'muted' | 'gold' {
