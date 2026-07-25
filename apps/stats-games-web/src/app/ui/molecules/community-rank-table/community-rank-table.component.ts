@@ -49,10 +49,28 @@ export type CommunityRankVariant = 'snapshot' | 'deep';
         }
         <div class="sg-community-rank__scroll">
           <table class="sg-community-rank__table">
+            <colgroup>
+              <col class="sg-community-rank__col-rank" />
+              <col class="sg-community-rank__col-player" />
+              <col class="sg-community-rank__col-metric" />
+              <col class="sg-community-rank__col-metric" />
+              @if (!isSnapshot) {
+                <col class="sg-community-rank__col-kda sg-community-rank__col--optional" />
+                <col class="sg-community-rank__col-metric sg-community-rank__col--optional" />
+                @if (showRankPoints) {
+                  <col class="sg-community-rank__col-metric sg-community-rank__col--optional" />
+                }
+                <col class="sg-community-rank__col-metric sg-community-rank__col--optional" />
+              }
+              <col class="sg-community-rank__col-score" />
+              @if (!isSnapshot) {
+                <col class="sg-community-rank__col-delta sg-community-rank__col--delta" />
+              }
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col" class="sg-community-rank__th--rank" title="Puesto en la muestra">#</th>
-                <th scope="col">Jugador</th>
+                <th scope="col" class="sg-community-rank__th--player">Jugador</th>
                 <th
                   scope="col"
                   class="sg-community-rank__th--num"

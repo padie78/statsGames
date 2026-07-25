@@ -37,3 +37,26 @@ function isoWeek(date: Date): string {
   const week = Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
   return String(week).padStart(2, '0');
 }
+
+/** ISO week id for a Date (UTC): `2026-W30`. */
+export function isoWeekPeriodIdFromDate(date: Date = new Date()): string {
+  const tmp = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+  return `${tmp.getUTCFullYear()}-W${isoWeek(tmp)}`;
+}
+
+/** Semana ISO anterior (`2026-W30` → `2026-W29`). */
+export function previousWeeklyPeriodId(periodId: string): string | null {
+  const match = /^(\d{4})-W(\d{2})$/.exec(periodId.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  // Lunes de esa semana ISO → restar 7 días.
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (day - 1) + (week - 1) * 7);
+  monday.setUTCDate(monday.getUTCDate() - 7);
+  return isoWeekPeriodIdFromDate(monday);
+}

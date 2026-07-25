@@ -12,6 +12,11 @@ import {
   resolveMatchHistory,
 } from '../../data/match-mock.data';
 import { AuthService } from '../../core/auth/auth.service';
+import { AnalysisRangeService } from '../../core/analysis/analysis-range.service';
+import {
+  analysisRangeNoun,
+  type AnalysisRangeId,
+} from '../../core/analysis/analysis-range';
 import { GameContextService } from '../../core/game/game-context.service';
 import { gamePlatformMeta } from '../../core/game/game-platform.config';
 import {
@@ -44,6 +49,7 @@ import {
 } from '../../services/stats.service';
 import {
   AgentOfWeekComponent,
+  AnalysisRangeToggleComponent,
   CommunityRankTableComponent,
   MatchHighlightCardComponent,
   TrackStartPanelComponent,
@@ -81,6 +87,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
     WeekHeroBrandComponent,
     WeeklyHomeSummaryComponent,
     AgentOfWeekComponent,
+    AnalysisRangeToggleComponent,
   ],
   animations: [sgFadeSlideIn],
   template: `
@@ -113,7 +120,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
         <section
           class="sg-dashboard__week"
           [attr.data-game]="heroPlatform()"
-          aria-label="Resumen semanal"
+          [attr.aria-label]="'Resumen · ' + rangeNoun()"
         >
           <img
             class="sg-dashboard__week-art"
@@ -135,12 +142,12 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
               <h1 class="sg-dashboard__week-title">Inicio</h1>
               <p class="sg-dashboard__week-lede u-m-0">
                 @if (needsTrackingSetup()) {
-                  Conectá tu cuenta del juego para ver KPIs reales, forma semanal y análisis.
+                  Conectá tu cuenta del juego para ver KPIs reales, forma y análisis.
                 } @else if (weekMatchCount() === 0) {
-                  Todavía no hay partidas en la ventana semanal. Cuando juegues, acá aparece el
+                  Todavía no hay partidas en {{ rangeNoun() }}. Cuando juegues, acá aparece el
                   resumen de forma y el análisis.
                 } @else {
-                  Esta semana: {{ weekSummary().winCount }}V /
+                  {{ rangeMeta().label }}: {{ weekSummary().winCount }}V /
                   {{ weekMatchCount() }} partidas · WR {{ weekSummary().winRate }}.
                   @if (matchesUsePreview()) {
                     <span class="sg-analytics__badge">preview</span>
@@ -148,7 +155,15 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                 }
               </p>
 
-              <div class="sg-dashboard__week-kpis" aria-label="KPIs de la semana">
+              <div class="sg-dashboard__week-range">
+                <sg-analysis-range-toggle
+                  [value]="analysisRange.range()"
+                  ariaLabel="Rango de análisis"
+                  (rangeChange)="onAnalysisRangeChange($event)"
+                />
+              </div>
+
+              <div class="sg-dashboard__week-kpis" [attr.aria-label]="'KPIs · ' + rangeNoun()">
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">{{ weekSummary().winRate }}</span>
                   <span class="sg-dashboard__week-kpi-label">Win rate</span>
@@ -175,13 +190,13 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
             <div class="sg-dashboard__block-head">
               <div>
                 <h2 id="dash-section-analysis" class="sg-dashboard__block-title">
-                  Análisis semanal
+                  Análisis · {{ rangeMeta().label }}
                 </h2>
                 <p class="sg-dashboard__block-desc">
                   @if (needsTrackingSetup()) {
-                    Vinculá tu cuenta para ver cómo venís esta semana.
+                    Vinculá tu cuenta para ver cómo venís en {{ rangeNoun() }}.
                   } @else {
-                    Forma, foco y plan de práctica.
+                    Forma, foco y plan de práctica según el rango elegido.
                   }
                 </p>
               </div>
@@ -214,7 +229,7 @@ import { extractGraphqlErrorMessage } from '../../utils/graphql-error.util';
                     Tu puesto esta semana
                   </h2>
                   <p class="sg-dashboard__block-desc">
-                    Quién está justo arriba y abajo tuyo.
+                    Ranking comunitario semanal (referencia). Quién está justo arriba y abajo.
                     @if (communityUsesMock()) {
                       <span class="sg-analytics__badge">preview</span>
                     }
@@ -302,6 +317,7 @@ export class DashboardPageComponent implements OnInit {
   readonly notifications = inject(MatchNotificationsStore);
   private readonly productAlerts = inject(InAppAlertsStore);
   private readonly gameContext = inject(GameContextService);
+  readonly analysisRange = inject(AnalysisRangeService);
   private readonly matchService = inject(MatchService);
   private readonly matchAi = inject(MatchAiService);
   private readonly playerService = inject(PlayerService);
@@ -342,6 +358,8 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly platformMeta = computed(() => gamePlatformMeta(this.heroPlatform()));
+  readonly rangeMeta = computed(() => this.analysisRange.meta());
+  readonly rangeNoun = computed(() => analysisRangeNoun(this.analysisRange.range()));
   private readonly weekBannerFailed = signal(false);
   /** Tras fallo del splash del campeón, probar splash curado una vez. */
   private readonly weekBannerRetried = signal(false);
@@ -484,9 +502,11 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly weeklyKd = computed(() => {
-    const w = this.weekly();
-    if (w && w.matchCount > 0) {
-      return computeKdRatio(w.totalKills, w.totalDeaths);
+    if (this.rangeMeta().preferWeeklyRollup) {
+      const w = this.weekly();
+      if (w && w.matchCount > 0) {
+        return computeKdRatio(w.totalKills, w.totalDeaths);
+      }
     }
     const summary = this.weekSummary();
     if (summary.matchCount > 0) {
@@ -496,7 +516,7 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly weekMatches = computed(() =>
-    filterMatchesWithinDays(this.effectiveRecentMatches(), 7),
+    filterMatchesWithinDays(this.effectiveRecentMatches(), this.rangeMeta().days),
   );
 
   readonly weekSummary = computed(() => aggregateMatchStats(this.weekMatches()));
@@ -507,9 +527,12 @@ export class DashboardPageComponent implements OnInit {
     return stamp.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   });
 
-  readonly weekMatchCount = computed(
-    () => this.weekly()?.matchCount ?? this.weekSummary().matchCount,
-  );
+  readonly weekMatchCount = computed(() => {
+    if (this.rangeMeta().preferWeeklyRollup) {
+      return this.weekly()?.matchCount ?? this.weekSummary().matchCount;
+    }
+    return this.weekSummary().matchCount;
+  });
 
   /**
    * Onboarding de conexión solo si el juego activo no tiene ID vinculado en el perfil.
@@ -646,7 +669,11 @@ export class DashboardPageComponent implements OnInit {
   });
 
   readonly communityRank = computed<CommunityRankTableView | null>(() => {
-    const summary = this.weekSummary();
+    // Ranking comunitario siempre semanal (backend WEEKLY).
+    const weeklyMatches = filterMatchesWithinDays(this.effectiveRecentMatches(), 7);
+    const summary = this.rangeMeta().preferWeeklyRollup
+      ? this.weekSummary()
+      : aggregateMatchStats(weeklyMatches);
     const kd =
       summary.totalDeaths > 0
         ? summary.totalKills / summary.totalDeaths
@@ -692,12 +719,16 @@ export class DashboardPageComponent implements OnInit {
     if (report?.status === 'ready' && report.matchId) {
       return 'Ver último análisis de partida';
     }
-    return 'Ver análisis semanal';
+    return `Ver análisis · ${this.rangeMeta().shortLabel}`;
   });
 
   ngOnInit(): void {
     void this.loadData();
     this.realtime.ensureConnected();
+  }
+
+  onAnalysisRangeChange(id: AnalysisRangeId): void {
+    this.analysisRange.setRange(id);
   }
 
   async refresh(event: CustomEvent): Promise<void> {
@@ -802,11 +833,12 @@ export class DashboardPageComponent implements OnInit {
         'fortnite';
       const platform = matchBackendPlatform(uiGame);
       const periodId = currentWeeklyPeriodIdForStats();
+      const matchLimit = Math.min(150, Math.max(50, this.rangeMeta().days + 40));
 
       const [matches, weeklyRows, community, leaderboard, aiReports] = await Promise.all([
         this.matchService.listPlayerMatchesOnce(userId, {
           platform: platform ?? undefined,
-          limit: 50,
+          limit: matchLimit,
         }),
         firstValueFrom(
           this.statsService.listPlayerStatsRollups(userId, 'WEEKLY', periodId, platform),
