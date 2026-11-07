@@ -66,6 +66,7 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
   template: `
     <sg-match-preview-modal
       [matchId]="previewMatchId()"
+      [seedMatch]="previewSeedMatch()"
       [platform]="bannerPlatform()"
       (closed)="closeMatchPreview()"
     />
@@ -114,50 +115,54 @@ import { resolveMatchHistory } from '../../data/match-mock.data';
                 }
               </p>
 
-              @if (heroChips().length) {
-                <div class="sg-dashboard__week-chips" aria-label="Región y modo">
-                  @for (chip of heroChips(); track chip.id) {
-                    <span
-                      class="sg-dashboard__week-chip"
-                      [attr.data-tone]="chip.tone"
-                    >{{ chip.label }}</span>
+              @if (heroChips().length || latestMatch() || !loading()) {
+                <div class="sg-dashboard__week-mid">
+                  @if (heroChips().length) {
+                    <div class="sg-dashboard__week-chips" aria-label="Región y modo">
+                      @for (chip of heroChips(); track chip.id) {
+                        <span
+                          class="sg-dashboard__week-chip"
+                          [attr.data-tone]="chip.tone"
+                        >{{ chip.label }}</span>
+                      }
+                    </div>
                   }
-                </div>
-              }
 
-              @if (latestMatch(); as latest) {
-                <div class="sg-dashboard__week-latest">
-                  <div class="sg-dashboard__week-latest-copy">
-                    <span class="sg-dashboard__week-latest-label">Último match</span>
-                    <span
-                      class="sg-dashboard__week-latest-title"
-                      [class.sg-dashboard__week-latest-title--win]="latest.won"
-                      [class.sg-dashboard__week-latest-title--loss]="!latest.won"
-                    >{{ latest.headline }}</span>
-                    <span class="sg-dashboard__week-latest-time">{{ latest.relativeTime }}</span>
-                  </div>
-                  <button
-                    type="button"
-                    class="u-btn u-btn--gold sg-dashboard__week-cta"
-                    (click)="openMatchPreview(latest)"
-                  >
-                    Ver análisis
-                  </button>
-                </div>
-              } @else if (!loading()) {
-                <div class="sg-dashboard__week-latest sg-dashboard__week-latest--empty">
-                  <div class="sg-dashboard__week-latest-copy">
-                    <span class="sg-dashboard__week-latest-label">Sin partidas</span>
-                    <span class="sg-dashboard__week-latest-title">
-                      Conectá tu cuenta para sincronizar el historial
-                    </span>
-                  </div>
-                  <a
-                    routerLink="/tabs/integrations"
-                    class="u-btn u-btn--gold sg-dashboard__week-cta"
-                  >
-                    Integraciones
-                  </a>
+                  @if (latestMatch(); as latest) {
+                    <div class="sg-dashboard__week-latest">
+                      <div class="sg-dashboard__week-latest-copy">
+                        <span class="sg-dashboard__week-latest-label">Último match</span>
+                        <span
+                          class="sg-dashboard__week-latest-title"
+                          [class.sg-dashboard__week-latest-title--win]="latest.won"
+                          [class.sg-dashboard__week-latest-title--loss]="!latest.won"
+                        >{{ latest.headline }}</span>
+                        <span class="sg-dashboard__week-latest-time">{{ latest.relativeTime }}</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="u-btn u-btn--gold sg-dashboard__week-cta"
+                        (click)="openMatchPreview(latest)"
+                      >
+                        Ver análisis
+                      </button>
+                    </div>
+                  } @else if (!loading()) {
+                    <div class="sg-dashboard__week-latest sg-dashboard__week-latest--empty">
+                      <div class="sg-dashboard__week-latest-copy">
+                        <span class="sg-dashboard__week-latest-label">Sin partidas</span>
+                        <span class="sg-dashboard__week-latest-title">
+                          Conectá tu cuenta para sincronizar el historial
+                        </span>
+                      </div>
+                      <a
+                        routerLink="/tabs/integrations"
+                        class="u-btn u-btn--gold sg-dashboard__week-cta"
+                      >
+                        Integraciones
+                      </a>
+                    </div>
+                  }
                 </div>
               }
 
@@ -341,6 +346,7 @@ export class MatchesPageComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
   readonly previewMatchId = signal<string | null>(null);
+  readonly previewSeedMatch = signal<MatchUpdateView | null>(null);
   private readonly heroArtFailed = signal(false);
 
   readonly bannerPlatform = computed(
@@ -696,10 +702,29 @@ export class MatchesPageComponent implements OnInit {
 
   openMatchPreview(match: { matchId: string } | MatchHistoryListItem): void {
     this.previewMatchId.set(match.matchId);
+    const listItem = match as MatchHistoryListItem;
+    const fromHistory = this.filteredMatches().find((m) => m.matchId === match.matchId);
+    if (fromHistory) {
+      this.previewSeedMatch.set(fromHistory);
+      return;
+    }
+    if (listItem.platform) {
+      this.previewSeedMatch.set({
+        userId: this.auth.userId() ?? '',
+        matchId: listItem.matchId,
+        platform: listItem.platform,
+        summary: listItem.summary ?? '',
+        updatedAt: listItem.updatedAt ?? new Date().toISOString(),
+        stats: listItem.stats ?? null,
+      });
+      return;
+    }
+    this.previewSeedMatch.set(null);
   }
 
   closeMatchPreview(): void {
     this.previewMatchId.set(null);
+    this.previewSeedMatch.set(null);
   }
 
   setDateFilter(value: MatchDateFilter): void {

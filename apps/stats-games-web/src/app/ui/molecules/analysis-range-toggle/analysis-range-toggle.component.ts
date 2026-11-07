@@ -4,11 +4,13 @@ import {
   todayPeriodId,
   type AnalysisRangeId,
 } from '../../../core/analysis/analysis-range';
+import { DatePickerComponent } from '../../atoms/date-picker/date-picker.component';
 
 @Component({
   standalone: true,
   selector: 'sg-analysis-range-toggle',
   encapsulation: ViewEncapsulation.None,
+  imports: [DatePickerComponent],
   template: `
     <div class="sg-analysis-range-wrap">
       <div class="sg-analysis-range" role="group" [attr.aria-label]="ariaLabel">
@@ -27,16 +29,13 @@ import {
       </div>
 
       @if (value === 'day') {
-        <label class="sg-analysis-range__day">
-          <span class="sg-analysis-range__day-label">Fecha</span>
-          <input
-            type="date"
-            class="sg-analysis-range__day-input"
-            [value]="selectedDayIso"
-            [max]="maxDay"
-            (change)="onDayInput($event)"
-          />
-        </label>
+        <sg-date-picker
+          class="sg-analysis-range__day-picker"
+          label="Fecha"
+          [value]="selectedDayIso"
+          [max]="maxDay"
+          (valueChange)="dayChange.emit($event)"
+        />
       }
     </div>
   `,
@@ -54,11 +53,5 @@ export class AnalysisRangeToggleComponent {
   onSelect(id: AnalysisRangeId): void {
     if (id === this.value) return;
     this.rangeChange.emit(id);
-  }
-
-  onDayInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    if (!value) return;
-    this.dayChange.emit(value);
   }
 }

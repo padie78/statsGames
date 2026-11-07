@@ -1,6 +1,6 @@
 import { GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import type { IMatchReader, IMatchWriter } from '@stats-games/application';
-import { DynamoKeys, EntityType, KeyPrefix } from '@stats-games/common';
+import { DynamoKeys, EntityType, GAME_PLATFORMS, KeyPrefix } from '@stats-games/common';
 import { Match, MatchStats } from '@stats-games/domain';
 import { getDocumentClient } from '../aws/dynamodb-client.factory';
 
@@ -41,16 +41,8 @@ export class DynamoDbMatchRepository implements IMatchWriter, IMatchReader {
 
   async getByUserAndMatchId(userId: string, matchId: string): Promise<Match | null> {
     const client = getDocumentClient();
-    const platforms = [
-      'valorant',
-      'league_of_legends',
-      'cs2',
-      'fortnite',
-      'roblox',
-      'rocket_league',
-    ] as const;
 
-    for (const platform of platforms) {
+    for (const platform of GAME_PLATFORMS) {
       const result = await client.send(
         new GetCommand({
           TableName: this.tableName,
@@ -64,7 +56,7 @@ export class DynamoDbMatchRepository implements IMatchWriter, IMatchReader {
       return Match.reconstitute({
         userId: String(result.Item['userId']),
         matchId: String(result.Item['matchId']),
-        platform: result.Item['platform'] as (typeof platforms)[number],
+        platform: result.Item['platform'] as (typeof GAME_PLATFORMS)[number],
         stats: MatchStats.fromRecord(JSON.parse(String(result.Item['statsJson'] ?? '{}'))),
         occurredAtIso: String(result.Item['occurredAtIso']),
         correlationId: String(result.Item['correlationId']),

@@ -53,6 +53,44 @@ import {
                 Configuración.
               </p>
 
+              <div class="sg-dashboard__week-mid">
+                <div class="sg-dashboard__week-chips" aria-label="Estado del perfil">
+                  <span class="sg-dashboard__week-chip">{{ game().label }}</span>
+                  <span
+                    class="sg-dashboard__week-chip"
+                    [attr.data-tone]="gamerTag() ? 'win' : 'warn'"
+                  >
+                    {{ gamerTag() ? 'Público listo' : 'Falta gamer tag' }}
+                  </span>
+                </div>
+                <div class="sg-dashboard__week-latest">
+                  <div class="sg-dashboard__week-latest-copy">
+                    <span class="sg-dashboard__week-latest-label">Tu ficha</span>
+                    <span class="sg-dashboard__week-latest-title">
+                      {{ gamerTag() || 'Sin gamer tag' }}
+                    </span>
+                    <span class="sg-dashboard__week-latest-time">
+                      {{ game().badge }}
+                    </span>
+                  </div>
+                  @if (gamerTag(); as tag) {
+                    <a
+                      class="u-btn u-btn--gold sg-dashboard__week-cta"
+                      [routerLink]="['/player', tag]"
+                    >
+                      Ver ficha
+                    </a>
+                  } @else {
+                    <a
+                      routerLink="/tabs/settings"
+                      class="u-btn u-btn--gold sg-dashboard__week-cta"
+                    >
+                      Configurar
+                    </a>
+                  }
+                </div>
+              </div>
+
               <div class="sg-dashboard__week-kpis" aria-label="Identidad">
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">{{ initials() }}</span>

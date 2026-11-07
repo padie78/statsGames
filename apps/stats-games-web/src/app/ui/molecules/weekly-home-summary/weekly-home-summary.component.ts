@@ -13,6 +13,7 @@ import {
   buildYouVsBenchmarkChartOptions,
 } from '../../../core/charts/echart-theme.util';
 import type { WeeklyAiCoachSummary } from '../../../utils/weekly-ai-summary.util';
+import { compactFocusHeadline } from '../../../utils/weekly-ai-summary.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
 
 interface HomeWeekChip {
@@ -40,12 +41,14 @@ interface HomeWeekChip {
             <p class="sg-home-week__narrative u-m-0">{{ summary.narrative[0] }}</p>
           }
         </div>
-        <div class="sg-home-week__meta">
-          <sg-neon-badge tone="gold">
-            {{ summary.winCount }}V · {{ summary.lossCount }}D
-          </sg-neon-badge>
-          <sg-neon-badge tone="gold">{{ summary.matchCount }} partidas</sg-neon-badge>
-        </div>
+        @if (showMeta) {
+          <div class="sg-home-week__meta">
+            <sg-neon-badge tone="gold">
+              {{ summary.winCount }}V · {{ summary.lossCount }}D
+            </sg-neon-badge>
+            <sg-neon-badge tone="gold">{{ summary.matchCount }} partidas</sg-neon-badge>
+          </div>
+        }
       </header>
 
       <div class="sg-home-week__body">
@@ -138,6 +141,12 @@ export class WeeklyHomeSummaryComponent {
   @Input({ required: true }) summary!: WeeklyAiCoachSummary;
   @Input() kdLabel = 'K/D';
   @Input() ctaLabel = 'Ver análisis semanal';
+  /** Off cuando el contenedor ya muestra V/D y partidas (KPIs del hero). */
+  @Input() showMeta = true;
+  /** Off cuando el contenedor ya grafica forma y comunidad. */
+  @Input() showCharts = true;
+  /** Off cuando el contenedor ya muestra el bloque «Tu foco ahora». */
+  @Input() showFocusChip = true;
   @Output() readonly primaryClick = new EventEmitter<void>();
 
   get chips(): HomeWeekChip[] {
@@ -145,8 +154,12 @@ export class WeeklyHomeSummaryComponent {
     if (this.summary?.strengths[0]) {
       items.push({ label: 'Bien', text: this.summary.strengths[0], tone: 'lime' });
     }
-    if (this.summary?.focusNext) {
-      items.push({ label: 'Foco', text: this.summary.focusNext, tone: 'gold' });
+    if (this.showFocusChip && this.summary?.focusNext) {
+      items.push({
+        label: 'Foco',
+        text: compactFocusHeadline(this.summary.focusNext),
+        tone: 'gold',
+      });
     }
     return items;
   }
@@ -160,6 +173,7 @@ export class WeeklyHomeSummaryComponent {
   }
 
   get hasCharts(): boolean {
+    if (!this.showCharts) return false;
     return !!this.summary?.killsTrend.length || !!this.summary?.communityRows.length;
   }
 

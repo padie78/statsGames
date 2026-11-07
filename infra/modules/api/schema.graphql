@@ -8,6 +8,9 @@ type Query {
   listPlayerMatches(userId: ID!, platform: String, limit: Int): [MatchUpdate!]!
     @aws_api_key
     @aws_cognito_user_pools
+  getPlayerMatch(userId: ID!, matchId: ID!): MatchUpdate
+    @aws_api_key
+    @aws_cognito_user_pools
   getMatchAiReport(userId: ID!, matchId: ID!): MatchAiReport
     @aws_api_key
     @aws_cognito_user_pools

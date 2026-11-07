@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import {
   Component,
+  ElementRef,
   HostListener,
   OnDestroy,
   ViewEncapsulation,
@@ -13,6 +14,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { lolMatchesBannerSplashUrl } from '../../../core/game/lol-ddragon.util';
+import { valorantMatchesBannerSplashUrl } from '../../../core/game/valorant-assets.util';
 import {
   OBJECTIVE_DOMAIN_LABELS,
   OBJECTIVE_DOMAIN_ORDER,
@@ -45,6 +48,74 @@ import { sgFadeSlideIn, sgModalIn } from '../../animations/sg-motion';
 type ObjTab = 'builder' | 'reality' | 'compliance' | 'history';
 type HistoryFilter = 'all' | 'in_progress' | 'fulfilled' | 'not_fulfilled';
 type ModalKind = 'program' | 'execution' | null;
+type ComplianceFilter = 'all' | 'aligned' | 'above' | 'critical' | 'pending';
+type ComplianceStatus = 'aligned' | 'above' | 'critical' | 'pending';
+type DeltaTone = 'ok' | 'warn' | 'danger' | 'muted';
+
+/** Fila de cumplimiento lista para render: plan, real, desvío y barra. */
+interface ComplianceRowVm {
+  key: string;
+  metricTypeId: string;
+  metricLabel: string;
+  domainLabel: string;
+  goalLabel: string;
+  sourceLabel: string;
+  periodId: string;
+  unit: string;
+  planLabel: string;
+  actualLabel: string;
+  pctLabel: string;
+  compliancePct: number | null;
+  /** Ancho de la barra: la meta (100%) queda en el 75% del track. */
+  barPct: number;
+  deltaLabel: string;
+  deltaTone: DeltaTone;
+  status: ComplianceStatus;
+  statusLabel: string;
+}
+
+/** La meta (100%) se dibuja al 75% del track para dejar ver el excedente. */
+const COMPLIANCE_GOAL_ANCHOR_PCT = 75;
+
+function complianceBarWidth(pct: number | null): number {
+  if (pct == null) return 0;
+  const scaled = (pct / 100) * COMPLIANCE_GOAL_ANCHOR_PCT;
+  return Math.max(2, Math.min(100, Math.round(scaled)));
+}
+
+function formatMetricValue(value: number, unit: string): string {
+  const rounded = Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, '');
+  return unit ? `${rounded} ${unit}` : rounded;
+}
+
+function formatDeltaValue(delta: number | null, unit: string): string {
+  if (delta == null) return '—';
+  const rounded = Math.round(delta * 100) / 100;
+  if (rounded === 0) return unit ? `0 ${unit}` : '0';
+  const sign = rounded > 0 ? '+' : '';
+  return `${sign}${formatMetricValue(rounded, unit)}`;
+}
+
+function deltaToneForStatus(status: ComplianceStatus): DeltaTone {
+  if (status === 'aligned') return 'ok';
+  if (status === 'above') return 'warn';
+  if (status === 'critical') return 'danger';
+  return 'muted';
+}
+
+/** Ordena críticas primero, luego sin dato, alineadas y excedidas. */
+function complianceSortWeight(row: ComplianceRowVm): number {
+  switch (row.status) {
+    case 'critical':
+      return 0;
+    case 'pending':
+      return 1;
+    case 'aligned':
+      return 2;
+    default:
+      return 3;
+  }
+}
 
 interface DraftTargetRow {
   metricTypeId: string;
@@ -392,73 +463,236 @@ interface DraftTargetRow {
       @if (tab() === 'compliance') {
         <div class="sg-obj-panel__body" role="tabpanel">
           @if (!evolution()) {
-            <p class="sg-obj-empty u-m-0">
-              Sin datos de cumplimiento. Definí metas y cargá al menos una ejecución.
-            </p>
-          } @else {
-            <div class="sg-obj-kpis" aria-label="KPIs de cumplimiento">
-              <article class="sg-obj-kpi">
-                <span class="sg-obj-kpi__value">
-                  {{
-                    evolution()!.globalCompliancePct != null
-                      ? evolution()!.globalCompliancePct + '%'
-                      : '—'
-                  }}
-                </span>
-                <span class="sg-obj-kpi__label">Cumplimiento global</span>
-              </article>
-              <article class="sg-obj-kpi sg-obj-kpi--ok">
-                <span class="sg-obj-kpi__value">{{ evolution()!.alignedCount }}</span>
-                <span class="sg-obj-kpi__label">Alineados</span>
-              </article>
-              <article class="sg-obj-kpi sg-obj-kpi--warn">
-                <span class="sg-obj-kpi__value">{{ evolution()!.aboveCount }}</span>
-                <span class="sg-obj-kpi__label">Por encima</span>
-              </article>
-              <article class="sg-obj-kpi sg-obj-kpi--danger">
-                <span class="sg-obj-kpi__value">{{ evolution()!.criticalCount }}</span>
-                <span class="sg-obj-kpi__label">Críticos</span>
-              </article>
+            <div class="sg-obj-empty-card">
+              <p class="sg-obj-empty u-m-0">
+                Todavía no hay nada que medir: definí metas en el programa y cargá al menos una
+                ejecución real, o sincronizá los KPIs desde tus partidas.
+              </p>
+              <div class="sg-obj-actions">
+                <button type="button" class="u-btn u-btn--gold" (click)="openBuilder()">
+                  Ver programa
+                </button>
+                <button type="button" class="u-btn u-btn--ghost" (click)="tab.set('reality')">
+                  Cargar realidad
+                </button>
+              </div>
             </div>
+          } @else {
+            <article
+              class="sg-match-panel u-surface-card sg-obj-compliance-hero"
+              [attr.data-status]="complianceOverallStatus()"
+            >
+              <div class="sg-match-panel__body">
+                <header class="sg-match-panel__header">
+                  <div class="sg-match-panel__title-block">
+                    <p class="sg-match-panel__eyebrow">Plan vs realidad</p>
+                    <h3 class="sg-match-panel__title">{{ evolution()!.title }}</h3>
+                    <p class="sg-match-panel__summary">
+                      {{ evolution()!.cadence === 'monthly' ? 'Cadencia mensual' : 'Cadencia semanal' }}
+                      · {{ complianceRows().length }} metas
+                      · {{ compliancePeriodLabel() }}
+                    </p>
+                  </div>
+
+                  <div
+                    class="sg-match-panel__score"
+                    [attr.aria-label]="
+                      'Cumplimiento global ' +
+                      (evolution()!.globalCompliancePct != null
+                        ? roundPct(evolution()!.globalCompliancePct!) + '%'
+                        : 'sin dato')
+                    "
+                  >
+                    <div class="sg-match-panel__score-part">
+                      <span class="sg-match-panel__score-num">
+                        {{
+                          evolution()!.globalCompliancePct != null
+                            ? roundPct(evolution()!.globalCompliancePct!) + '%'
+                            : '—'
+                        }}
+                      </span>
+                      <span class="sg-match-panel__score-label">Global</span>
+                    </div>
+                  </div>
+                </header>
+
+                <div class="sg-obj-gauge">
+                  <div class="sg-obj-gauge__track">
+                    <div
+                      class="sg-obj-gauge__fill"
+                      [style.width.%]="complianceGaugePct()"
+                      [attr.data-status]="complianceOverallStatus()"
+                    ></div>
+                    <span class="sg-obj-gauge__goal" aria-hidden="true"></span>
+                  </div>
+                  <div class="sg-obj-gauge__legend">
+                    <span>0%</span>
+                    <span class="sg-obj-gauge__legend-goal">Meta 100%</span>
+                    <span>133%+</span>
+                  </div>
+                  <p class="sg-obj-gauge__caption u-m-0">{{ complianceHeadline() }}</p>
+                </div>
+
+                <ul class="sg-match-panel__strip" aria-label="Distribución de metas">
+                  <li class="sg-match-panel__strip-item">
+                    <span class="sg-match-panel__strip-value">{{ complianceCounts().aligned }}</span>
+                    <span class="sg-match-panel__strip-label">Alineadas</span>
+                  </li>
+                  <li class="sg-match-panel__strip-item">
+                    <span class="sg-match-panel__strip-value">{{ complianceCounts().above }}</span>
+                    <span class="sg-match-panel__strip-label">Excedidas</span>
+                  </li>
+                  <li class="sg-match-panel__strip-item">
+                    <span class="sg-match-panel__strip-value">{{ complianceCounts().critical }}</span>
+                    <span class="sg-match-panel__strip-label">Críticas</span>
+                  </li>
+                  <li class="sg-match-panel__strip-item">
+                    <span class="sg-match-panel__strip-value">{{ complianceCounts().pending }}</span>
+                    <span class="sg-match-panel__strip-label">Sin dato</span>
+                  </li>
+                </ul>
+              </div>
+            </article>
+
+            @if (complianceFocus(); as focus) {
+              <aside class="sg-obj-focus-card" [attr.data-status]="focus.status">
+                <p class="sg-obj-focus-card__eyebrow u-m-0">Foco recomendado</p>
+                <p class="sg-obj-focus-card__title u-m-0">{{ focus.metricLabel }}</p>
+                <p class="sg-obj-focus-card__body u-m-0">{{ complianceFocusAdvice() }}</p>
+                @if (complianceBest(); as best) {
+                  <p class="sg-obj-focus-card__note u-m-0">
+                    Sostené <strong>{{ best.metricLabel }}</strong> ({{ best.pctLabel }}): ahí el plan
+                    ya se está cumpliendo.
+                  </p>
+                }
+                <button type="button" class="u-btn u-btn--ghost" (click)="tab.set('reality')">
+                  Actualizar realidad
+                </button>
+              </aside>
+            }
+
+            <div class="sg-obj-history-filters" role="group" aria-label="Filtrar metas por estado">
+              <button
+                type="button"
+                class="sg-obj-history-filter"
+                [class.sg-obj-history-filter--active]="complianceFilter() === 'all'"
+                (click)="complianceFilter.set('all')"
+              >
+                Todas ({{ complianceCounts().all }})
+              </button>
+              <button
+                type="button"
+                class="sg-obj-history-filter"
+                [class.sg-obj-history-filter--active]="complianceFilter() === 'critical'"
+                (click)="complianceFilter.set('critical')"
+              >
+                Críticas ({{ complianceCounts().critical }})
+              </button>
+              <button
+                type="button"
+                class="sg-obj-history-filter"
+                [class.sg-obj-history-filter--active]="complianceFilter() === 'aligned'"
+                (click)="complianceFilter.set('aligned')"
+              >
+                Alineadas ({{ complianceCounts().aligned }})
+              </button>
+              <button
+                type="button"
+                class="sg-obj-history-filter"
+                [class.sg-obj-history-filter--active]="complianceFilter() === 'above'"
+                (click)="complianceFilter.set('above')"
+              >
+                Excedidas ({{ complianceCounts().above }})
+              </button>
+              <button
+                type="button"
+                class="sg-obj-history-filter"
+                [class.sg-obj-history-filter--active]="complianceFilter() === 'pending'"
+                (click)="complianceFilter.set('pending')"
+              >
+                Sin dato ({{ complianceCounts().pending }})
+              </button>
+            </div>
+
+            @if (!complianceGroups().length) {
+              <p class="sg-obj-empty u-m-0">No hay metas con este estado en el programa.</p>
+            } @else {
+              @for (group of complianceGroups(); track group.periodId) {
+                <section class="sg-obj-compliance-group">
+                  <div class="sg-obj-summary__section-head">
+                    <h4 class="sg-obj-summary__section-title">Período {{ group.periodId }}</h4>
+                    <span class="sg-obj-compliance-group__count">
+                      {{ group.rows.length }} metas
+                    </span>
+                  </div>
+
+                  <ul class="sg-obj-compliance-list">
+                    @for (row of group.rows; track row.key) {
+                      <li class="sg-obj-compliance-row" [attr.data-status]="row.status">
+                        <div class="sg-obj-compliance-row__head">
+                          <div class="sg-obj-compliance-row__ident">
+                            <p class="sg-obj-compliance-row__label u-m-0">{{ row.metricLabel }}</p>
+                            <p class="sg-obj-compliance-row__meta u-m-0">
+                              {{ row.domainLabel }} · {{ row.goalLabel }} · {{ row.sourceLabel }}
+                            </p>
+                          </div>
+                          <sg-neon-badge [tone]="statusTone(row.status)">
+                            {{ row.statusLabel }}
+                          </sg-neon-badge>
+                        </div>
+
+                        <div
+                          class="sg-obj-compliance-row__bar"
+                          role="img"
+                          [attr.aria-label]="
+                            row.metricLabel +
+                            ': real ' +
+                            row.actualLabel +
+                            ' sobre plan ' +
+                            row.planLabel +
+                            ' (' +
+                            row.pctLabel +
+                            ')'
+                          "
+                        >
+                          <div class="sg-obj-compliance-row__track">
+                            <div
+                              class="sg-obj-compliance-row__fill"
+                              [style.width.%]="row.barPct"
+                            ></div>
+                            <span class="sg-obj-compliance-row__goal" aria-hidden="true"></span>
+                          </div>
+                          <span class="sg-obj-compliance-row__pct">{{ row.pctLabel }}</span>
+                        </div>
+
+                        <dl class="sg-obj-compliance-row__values">
+                          <div>
+                            <dt>Plan</dt>
+                            <dd>{{ row.planLabel }}</dd>
+                          </div>
+                          <div>
+                            <dt>Real</dt>
+                            <dd>{{ row.actualLabel }}</dd>
+                          </div>
+                          <div>
+                            <dt>Desvío</dt>
+                            <dd [attr.data-tone]="row.deltaTone">{{ row.deltaLabel }}</dd>
+                          </div>
+                        </dl>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
+            }
 
             <sg-stats-comparison-chart
               title="Plan vs Real por métrica"
-              subtitle="Barras: meta planificada vs ejecución acumulada."
+              subtitle="Barras: meta planificada vs ejecución acumulada del programa."
               youLabel="Real"
               benchmarkLabel="Plan"
               [rows]="chartRows()"
             />
-
-            <div class="sg-obj-table-wrap">
-              <table class="sg-obj-table">
-                <thead>
-                  <tr>
-                    <th>Métrica</th>
-                    <th>Período</th>
-                    <th>Plan</th>
-                    <th>Real</th>
-                    <th>%</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of evolution()!.rows; track row.metricTypeId + row.periodId) {
-                    <tr [attr.data-status]="row.status">
-                      <td>{{ row.metricLabel }}</td>
-                      <td>{{ row.periodId }}</td>
-                      <td>{{ row.plannedValue }} {{ row.unit }}</td>
-                      <td>{{ row.actualValue ?? '—' }}</td>
-                      <td>{{ row.compliancePct != null ? row.compliancePct + '%' : '—' }}</td>
-                      <td>
-                        <sg-neon-badge [tone]="statusTone(row.status)">
-                          {{ row.statusLabel }}
-                        </sg-neon-badge>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
 
             <p class="sg-obj-hint u-m-0">
               Esto mide plan vs realidad del programa.
@@ -551,31 +785,53 @@ interface DraftTargetRow {
     </section>
 
     @if (modal() === 'program') {
-      <div class="sg-obj-modal" role="presentation" (click)="closeModal()" @sgFadeSlideIn>
+      <div
+        class="sg-match-modal sg-obj-modal--fullscreen"
+        role="presentation"
+        (click)="closeModal()"
+        @sgFadeSlideIn
+      >
+        <div class="sg-match-modal__wings" aria-hidden="true">
+          <div
+            class="sg-match-modal__wing sg-match-modal__wing--left"
+            [style.background-image]="'url(' + modalWingArtUrl() + ')'"
+          ></div>
+          <div
+            class="sg-match-modal__wing sg-match-modal__wing--right"
+            [style.background-image]="'url(' + modalWingArtUrl() + ')'"
+          ></div>
+        </div>
+
+        <button
+          type="button"
+          class="sg-match-modal__close"
+          aria-label="Cerrar"
+          (click)="closeModal()"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+
         <div
-          class="sg-obj-modal__dialog"
+          class="sg-match-modal__dialog page-shell page-shell--fluid sg-obj-modal__dialog--fullscreen"
           role="dialog"
           aria-modal="true"
           aria-labelledby="sg-obj-modal-program-title"
           (click)="$event.stopPropagation()"
           @sgModalIn
         >
-          <header class="sg-obj-modal__header">
+          <header class="sg-match-modal__header">
             <div>
-              <p class="sg-obj-modal__eyebrow">Programa</p>
-              <h3 id="sg-obj-modal-program-title" class="sg-obj-modal__title">
+              <p class="sg-match-modal__eyebrow">Programa</p>
+              <h3 id="sg-obj-modal-program-title" class="sg-match-modal__title">
                 {{ programModalMode() === 'create' ? 'Nuevo programa' : 'Editar programa' }}
               </h3>
-              <p class="sg-obj-modal__subtitle u-m-0">
+              <p class="sg-match-modal__subtitle u-m-0">
                 Elegí parámetros por dominio: competitivo, disciplina, mental, economía, técnica y más.
               </p>
             </div>
-            <button type="button" class="sg-obj-modal__close" aria-label="Cerrar" (click)="closeModal()">
-              ×
-            </button>
           </header>
 
-          <div class="sg-obj-modal__body">
+          <div class="sg-match-modal__body sg-obj-modal__body">
             <label class="sg-obj-field">
               <span>Título del programa</span>
               <input type="text" [(ngModel)]="title" placeholder="Ej. Prep ranked Q3" />
@@ -696,7 +952,7 @@ interface DraftTargetRow {
             </div>
           </div>
 
-          <footer class="sg-obj-modal__footer">
+          <footer class="sg-obj-modal__footer sg-obj-modal__footer--fullscreen">
             <button type="button" class="u-btn u-btn--ghost" (click)="closeModal()">Cancelar</button>
             <button
               type="button"
@@ -774,6 +1030,7 @@ interface DraftTargetRow {
 export class ObjectivesPlanPanelComponent implements OnDestroy {
   private readonly objectives = inject(ObjectivesService);
   private readonly document = inject(DOCUMENT);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly userId = input.required<string>();
   readonly platform = input<string | null>(null);
@@ -794,6 +1051,7 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
   /** Snapshot local para no perder activos entre cargas concurrentes / refresh. */
   readonly cachedPrograms = signal<TargetProgramView[]>([]);
   readonly historyFilter = signal<HistoryFilter>('all');
+  readonly complianceFilter = signal<ComplianceFilter>('all');
   readonly draftTargets = signal<DraftTargetRow[]>([]);
   readonly helpMetricIndex = signal<number | null>(null);
   readonly saving = signal(false);
@@ -898,6 +1156,122 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
       you: m.actualTotal,
       benchmark: m.plannedTotal,
     }));
+  });
+
+  readonly complianceRows = computed((): ComplianceRowVm[] => {
+    const evo = this.evolution();
+    if (!evo) return [];
+    const catalog = this.metrics();
+
+    return evo.rows.map((row) => {
+      const meta = catalog.find((m) => m.id === row.metricTypeId);
+      const domain = meta?.domain ?? 'competitive';
+      const goalKind = meta?.goalKind ?? 'at_least';
+      const isCeiling = goalKind === 'at_most';
+      const hasActual = row.actualValue != null;
+      const unit = row.unit || meta?.unit || '';
+      const pct = row.compliancePct ?? null;
+      const status: ComplianceStatus = hasActual
+        ? ((row.status as ComplianceStatus) ?? 'critical')
+        : 'pending';
+      const delta = hasActual ? (row.actualValue as number) - row.plannedValue : null;
+
+      return {
+        key: `${row.metricTypeId}#${row.periodId}`,
+        metricTypeId: row.metricTypeId,
+        metricLabel: row.metricLabel || meta?.label || row.metricTypeId,
+        domainLabel: OBJECTIVE_DOMAIN_LABELS[domain as ObjectiveMetricDomain] ?? domain,
+        goalLabel: isCeiling ? 'Tope máximo' : 'Meta mínima',
+        sourceLabel: meta?.autoSource ? 'Auto' : 'Manual',
+        periodId: row.periodId,
+        unit,
+        planLabel: `${isCeiling ? '≤' : '≥'} ${formatMetricValue(row.plannedValue, unit)}`,
+        actualLabel: hasActual
+          ? formatMetricValue(row.actualValue as number, unit)
+          : 'Sin cargar',
+        pctLabel: pct != null ? `${Math.round(pct)}%` : '—',
+        compliancePct: pct,
+        barPct: complianceBarWidth(pct),
+        deltaLabel: formatDeltaValue(delta, unit),
+        deltaTone: deltaToneForStatus(status),
+        status,
+        statusLabel: hasActual ? row.statusLabel : 'Sin dato',
+      };
+    });
+  });
+
+  readonly complianceCounts = computed(() => {
+    const rows = this.complianceRows();
+    return {
+      all: rows.length,
+      aligned: rows.filter((r) => r.status === 'aligned').length,
+      above: rows.filter((r) => r.status === 'above').length,
+      critical: rows.filter((r) => r.status === 'critical').length,
+      pending: rows.filter((r) => r.status === 'pending').length,
+    };
+  });
+
+  readonly filteredComplianceRows = computed(() => {
+    const filter = this.complianceFilter();
+    const rows = this.complianceRows();
+    if (filter === 'all') return rows;
+    return rows.filter((r) => r.status === filter);
+  });
+
+  /** Agrupa por período (más reciente primero) para leer la evolución del plan. */
+  readonly complianceGroups = computed(() => {
+    const byPeriod = new Map<string, ComplianceRowVm[]>();
+    for (const row of this.filteredComplianceRows()) {
+      const list = byPeriod.get(row.periodId) ?? [];
+      list.push(row);
+      byPeriod.set(row.periodId, list);
+    }
+    return [...byPeriod.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([periodId, rows]) => ({
+        periodId,
+        rows: [...rows].sort((a, b) => complianceSortWeight(a) - complianceSortWeight(b)),
+      }));
+  });
+
+  readonly compliancePeriodLabel = computed(() => {
+    const periods = [...new Set(this.complianceRows().map((r) => r.periodId))];
+    if (!periods.length) return this.draftPeriodId();
+    if (periods.length === 1) return periods[0]!;
+    return `${periods.length} períodos`;
+  });
+
+  readonly complianceOverallStatus = computed((): ComplianceStatus => {
+    const counts = this.complianceCounts();
+    if (counts.all > 0 && counts.pending === counts.all) return 'pending';
+    const pct = this.evolution()?.globalCompliancePct;
+    if (pct == null) return 'pending';
+    if (pct < 90) return 'critical';
+    if (pct > 115) return 'above';
+    return 'aligned';
+  });
+
+  readonly complianceGaugePct = computed(() =>
+    complianceBarWidth(this.evolution()?.globalCompliancePct ?? null),
+  );
+
+  /** Meta más floja: el próximo punto de mejora del programa. */
+  readonly complianceFocus = computed((): ComplianceRowVm | null => {
+    const rows = this.complianceRows();
+    const critical = rows
+      .filter((r) => r.status === 'critical')
+      .sort((a, b) => (a.compliancePct ?? 0) - (b.compliancePct ?? 0));
+    if (critical.length) return critical[0]!;
+    const pending = rows.filter((r) => r.status === 'pending');
+    if (pending.length) return pending[0]!;
+    return null;
+  });
+
+  readonly complianceBest = computed((): ComplianceRowVm | null => {
+    const rows = this.complianceRows()
+      .filter((r) => r.status === 'aligned' && r.compliancePct != null)
+      .sort((a, b) => (b.compliancePct ?? 0) - (a.compliancePct ?? 0));
+    return rows[0] ?? null;
   });
 
   readonly historyCounts = computed(() => {
@@ -1245,6 +1619,34 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     return pct != null ? `${Math.round(pct)}% cumplimiento` : 'Sin ejecución cargada';
   }
 
+  /** Lectura del cumplimiento global en tono directo para el jugador. */
+  complianceHeadline(): string {
+    const counts = this.complianceCounts();
+    switch (this.complianceOverallStatus()) {
+      case 'pending':
+        return 'Sin ejecución cargada todavía. Sincronizá desde partidas para que el plan empiece a medirse.';
+      case 'critical':
+        return `Estás por debajo del plan: ${counts.critical} de ${counts.all} metas en rojo. Priorizá una sola y sostenela.`;
+      case 'above':
+        return 'Superás el plan con holgura. Si ya te queda cómodo, subí la meta para seguir creciendo.';
+      default:
+        return 'Vas alineado al plan. Mantené el ritmo antes de agregar metas nuevas.';
+    }
+  }
+
+  /** Consejo accionable sobre la meta más floja del programa. */
+  complianceFocusAdvice(): string {
+    const focus = this.complianceFocus();
+    if (!focus) return '';
+    if (focus.status === 'pending') {
+      return `Todavía no cargaste la realidad de ${focus.metricLabel} en ${focus.periodId}. Sin dato no hay diagnóstico posible.`;
+    }
+    if (focus.goalLabel === 'Tope máximo') {
+      return `Te pasaste del tope: ${focus.actualLabel} contra un límite de ${focus.planLabel}. Bajarlo es la palanca más rápida del programa.`;
+    }
+    return `Vas al ${focus.pctLabel} de la meta: ${focus.actualLabel} contra ${focus.planLabel}. Recortá esa brecha antes de sumar objetivos nuevos.`;
+  }
+
   openBuilder(): void {
     this.tab.set('builder');
     const uid = this.userId();
@@ -1561,12 +1963,23 @@ export class ObjectivesPlanPanelComponent implements OnDestroy {
     if (history) this.history.set(history);
   }
 
+  /** Arte lateral del modal full-screen (mismo lenguaje que Análisis de partida). */
+  modalWingArtUrl(): string {
+    const id = this.program()?.programId ?? this.userId() ?? 'obj-modal';
+    let seed = 23;
+    for (let i = 0; i < id.length; i++) seed = (seed + id.charCodeAt(i) * (i + 5)) % 997;
+    if (this.platform() === 'valorant') {
+      return valorantMatchesBannerSplashUrl(seed);
+    }
+    return lolMatchesBannerSplashUrl(seed);
+  }
+
   private lockBody(): void {
-    this.document.body.classList.add('sg-obj-modal-lock');
+    this.document.body.classList.add('sg-obj-modal-lock', 'sg-match-modal-lock');
   }
 
   private unlockBody(): void {
-    this.document.body.classList.remove('sg-obj-modal-lock');
+    this.document.body.classList.remove('sg-obj-modal-lock', 'sg-match-modal-lock');
   }
 }
 

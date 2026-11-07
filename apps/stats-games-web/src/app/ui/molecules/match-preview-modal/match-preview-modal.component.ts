@@ -15,6 +15,7 @@ import {
 import { lolMatchesBannerSplashUrl } from '../../../core/game/lol-ddragon.util';
 import { valorantMatchesBannerSplashUrl } from '../../../core/game/valorant-assets.util';
 import type { SelectedGame } from '../../../core/game/selected-game';
+import type { MatchUpdateView } from '../../../services/match.service';
 import { sgFadeSlideIn, sgModalIn } from '../../animations/sg-motion';
 import { MatchAnalysisViewComponent } from '../../organisms/match-analysis-view/match-analysis-view.component';
 
@@ -66,7 +67,11 @@ import { MatchAnalysisViewComponent } from '../../organisms/match-analysis-view/
           </header>
 
           <div class="sg-match-modal__body">
-            <sg-match-analysis-view [matchId]="matchId" (ctaClick)="closed.emit()" />
+            <sg-match-analysis-view
+              [matchId]="matchId"
+              [seedMatch]="seedMatch"
+              (ctaClick)="closed.emit()"
+            />
           </div>
         </div>
       </div>
@@ -78,6 +83,7 @@ export class MatchPreviewModalComponent implements OnChanges, OnDestroy {
   private readonly document = inject(DOCUMENT);
 
   @Input() matchId: string | null = null;
+  @Input() seedMatch: MatchUpdateView | null = null;
   @Input() platform: SelectedGame | string | null = null;
   @Output() readonly closed = new EventEmitter<void>();
 

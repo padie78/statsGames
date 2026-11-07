@@ -834,3 +834,32 @@ function unique(values: string[]): string[] {
   }
   return out;
 }
+
+/**
+ * Copia corta para Inicio (hero / bloque foco).
+ * El plan completo queda en Coach; acá solo la palanca accionable.
+ */
+export function compactFocusHeadline(raw: string, maxLen = 44): string {
+  let text = raw.replace(/\s+/g, ' ').trim();
+  if (!text) return text;
+
+  text = text.replace(
+    /^(mejorar|mejora|mejorá|mejorar el|mejorar la|mejorar los|mejorar las|enfocate en|enfocá en|trabajar en|foco[:\s]+)\s+/i,
+    '',
+  );
+
+  const clauseBreak = text.search(
+    /\s+(para|con el fin de|a fin de|de manera que|así que|con el objetivo de)\s+/i,
+  );
+  if (clauseBreak >= 10) {
+    text = text.slice(0, clauseBreak).trim();
+  }
+
+  if (text.length > maxLen) {
+    const slice = text.slice(0, maxLen);
+    const at = slice.lastIndexOf(' ');
+    text = `${(at > 16 ? slice.slice(0, at) : slice).trimEnd()}…`;
+  }
+
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

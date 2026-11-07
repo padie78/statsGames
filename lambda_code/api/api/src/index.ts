@@ -7,6 +7,7 @@ import {
   getEvolutionAiReport,
   getMatchAiReport,
   getObjectiveEvolution,
+  getPlayerMatch,
   getPlayerProfile,
   getProfileByGamerTag,
   linkPlatformAccount,
@@ -34,6 +35,10 @@ type ResolverArgs =
   | {
       fieldName: 'listPlayerMatches';
       args: { userId: string; platform?: string | null; limit?: number | null };
+    }
+  | {
+      fieldName: 'getPlayerMatch';
+      args: { userId: string; matchId: string };
     }
   | {
       fieldName: 'getMatchAiReport';
@@ -142,6 +147,14 @@ async function dispatch(op: ResolverArgs): Promise<unknown> {
         limit: op.args.limit ?? undefined,
       });
       return rows.map(mapMatchUpdate);
+    }
+
+    case 'getPlayerMatch': {
+      const row = await getPlayerMatch.execute({
+        userId: op.args.userId,
+        matchId: op.args.matchId,
+      });
+      return row ? mapMatchUpdate(row) : null;
     }
 
     case 'getMatchAiReport':

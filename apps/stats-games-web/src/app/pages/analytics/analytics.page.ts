@@ -140,6 +140,31 @@ import {
               <h1 class="sg-dashboard__week-title">Evolución</h1>
               <p class="sg-dashboard__week-lede u-m-0">{{ heroLede() }}</p>
 
+              <div class="sg-dashboard__week-mid">
+                <div class="sg-dashboard__week-chips" aria-label="Contexto de evolución">
+                  <span class="sg-dashboard__week-chip">{{ rangeMeta().label }}</span>
+                  <span class="sg-dashboard__week-chip">
+                    {{ formWeeks() }} semanas
+                  </span>
+                  @if (communityUsesMock()) {
+                    <span class="sg-dashboard__week-chip">preview</span>
+                  }
+                </div>
+                <div class="sg-dashboard__week-latest">
+                  <div class="sg-dashboard__week-latest-copy">
+                    <span class="sg-dashboard__week-latest-label">Lectura del rango</span>
+                    <span class="sg-dashboard__week-latest-title">{{ heroSpotlightTitle() }}</span>
+                    <span class="sg-dashboard__week-latest-time">{{ heroSpotlightHint() }}</span>
+                  </div>
+                  <a
+                    routerLink="/tabs/ai-coach"
+                    class="u-btn u-btn--gold sg-dashboard__week-cta"
+                  >
+                    Coach →
+                  </a>
+                </div>
+              </div>
+
               <div class="sg-dashboard__week-kpis" [attr.aria-label]="'KPIs clave · ' + rangeNoun()">
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">{{ platformWeekSummary().winRate }}</span>
@@ -173,8 +198,6 @@ import {
             </div>
           </div>
           <sg-analysis-filters-panel
-            title="Período de análisis"
-            [subtitle]="'Activo: ' + rangeMeta().label"
             [value]="analysisRange.range()"
             [selectedDayIso]="analysisRange.selectedDayIso()"
             (rangeChange)="onAnalysisRangeChange($event)"
@@ -537,6 +560,19 @@ export class AnalyticsPageComponent implements OnInit, OnDestroy {
       return `Tu forma en ${noun}, la curva multi-semana y tu puesto en la muestra semanal. El detalle de cada partida vive en Partidas.`;
     }
     return `Elegí el rango arriba: KPIs, curvas, comparativas y ranking se recalculan con el historial disponible.`;
+  });
+
+  readonly heroSpotlightTitle = computed(() => {
+    const count = this.weekMatchCount();
+    if (count === 0) return `Sin partidas en ${this.rangeNoun()}`;
+    return `${this.compareTitle()} · ${count} partidas`;
+  });
+
+  readonly heroSpotlightHint = computed(() => {
+    if (this.weekMatchCount() === 0) {
+      return 'Ampliá el período o jugá para armar la curva.';
+    }
+    return `WR ${this.platformWeekSummary().winRate} · ${this.kdLabel()} ${this.heroKd()}`;
   });
 
   readonly evolutionAiSubtitle = computed(() => {

@@ -4,6 +4,7 @@ import {
   todayPeriodId,
   type AnalysisRangeId,
 } from '../../../core/analysis/analysis-range';
+import { DatePickerComponent } from '../../atoms/date-picker/date-picker.component';
 
 /**
  * Panel de período unificado (misma cáscara visual que Partidas).
@@ -13,16 +14,21 @@ import {
   standalone: true,
   selector: 'sg-analysis-filters-panel',
   encapsulation: ViewEncapsulation.None,
+  imports: [DatePickerComponent],
   template: `
     <section class="sg-match-filters u-surface-card u-p-5" [attr.aria-label]="ariaLabel">
-      <div class="sg-match-filters__top">
-        <div class="sg-match-filters__top-badges">
-          <span class="sg-analysis-filters__title">{{ title }}</span>
-          @if (subtitle) {
-            <span class="sg-analysis-filters__subtitle">{{ subtitle }}</span>
-          }
+      @if (title || subtitle) {
+        <div class="sg-match-filters__top">
+          <div class="sg-match-filters__top-badges">
+            @if (title) {
+              <span class="sg-analysis-filters__title">{{ title }}</span>
+            }
+            @if (subtitle) {
+              <span class="sg-analysis-filters__subtitle">{{ subtitle }}</span>
+            }
+          </div>
         </div>
-      </div>
+      }
 
       <div class="sg-match-filters__row">
         <div class="sg-match-filters__group">
@@ -42,16 +48,13 @@ import {
             }
           </div>
           @if (value === 'day') {
-            <label class="sg-match-filters__day">
-              <span class="sg-match-filters__day-label">Fecha</span>
-              <input
-                type="date"
-                class="sg-match-filters__day-input"
-                [value]="selectedDayIso"
-                [max]="maxDay"
-                (change)="onDayInput($event)"
-              />
-            </label>
+            <sg-date-picker
+              class="sg-match-filters__day-picker"
+              label="Fecha"
+              [value]="selectedDayIso"
+              [max]="maxDay"
+              (valueChange)="dayChange.emit($event)"
+            />
           }
         </div>
       </div>
@@ -61,7 +64,7 @@ import {
 export class AnalysisFiltersPanelComponent {
   @Input() value: AnalysisRangeId = 'week';
   @Input() selectedDayIso = todayPeriodId();
-  @Input() title = 'Filtros';
+  @Input() title = '';
   @Input() subtitle = '';
   @Input() ariaLabel = 'Filtros de análisis';
   @Output() readonly rangeChange = new EventEmitter<AnalysisRangeId>();
@@ -73,11 +76,5 @@ export class AnalysisFiltersPanelComponent {
   onSelect(id: AnalysisRangeId): void {
     if (id === this.value) return;
     this.rangeChange.emit(id);
-  }
-
-  onDayInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    if (!value) return;
-    this.dayChange.emit(value);
   }
 }

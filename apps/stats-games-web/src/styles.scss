@@ -296,18 +296,22 @@ ion-content.auth-gate::part(scroll) {
   display: flex;
   align-items: center;
   gap: var(--sg-space-3);
-  min-height: 3rem;
+  min-height: var(--sg-field-h);
   padding: 0 var(--sg-space-3);
   margin-bottom: var(--sg-space-3);
-  border: 1px solid var(--sg-border-subtle);
-  border-radius: var(--sg-radius-md);
-  background: rgba(5, 7, 13, 0.65);
-  transition: border-color var(--sg-duration-fast) var(--sg-ease-out);
+  border: 1px solid var(--sg-field-border);
+  border-radius: var(--sg-field-radius);
+  background: var(--sg-field-bg);
+  box-shadow: var(--sg-field-shadow);
+  transition:
+    border-color var(--sg-duration-fast) var(--sg-ease-out),
+    box-shadow var(--sg-duration-fast) var(--sg-ease-out),
+    background var(--sg-duration-fast) var(--sg-ease-out);
 }
 
 .auth-gate__field:focus-within {
-  border-color: rgba(var(--sg-accent-primary-rgb), 0.5);
-  box-shadow: 0 0 0 1px rgba(var(--sg-accent-primary-rgb), 0.12);
+  border-color: var(--sg-field-border-focus);
+  box-shadow: var(--sg-field-shadow), var(--sg-field-focus-ring);
 }
 
 .auth-gate__field-icon {

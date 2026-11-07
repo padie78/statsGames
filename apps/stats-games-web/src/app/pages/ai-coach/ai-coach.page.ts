@@ -106,6 +106,55 @@ import {
                 informe macro de progreso está en Evolución.
               </p>
 
+              <div class="sg-dashboard__week-mid">
+                <div class="sg-dashboard__week-chips" aria-label="Contexto del coach">
+                  <span class="sg-dashboard__week-chip">{{ rangeMeta().label }}</span>
+                  <span class="sg-dashboard__week-chip">
+                    {{ heroKpis().reports }} reportes
+                  </span>
+                  @if (heroSpotlight(); as spot) {
+                    @if (spot.gradeLabel) {
+                      <span class="sg-dashboard__week-chip" data-tone="mode">
+                        {{ spot.gradeLabel }}
+                      </span>
+                    }
+                  }
+                </div>
+
+                @if (heroSpotlight(); as spot) {
+                  <div class="sg-dashboard__week-latest">
+                    <div class="sg-dashboard__week-latest-copy">
+                      <span class="sg-dashboard__week-latest-label">Último análisis</span>
+                      <span class="sg-dashboard__week-latest-title">{{ spot.headline }}</span>
+                      <span class="sg-dashboard__week-latest-time">
+                        {{ spot.identity }} · {{ spot.relativeTime }}
+                      </span>
+                    </div>
+                    <a
+                      class="u-btn u-btn--gold sg-dashboard__week-cta"
+                      [routerLink]="spot.route"
+                    >
+                      Abrir
+                    </a>
+                  </div>
+                } @else {
+                  <div class="sg-dashboard__week-latest sg-dashboard__week-latest--empty">
+                    <div class="sg-dashboard__week-latest-copy">
+                      <span class="sg-dashboard__week-latest-label">Sin reportes</span>
+                      <span class="sg-dashboard__week-latest-title">
+                        Jugá una partida para generar el primer análisis IA
+                      </span>
+                    </div>
+                    <a
+                      routerLink="/tabs/matches"
+                      class="u-btn u-btn--gold sg-dashboard__week-cta"
+                    >
+                      Partidas
+                    </a>
+                  </div>
+                }
+              </div>
+
               <div class="sg-dashboard__week-kpis" [attr.aria-label]="'KPIs · ' + rangeNoun()">
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">{{ heroKpis().winRate }}</span>
@@ -139,8 +188,6 @@ import {
               </div>
             </div>
             <sg-analysis-filters-panel
-              title="Período de análisis"
-              [subtitle]="'Activo: ' + rangeMeta().label"
               [value]="analysisRange.range()"
               [selectedDayIso]="analysisRange.selectedDayIso()"
               (rangeChange)="onAnalysisRangeChange($event)"
@@ -369,6 +416,18 @@ export class AiCoachPageComponent implements OnInit {
       kd: s.matchCount ? (useKda ? s.kda : s.kd) : '—',
       wins: s.winCount,
       reports: rangeReports,
+    };
+  });
+
+  readonly heroSpotlight = computed(() => {
+    const card = this.reportCards().find((row) => row.status === 'ready') ?? this.reportCards()[0];
+    if (!card) return null;
+    return {
+      headline: card.headline,
+      identity: card.identity,
+      relativeTime: card.relativeTime,
+      gradeLabel: card.gradeLabel,
+      route: matchDetailRoute(card.matchId),
     };
   });
 

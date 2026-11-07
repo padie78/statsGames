@@ -5,6 +5,7 @@ import {
   todayPeriodId,
   type MatchDateFilter,
 } from '../../../core/analysis/analysis-range';
+import { DatePickerComponent } from '../../atoms/date-picker/date-picker.component';
 import { SelectComponent, type SelectOption } from '../../atoms/select/select.component';
 import type { MatchSortKey } from '../../../utils/match-stats.util';
 import { NeonBadgeComponent } from '../../atoms/neon-badge/neon-badge.component';
@@ -16,7 +17,7 @@ export type MatchResultFilter = 'all' | 'wins' | 'losses';
   standalone: true,
   selector: 'sg-match-filters-toolbar',
   encapsulation: ViewEncapsulation.None,
-  imports: [FormsModule, SelectComponent, NeonBadgeComponent],
+  imports: [FormsModule, SelectComponent, NeonBadgeComponent, DatePickerComponent],
   template: `
     <section class="sg-match-filters u-surface-card u-p-5" aria-label="Filtros de partidas">
       <div class="sg-match-filters__top">
@@ -77,16 +78,13 @@ export type MatchResultFilter = 'all' | 'wins' | 'losses';
             }
           </div>
           @if (dateRange === 'day') {
-            <label class="sg-match-filters__day">
-              <span class="sg-match-filters__day-label">Fecha</span>
-              <input
-                type="date"
-                class="sg-match-filters__day-input"
-                [value]="selectedDayIso"
-                [max]="maxDay"
-                (change)="onDayInput($event)"
-              />
-            </label>
+            <sg-date-picker
+              class="sg-match-filters__day-picker"
+              label="Fecha"
+              [value]="selectedDayIso"
+              [max]="maxDay"
+              (valueChange)="dayChange.emit($event)"
+            />
           }
         </div>
 
@@ -197,12 +195,6 @@ export class MatchFiltersToolbarComponent {
 
   onSortChange(value: string): void {
     this.sortChange.emit(value as MatchSortKey);
-  }
-
-  onDayInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    if (!value) return;
-    this.dayChange.emit(value);
   }
 
   private toSelectOptions(values: string[], allLabel: string): SelectOption[] {

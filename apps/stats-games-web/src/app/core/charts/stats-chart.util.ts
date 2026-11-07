@@ -263,6 +263,75 @@ export function buildWeeklyFormFromMatches(
   });
 }
 
+/**
+ * Forma diaria (WR + K/D|KDA) para rangos cortos. Mismo shape que la semanal,
+ * así el chart de forma puede seguir el período elegido en vez de semanas fijas.
+ */
+export function buildDailyFormFromMatches(
+  matches: MatchUpdateView[],
+  options?: { days?: number; useKda?: boolean },
+): WeeklyFormPoint[] {
+  const days = Math.max(2, options?.days ?? 7);
+  const useKda = Boolean(options?.useKda);
+  const periodIds = listRecentDayPeriodIds(days);
+  const buckets = new Map(
+    periodIds.map((periodId) => [
+      periodId,
+      { matchCount: 0, winCount: 0, kills: 0, deaths: 0, assists: 0 },
+    ]),
+  );
+
+  for (const match of matches) {
+    const stamp = new Date(match.updatedAt);
+    if (Number.isNaN(stamp.getTime())) continue;
+    const bucket = buckets.get(stamp.toISOString().slice(0, 10));
+    if (!bucket) continue;
+    bucket.matchCount += 1;
+    bucket.kills += match.stats?.kills ?? match.stats?.goals ?? 0;
+    bucket.deaths += match.stats?.deaths ?? 0;
+    bucket.assists += match.stats?.assists ?? 0;
+    if (isMatchWin(match.stats)) bucket.winCount += 1;
+  }
+
+  const currentId = periodIds[periodIds.length - 1];
+  return periodIds.map((periodId) => {
+    const b = buckets.get(periodId)!;
+    const hasData = b.matchCount > 0;
+    const ratioNumerator = useKda ? b.kills + b.assists : b.kills;
+    return {
+      periodId,
+      label: periodId.slice(5),
+      winRate: hasData ? Math.round((b.winCount / b.matchCount) * 1000) / 10 : null,
+      kd: hasData ? Number((ratioNumerator / Math.max(b.deaths, 1)).toFixed(2)) : null,
+      fairScore: hasData
+        ? computeFairCommunityScore({
+            totalKills: b.kills,
+            totalDeaths: b.deaths,
+            totalAssists: b.assists,
+            winCount: b.winCount,
+            matchCount: b.matchCount,
+          })
+        : null,
+      matchCount: b.matchCount,
+      winCount: b.winCount,
+      hasData,
+      isCurrent: periodId === currentId,
+    };
+  });
+}
+
+/** Últimos N días UTC como `YYYY-MM-DD`, del más viejo al más nuevo. */
+function listRecentDayPeriodIds(days: number): string[] {
+  const ids: string[] = [];
+  const cursor = new Date();
+  cursor.setUTCHours(0, 0, 0, 0);
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const day = new Date(cursor.getTime() - i * 86_400_000);
+    ids.push(day.toISOString().slice(0, 10));
+  }
+  return ids;
+}
+
 function isoWeekPeriodIdFromDate(date: Date): string {
   const tmp = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const day = tmp.getUTCDay() || 7;

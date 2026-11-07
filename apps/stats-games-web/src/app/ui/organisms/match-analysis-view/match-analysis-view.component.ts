@@ -22,7 +22,7 @@ import {
   MOCK_COMMUNITY_BENCHMARKS,
   type CommunityBenchmarks,
 } from '../../../data/community-mock.data';
-import { resolveMatchHistory } from '../../../data/match-mock.data';
+import { buildMockMatchHistory, resolveMatchHistory } from '../../../data/match-mock.data';
 import { AppSyncRealtimeService } from '../../../services/appsync-realtime.service';
 import { MatchAiService, type MatchAiReportView } from '../../../services/match-ai.service';
 import { MatchService, type MatchUpdateView } from '../../../services/match.service';
@@ -111,6 +111,8 @@ export class MatchAnalysisViewComponent implements OnChanges {
   private readonly notifications = inject(MatchNotificationsStore);
 
   @Input() matchId: string | null = null;
+  /** Semilla opcional (router state / modal) para no depender solo del listado. */
+  @Input() seedMatch: MatchUpdateView | null = null;
   @Output() readonly ctaClick = new EventEmitter<void>();
 
   readonly loading = signal(true);
@@ -222,7 +224,7 @@ export class MatchAnalysisViewComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['matchId']) {
+    if (changes['matchId'] || changes['seedMatch']) {
       void this.loadMatch();
     }
   }
@@ -242,7 +244,7 @@ export class MatchAnalysisViewComponent implements OnChanges {
   }
 
   private async loadMatch(): Promise<void> {
-    const matchId = (this.matchId ?? '').trim();
+    const matchId = normalizeMatchId(this.matchId);
     if (!matchId) {
       this.match.set(null);
       this.error.set(null);
@@ -259,31 +261,55 @@ export class MatchAnalysisViewComponent implements OnChanges {
 
     this.loading.set(true);
     this.error.set(null);
-    this.match.set(null);
     this.aiReport.set(null);
+
+    const seed =
+      this.seedMatch && normalizeMatchId(this.seedMatch.matchId) === matchId
+        ? this.seedMatch
+        : null;
+    // Pintar de inmediato si venimos del listado / router state.
+    if (seed) {
+      this.match.set(seed);
+    } else {
+      this.match.set(null);
+    }
 
     try {
       void this.fortniteOfficial.loadMap();
 
-      const rows = await this.matchService.listPlayerMatchesOnce(userId, { limit: 100 });
+      const byId = await this.matchService.getPlayerMatchOnce(userId, matchId).catch(() => null);
+
+      const rows = await this.matchService.listPlayerMatchesOnce(userId, { limit: 200 });
       const resolved = resolveMatchHistory(rows, userId, null);
       this.recentMatches.set(resolved);
 
       const fromLive =
-        this.realtime.liveMatches().find((m) => m.matchId === matchId) ??
+        this.realtime.liveMatches().find((m) => normalizeMatchId(m.matchId) === matchId) ??
         this.notifications.getByMatchId(matchId)?.match ??
         null;
 
+      const fromMock = buildMockMatchHistory(userId).find(
+        (m) => normalizeMatchId(m.matchId) === matchId,
+      );
+
       const found =
-        resolved.find((m) => m.matchId === matchId) ??
-        rows.find((m) => m.matchId === matchId) ??
-        fromLive;
+        byId ??
+        resolved.find((m) => normalizeMatchId(m.matchId) === matchId) ??
+        rows.find((m) => normalizeMatchId(m.matchId) === matchId) ??
+        fromLive ??
+        seed ??
+        fromMock ??
+        null;
 
       if (!found) {
-        this.error.set('No encontramos esta partida en tu historial.');
+        // No pisar una semilla ya renderizada (p. ej. modal / router state).
+        if (!this.match()) {
+          this.error.set('No encontramos esta partida en tu historial.');
+        }
         return;
       }
 
+      this.error.set(null);
       this.match.set(found);
       await this.loadCommunityBenchmarks(found.platform);
 
@@ -331,5 +357,15 @@ export class MatchAnalysisViewComponent implements OnChanges {
     }
 
     this.communityBenchmarks.set(MOCK_COMMUNITY_BENCHMARKS[uiGame] ?? null);
+  }
+}
+
+function normalizeMatchId(raw: string | null | undefined): string {
+  const value = (raw ?? '').trim();
+  if (!value) return '';
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
   }
 }

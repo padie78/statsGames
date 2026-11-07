@@ -5,6 +5,7 @@ import {
   GetMatchAiReportUseCase,
   GetObjectiveEvolutionUseCase,
   GetActiveTargetProgramUseCase,
+  GetPlayerMatchUseCase,
   GetPlayerProfileUseCase,
   GetProfileByGamerTagUseCase,
   LinkPlatformAccountUseCase,
@@ -58,6 +59,7 @@ export const linkPlatformAccount = new LinkPlatformAccountUseCase({
   logger,
 });
 export const listPlayerMatches = new ListPlayerMatchesUseCase(matchRepository);
+export const getPlayerMatch = new GetPlayerMatchUseCase(matchRepository);
 export const getMatchAiReport = new GetMatchAiReportUseCase(matchAiReports);
 export const listMatchAiReports = new ListMatchAiReportsUseCase(matchAiReports);
 export const getEvolutionAiReport = new GetEvolutionAiReportUseCase(evolutionAiReports);

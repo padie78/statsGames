@@ -9,6 +9,7 @@ export {
 } from './animations/sg-motion';
 export { AnimatedValueComponent } from './atoms/animated-value/animated-value.component';
 export { NeonBadgeComponent, type NeonBadgeTone } from './atoms/neon-badge/neon-badge.component';
+export { DatePickerComponent } from './atoms/date-picker/date-picker.component';
 export { SelectComponent, type SelectOption } from './atoms/select/select.component';
 export { StatValueComponent, type StatAccent } from './atoms/stat-value/stat-value.component';
 export {

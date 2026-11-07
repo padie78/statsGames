@@ -64,7 +64,7 @@ export interface MatchCardStats {
   imports: [NgTemplateOutlet, RouterLink, NeonBadgeComponent, StatValueComponent],
   template: `
     @if (clickable && !live && openMode === 'route' && detailLink) {
-      <a [routerLink]="detailLink" class="sg-match-card-link">
+      <a [routerLink]="detailLink" [state]="detailNavState" class="sg-match-card-link">
         <ng-container *ngTemplateOutlet="cardInner" />
       </a>
     } @else if (clickable && !live && openMode === 'event') {
@@ -265,6 +265,21 @@ export class MatchStatCardComponent {
   get detailLink(): string | null {
     if (!this.clickable || this.live || this.openMode !== 'route') return null;
     return matchDetailRoute(this.matchId);
+  }
+
+  /** Evita “partida no encontrada” si el detalle no llega a reconsultar a tiempo. */
+  get detailNavState(): { match: Record<string, unknown> } | undefined {
+    if (!this.matchId) return undefined;
+    return {
+      match: {
+        userId: '',
+        matchId: this.matchId,
+        platform: this.platform,
+        summary: this.summary,
+        updatedAt: this.updatedAt,
+        stats: this.stats ?? null,
+      },
+    };
   }
 
   get isVictory(): boolean {

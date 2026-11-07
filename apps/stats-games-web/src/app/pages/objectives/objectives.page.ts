@@ -58,6 +58,31 @@ import {
                 {{ rangeNoun() }}.
               </p>
 
+              <div class="sg-dashboard__week-mid">
+                <div class="sg-dashboard__week-chips" aria-label="Contexto de objetivos">
+                  <span class="sg-dashboard__week-chip">{{ analysisRange.meta().label }}</span>
+                  <span class="sg-dashboard__week-chip">
+                    {{ heroKpis().metrics }} métricas
+                  </span>
+                  @if (heroKpis().critical > 0) {
+                    <span class="sg-dashboard__week-chip" data-tone="warn">
+                      {{ heroKpis().critical }} críticos
+                    </span>
+                  } @else if (heroKpis().aligned > 0) {
+                    <span class="sg-dashboard__week-chip" data-tone="win">
+                      {{ heroKpis().aligned }} alineadas
+                    </span>
+                  }
+                </div>
+                <div class="sg-dashboard__week-latest">
+                  <div class="sg-dashboard__week-latest-copy">
+                    <span class="sg-dashboard__week-latest-label">Estado del programa</span>
+                    <span class="sg-dashboard__week-latest-title">{{ heroSpotlightTitle() }}</span>
+                    <span class="sg-dashboard__week-latest-time">{{ heroSpotlightHint() }}</span>
+                  </div>
+                </div>
+              </div>
+
               <div class="sg-dashboard__week-kpis" aria-label="KPIs del programa de objetivos">
                 <div class="sg-dashboard__week-kpi">
                   <span class="sg-dashboard__week-kpi-value">
@@ -93,8 +118,6 @@ import {
               </div>
             </div>
             <sg-analysis-filters-panel
-              title="Período de análisis"
-              [subtitle]="'Activo: ' + analysisRange.meta().label"
               [value]="analysisRange.range()"
               [selectedDayIso]="analysisRange.selectedDayIso()"
               (rangeChange)="onAnalysisRangeChange($event)"
@@ -151,6 +174,22 @@ export class ObjectivesPageComponent {
       critical: evolution?.criticalCount ?? 0,
       metrics: evolution?.byMetric.length ?? 0,
     };
+  });
+
+  readonly heroSpotlightTitle = computed(() => {
+    const kpis = this.heroKpis();
+    if (kpis.metrics === 0) return 'Todavía no hay programa activo';
+    if (kpis.critical > 0) return `${kpis.critical} metas fuera de rango`;
+    if (kpis.compliance !== '—') return `Cumplimiento global ${kpis.compliance}`;
+    return 'Programa cargado · sin ejecución aún';
+  });
+
+  readonly heroSpotlightHint = computed(() => {
+    const kpis = this.heroKpis();
+    if (kpis.metrics === 0) {
+      return 'Creá un programa abajo para empezar a medir.';
+    }
+    return `${kpis.aligned} alineadas · ${kpis.metrics} métricas activas`;
   });
 
   constructor() {

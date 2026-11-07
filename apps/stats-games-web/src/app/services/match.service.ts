@@ -48,6 +48,10 @@ interface ListPlayerMatchesResp {
   listPlayerMatches: MatchUpdateView[];
 }
 
+interface GetPlayerMatchResp {
+  getPlayerMatch: MatchUpdateView | null;
+}
+
 const MATCH_STATS_FIELDS = /* GraphQL */ `
   stats {
     kills
@@ -84,6 +88,19 @@ const MATCH_STATS_FIELDS = /* GraphQL */ `
 const LIST_PLAYER_MATCHES = /* GraphQL */ `
   query ListPlayerMatches($userId: ID!, $platform: String, $limit: Int) {
     listPlayerMatches(userId: $userId, platform: $platform, limit: $limit) {
+      userId
+      matchId
+      platform
+      summary
+      updatedAt
+      ${MATCH_STATS_FIELDS}
+    }
+  }
+`;
+
+const GET_PLAYER_MATCH = /* GraphQL */ `
+  query GetPlayerMatch($userId: ID!, $matchId: ID!) {
+    getPlayerMatch(userId: $userId, matchId: $matchId) {
       userId
       matchId
       platform
@@ -132,6 +149,14 @@ export class MatchService {
     options?: { platform?: BackendPlatform; limit?: number },
   ): Promise<MatchUpdateView[]> {
     return firstValueFrom(this.listPlayerMatches(userId, options));
+  }
+
+  async getPlayerMatchOnce(userId: string, matchId: string): Promise<MatchUpdateView | null> {
+    const resp = await this.client.graphql({
+      query: GET_PLAYER_MATCH,
+      variables: { userId, matchId },
+    });
+    return (resp as { data: GetPlayerMatchResp }).data.getPlayerMatch ?? null;
   }
 
   onMatchUpdate(userId: string): Observable<MatchUpdateView> {
