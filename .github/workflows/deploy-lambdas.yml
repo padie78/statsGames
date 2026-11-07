@@ -293,15 +293,23 @@ jobs:
             --output json > current-env.json
 
           if [ "$ARTIFACT" = "game_processor" ]; then
+            DATA_LAKE_BUCKET="$(aws lambda get-function-configuration \
+              --function-name "$FUNCTION_NAME" \
+              --query 'Environment.Variables.DATA_LAKE_BUCKET' \
+              --output text 2>/dev/null || true)"
+            if [ -z "$DATA_LAKE_BUCKET" ] || [ "$DATA_LAKE_BUCKET" = "None" ]; then
+              DATA_LAKE_BUCKET="$(cd infra && terraform output -raw data_lake_bucket 2>/dev/null || true)"
+            fi
             jq \
               --arg endpoint "$APPSYNC_ENDPOINT" \
               --arg apiKey "$APPSYNC_API_KEY" \
               --arg matchAiQueue "$MATCH_AI_QUEUE_URL" \
+              --arg dataLake "$DATA_LAKE_BUCKET" \
               '{Variables: (. + {
                 APPSYNC_ENDPOINT: $endpoint,
                 APPSYNC_API_KEY: $apiKey,
                 MATCH_AI_ANALYSIS_QUEUE_URL: $matchAiQueue
-              })}' \
+              } + (if $dataLake != "" and $dataLake != "None" then {DATA_LAKE_BUCKET: $dataLake} else {} end))}' \
               current-env.json > env-payload.json
           else
             jq \

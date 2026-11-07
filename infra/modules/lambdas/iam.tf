@@ -81,6 +81,19 @@ data "aws_iam_policy_document" "lambda_inline" {
     ]
     resources = ["arn:aws:appsync:*:*:apis/*"]
   }
+
+  dynamic "statement" {
+    for_each = var.data_lake_bucket_arn != "" ? [var.data_lake_bucket_arn] : []
+    content {
+      sid    = "DataLakePutMatchObjects"
+      effect = "Allow"
+      actions = [
+        "s3:PutObject",
+        "s3:AbortMultipartUpload",
+      ]
+      resources = ["${statement.value}/*"]
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "lambda_inline" {

@@ -2,6 +2,7 @@ export * from './lib/aws/dynamodb-client.factory';
 export * from './lib/messaging/sqs-game-ingestion-queue-publisher.adapter';
 export * from './lib/messaging/sqs-match-ai-analysis-queue-publisher.adapter';
 export * from './lib/messaging/sqs-evolution-ai-analysis-queue-publisher.adapter';
+export * from './lib/storage/s3-match-data-lake.adapter';
 export * from './lib/repositories/dynamodb-match.repository';
 export * from './lib/repositories/dynamodb-match-ai-report.repository';
 export * from './lib/repositories/dynamodb-evolution-ai-report.repository';

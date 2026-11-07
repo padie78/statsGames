@@ -7,7 +7,19 @@ resource "aws_glue_catalog_database" "analytics" {
 
 locals {
   data_lake_s3_root = "s3://${var.data_lake_bucket_name}/"
-  platforms         = ["valorant", "rocket_league", "fortnite", "roblox"]
+  # Alineado con libs/common platforms catalog (Fase 1 + 2).
+  platforms = [
+    "valorant",
+    "league_of_legends",
+    "cs2",
+    "dota2",
+    "overwatch2",
+    "rocket_league",
+    "fortnite",
+    "clash_royale",
+    "brawl_stars",
+    "roblox",
+  ]
 }
 
 resource "aws_glue_catalog_table" "match_history" {
@@ -19,18 +31,18 @@ resource "aws_glue_catalog_table" "match_history" {
   table_type = "EXTERNAL_TABLE"
 
   parameters = {
-    EXTERNAL              = "TRUE"
-    "parquet.compression" = "SNAPPY"
+    EXTERNAL       = "TRUE"
+    classification = "json"
   }
 
   storage_descriptor {
     location      = "${local.data_lake_s3_root}platform=${each.key}/"
-    input_format  = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"
-    output_format = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"
+    input_format  = "org.apache.hadoop.mapred.TextInputFormat"
+    output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
 
     ser_de_info {
-      name                  = "ParquetHiveSerDe"
-      serialization_library = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+      name                  = "JsonSerDe"
+      serialization_library = "org.openx.data.jsonserde.JsonSerDe"
       parameters = {
         "serialization.format" = "1"
       }
@@ -87,14 +99,35 @@ resource "aws_glue_crawler" "data_lake" {
   database_name = aws_glue_catalog_database.analytics.name
   role          = aws_iam_role.glue_crawler.arn
 
+  # Solo prefixes de partidas; excluye athena-results/ para no crear tablas espurias.
   s3_target {
-    path = local.data_lake_s3_root
+    path = "${local.data_lake_s3_root}platform="
+    exclusions = [
+      "athena-results/**",
+    ]
+  }
+
+  s3_target {
+    path = "${local.data_lake_s3_root}bronze/matches/"
+    exclusions = [
+      "athena-results/**",
+    ]
   }
 
   schema_change_policy {
     delete_behavior = "LOG"
     update_behavior = "UPDATE_IN_DATABASE"
   }
+
+  configuration = jsonencode({
+    Version = 1.0
+    CrawlerOutput = {
+      Partitions = { AddOrUpdateBehavior = "InheritFromTable" }
+    }
+    Grouping = {
+      TableGroupingPolicy = "CombineCompatibleSchemas"
+    }
+  })
 
   schedule = "cron(0 3 * * ? *)"
 }
@@ -106,18 +139,18 @@ resource "aws_glue_catalog_table" "bronze_matches" {
   table_type = "EXTERNAL_TABLE"
 
   parameters = {
-    EXTERNAL              = "TRUE"
-    "parquet.compression" = "SNAPPY"
+    EXTERNAL       = "TRUE"
+    classification = "json"
   }
 
   storage_descriptor {
     location      = "${local.data_lake_s3_root}bronze/matches/"
-    input_format  = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"
-    output_format = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"
+    input_format  = "org.apache.hadoop.mapred.TextInputFormat"
+    output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
 
     ser_de_info {
-      name                  = "ParquetHiveSerDe"
-      serialization_library = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+      name                  = "JsonSerDe"
+      serialization_library = "org.openx.data.jsonserde.JsonSerDe"
       parameters = {
         "serialization.format" = "1"
       }

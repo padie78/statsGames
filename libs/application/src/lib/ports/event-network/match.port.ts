@@ -5,6 +5,11 @@ export interface IMatchWriter {
   save(match: Match): Promise<void>;
 }
 
+/** Dual-write al Data Lake (S3) para Athena / histórico frío. */
+export interface IMatchDataLakeWriter {
+  write(match: Match): Promise<void>;
+}
+
 export interface IMatchReader {
   listByUser(
     userId: string,

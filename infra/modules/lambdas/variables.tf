@@ -210,3 +210,15 @@ variable "brawl_stars_poll_schedule" {
   default     = "rate(5 minutes)"
   description = "Schedule EventBridge del poller Brawl Stars."
 }
+
+variable "data_lake_bucket_name" {
+  type        = string
+  default     = ""
+  description = "Bucket S3 del Data Lake (dual-write de partidas desde game_processor)."
+}
+
+variable "data_lake_bucket_arn" {
+  type        = string
+  default     = ""
+  description = "ARN del bucket Data Lake."
+}

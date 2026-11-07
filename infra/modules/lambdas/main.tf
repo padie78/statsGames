@@ -303,6 +303,7 @@ resource "aws_lambda_function" "game_processor" {
       APPSYNC_ENDPOINT            = "https://placeholder-will-be-patched"
       APPSYNC_API_KEY             = "placeholder-will-be-patched"
       MATCH_AI_ANALYSIS_QUEUE_URL = var.match_ai_analysis_queue_url
+      DATA_LAKE_BUCKET            = var.data_lake_bucket_name
       LOG_LEVEL                   = "INFO"
     }
   }

@@ -3,6 +3,7 @@ import { GameQueueMessageSchema } from '../../dto/ingestion/game-queue-message.d
 import { MatchMapper } from '../../mappers/match.mapper';
 import type {
   IMatchAiAnalysisQueuePublisher,
+  IMatchDataLakeWriter,
   IMatchEventNotifier,
   IMatchWriter,
 } from '../../ports/event-network/match.port';
@@ -15,6 +16,7 @@ export interface ProcessMatchFromQueueDeps {
   matchEventNotifier: IMatchEventNotifier;
   statsSummaryRepository?: IStatsSummaryRepository;
   matchAiAnalysisPublisher?: IMatchAiAnalysisQueuePublisher;
+  matchDataLakeWriter?: IMatchDataLakeWriter;
   logger?: ILogger;
 }
 
@@ -53,6 +55,19 @@ export class ProcessMatchFromQueueUseCase {
       await this.deps.statsSummaryRepository.aggregateMatchEvent(
         MatchMapper.toProcessedEvent(match),
       );
+    }
+
+    if (!skippedDuplicate && this.deps.matchDataLakeWriter) {
+      try {
+        await this.deps.matchDataLakeWriter.write(match);
+      } catch (error) {
+        // El lake es analítica fría: no tumbar la ingesta operativa.
+        this.deps.logger?.error('Fallo dual-write Data Lake (no bloqueante)', {
+          matchId: message.matchId,
+          platform: message.platform,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     await this.deps.matchEventNotifier.publishMatchUpdate(match);

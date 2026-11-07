@@ -10,6 +10,7 @@
     "start:web": "nx serve stats-games-web",
     "sync:env": "bash scripts/sync-local-env.sh",
     "seed:mock": "node scripts/seed-mock-data.mjs",
+    "export:datalake": "python3 infra/scripts/export_matches_to_datalake.py",
     "send:match": "node integrations/producers/send-match.mjs",
     "probe:fortnite": "node integrations/producers/fortnite/probe-stats.mjs",
     "probe:roblox": "node integrations/producers/roblox/probe-badges.mjs"
@@ -29,6 +30,7 @@
     "@angular/router": "^17.3.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1085.0",
     "@aws-sdk/client-dynamodb": "^3.620.0",
+    "@aws-sdk/client-s3": "^3.1164.0",
     "@aws-sdk/client-sqs": "^3.620.0",
     "@aws-sdk/lib-dynamodb": "^3.620.0",
     "@ionic/angular": "^8.4.0",

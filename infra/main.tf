@@ -60,6 +60,8 @@ module "lambdas" {
   clash_royale_poll_schedule  = var.clash_royale_poll_schedule
   brawl_stars_api_key         = var.brawl_stars_api_key
   brawl_stars_poll_schedule   = var.brawl_stars_poll_schedule
+  data_lake_bucket_name       = module.storage.data_lake_bucket_name
+  data_lake_bucket_arn        = module.storage.data_lake_bucket_arn
 }
 
 module "api" {
